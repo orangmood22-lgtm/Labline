@@ -1,0 +1,55 @@
+{
+    "codex": {
+        "enabled": true,
+        "provider_name": "how88",
+        "model": "gpt-5.5",
+        "auth": {
+            "type": "token",
+            "token": ""
+        },
+        "cli": {
+            "command": "codex",
+            "args": []
+        },
+        "mcp": {
+            "enabled": true,
+            "server_name": "codex",
+            "timeout_ms": 120000
+        },
+        "review": {
+            "reasoning_effort": "xhigh",
+            "sandbox": "read-only"
+        },
+        "notes": "If MCP review is unavailable, fall back to local codex CLI if installed and signed in."
+    },
+    "deepseekv4pro": {
+        "enabled": true,
+        "provider_name": "daipai",
+        "model": "deepseek-v4-pro",
+        "auth": {
+            "type": "token",
+            "token": ""
+        },
+        "cli": {
+            "command": "claude",
+            "args": []
+        },
+        "mcp": {
+            "enabled": false,
+            "server_name": "",
+            "timeout_ms": 120000
+        },
+        "usage": {
+            "primary_role": "review_or_analysis",
+            "fallback_role": "secondary_reviewer"
+        },
+        "notes": ""
+    },
+    "routing": {
+        "default_reviewer": "codex",
+        "secondary_reviewer": "deepseekv4pro",
+        "allow_fallback": true,
+        "executor_family": "claude-opus-4-6",
+        "reviewer_requirement": "Reviewer must be different from executor family for integrity / claim judgment."
+    }
+}

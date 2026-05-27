@@ -5,6 +5,12 @@ Runs on the SSH remote host (or locally for Modal/Vast.ai future support).
 Reads a manifest, launches jobs across free GPUs via `screen`, retries on OOM,
 cleans stale screens, and writes state continuously to disk.
 
+Recovery contract:
+- `queue_state.json` is the canonical latest recovery receipt for scheduler resumability.
+- State writes should remain atomic.
+- Retry/backoff behavior should be explainable from manifest settings plus persisted state.
+- See `skills/shared-references/recovery-state-contract.md` for the shared resumability vocabulary used across ARIS.
+
 Usage (on remote):
     nohup python3 queue_manager.py \\
         --manifest manifest.json \\
@@ -37,6 +43,8 @@ State file format (queue_state.json):
     }, ...
   ]
 }
+
+This queue-local schema is intentionally richer than the minimal shared recovery schema, but should still satisfy the shared fields conceptually: run lineage (`meta.project` + manifest path), stage (`phase`), status, attempt count, artifact refs (`expected_output`), and update timestamps. See `skills/shared-references/recovery-state-contract.md`.
 """
 
 import argparse
@@ -46,8 +54,9 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -97,7 +106,7 @@ def resolve_conda_hook(manifest_hook=None):
 
 
 def now():
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def run(cmd, check=False, capture=True):
@@ -177,11 +186,24 @@ def load_state(state_file, manifest):
     return state
 
 
+def _atomic_write_json(path, data):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
 def save_state(state, state_file):
-    tmp = state_file + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(state, f, indent=2)
-    os.rename(tmp, state_file)
+    _atomic_write_json(state_file, state)
 
 
 def phase_ready(phase_name, state):
@@ -346,8 +368,8 @@ def step(manifest, state, state_file, log_dir):
             continue
         # Wait oom_delay after failure before retry
         if job["completed"]:
-            last = datetime.fromisoformat(job["completed"].rstrip("Z"))
-            elapsed = (datetime.utcnow() - last).total_seconds()
+            last = datetime.fromisoformat(job["completed"].rstrip("Z") + "+00:00")
+            elapsed = (datetime.now(UTC) - last).total_seconds()
             if elapsed >= oom_delay:
                 job["status"] = "pending"  # Requeue
 

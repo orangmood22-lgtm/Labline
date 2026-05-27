@@ -1,0 +1,104 @@
+# ARIS Multi-User Deployment
+# One container per researcher, shared volumes for framework + data
+#
+# Usage:
+#   1. Copy this file to your group server
+#   2. Edit .env file with user list and API keys
+#   3. docker compose up -d
+#   4. docker exec -it aris-zhangsan bash
+#
+# Add more users: copy a researcher block, change name + UID
+
+services:
+  # ─── Self-hosted Git (Gitea) ──────────────────────────────────────────────
+  gitea:
+    image: gitea/gitea:latest
+    container_name: aris-gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    volumes:
+      - gitea-data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"     # Web UI
+      - "2222:22"       # Git SSH
+    restart: unless-stopped
+
+  # ─── Researcher containers (copy block per user) ──────────────────────────
+  researcher-1:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        USERNAME: ${USER1_NAME:-researcher1}
+        UID: ${USER1_UID:-1001}
+        GID: ${USER1_GID:-1001}
+    container_name: aris-${USER1_NAME:-researcher1}
+    hostname: aris-${USER1_NAME:-researcher1}
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
+      - GITEA_URL=http://gitea:3000
+    volumes:
+      # Framework (read-only, shared)
+      - aris-framework:/aris/framework:ro
+      # Projects (per-user, persistent)
+      - user1-projects:/aris/projects
+      # Shared datasets (read-only)
+      - ${DATASETS_PATH:-./datasets}:/aris/shared/datasets:ro
+      # Public datasets (read-write, shared download cache)
+      - shared-downloads:/aris/shared/downloads
+      # Pretrained models
+      - shared-pretrained:/aris/shared/pretrained
+      # SSH keys (mount from host)
+      - ${USER1_SSH:-/dev/null}:/run/secrets/ssh:ro
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    depends_on:
+      - gitea
+
+  researcher-2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        USERNAME: ${USER2_NAME:-researcher2}
+        UID: ${USER2_UID:-1002}
+        GID: ${USER2_GID:-1002}
+    container_name: aris-${USER2_NAME:-researcher2}
+    hostname: aris-${USER2_NAME:-researcher2}
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
+      - GITEA_URL=http://gitea:3000
+    volumes:
+      - aris-framework:/aris/framework:ro
+      - user2-projects:/aris/projects
+      - ${DATASETS_PATH:-./datasets}:/aris/shared/datasets:ro
+      - shared-downloads:/aris/shared/downloads
+      - shared-pretrained:/aris/shared/pretrained
+      - ${USER2_SSH:-/dev/null}:/run/secrets/ssh:ro
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    depends_on:
+      - gitea
+
+volumes:
+  gitea-data:
+  aris-framework:
+  user1-projects:
+  user2-projects:
+  shared-downloads:
+  shared-pretrained:

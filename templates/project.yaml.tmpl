@@ -1,0 +1,45 @@
+# project.yaml — ARIS 科研项目元数据
+# 由 /init-research 自动生成，手动编辑也 OK
+
+project:
+  name: "{PROJECT_NAME}"
+  direction: "{RESEARCH_DIRECTION}"
+  size: "full"              # full | small
+  language: "zh"            # zh | en
+  created: "{DATE}"
+  author: "{USER}"
+
+# Git 配置 — /sync 读这个
+git:
+  auto_commit: true         # sync 时自动 commit
+  remote: ""                # Gitea URL, 留空 = 纯本地
+  branch: "main"
+
+# 远程 GPU 服务器 — /sync deploy 和 /leader Phase 3 读这个
+servers: []
+  # - name: "4090x4"
+  #   host: "4090x4-ai-original-22"
+  #   path: "/data/{USER}/aris/{PROJECT_NAME}"
+  #   conda_env: "/data/orangmood/aris_conda_env"
+  #   gpus: [0, 2, 3]
+
+# 框架路径 — /framework-update 读这个
+framework:
+  path: "/aris/framework"   # 容器内框架位置
+  repo: "https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git"
+
+# 数据集 — 容器内共享路径
+data:
+  shared: "/aris/shared/datasets"
+  project: "./data"         # 项目私有数据
+
+# 同步排除 — /sync 和 rsync 用
+sync_exclude:
+  - "outputs/"
+  - "wandb/"
+  - "*.tar.gz"
+  - "*.pth"
+  - "*.pt"
+  - "__pycache__/"
+  - ".pytest_cache/"
+  - "datasets/"

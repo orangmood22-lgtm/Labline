@@ -197,7 +197,7 @@ build_upstream_inventory() {
         src="$skills_dir/$name"
         if is_symlink "$src"; then
             local resolved; resolved="$(canonicalize "$src")"
-            [[ "$resolved" == "$repo"/* ]] || { warn "skipping upstream symlink leading outside repo: $name -> $resolved"; continue; }
+            [[ "$resolved" == "$repo"/* ]] || warn "upstream symlink leads outside repo: $name -> $resolved (allowed)"
         fi
         entries+=("skill|$name")
     done
@@ -391,8 +391,13 @@ compute_plan() {
                     # managed symlink with stale target — can update with --replace-link or auto if safely inside repo
                     echo "UPDATE_TARGET|$kind|$name|$current_target" >> "$out"
                 else
-                    # foreign symlink (user's own?) — conflict
-                    echo "CONFLICT|$kind|$name|symlink_to:$current_target" >> "$out"
+                    # foreign symlink — auto-adopt if it resolves to a valid skill (has SKILL.md)
+                    local resolved_target; resolved_target="$(canonicalize "$target_path" 2>/dev/null || true)"
+                    if [[ -n "$resolved_target" ]] && [[ -f "$resolved_target/SKILL.md" || -f "$(dirname "$resolved_target")/SKILL.md" ]]; then
+                        echo "ADOPT|$kind|$name|" >> "$out"
+                    else
+                        echo "CONFLICT|$kind|$name|symlink_to:$current_target" >> "$out"
+                    fi
                 fi
             fi
         elif [[ -e "$target_path" ]]; then

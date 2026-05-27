@@ -45,7 +45,9 @@ phases:
 import argparse
 import itertools
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
 
 
@@ -110,6 +112,22 @@ def build(config):
     return out
 
 
+def write_manifest_atomic(path, manifest):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True,
@@ -130,7 +148,7 @@ def main():
         config = json.loads(p.read_text())
 
     manifest = build(config)
-    Path(args.output).write_text(json.dumps(manifest, indent=2))
+    write_manifest_atomic(args.output, manifest)
 
     total_jobs = sum(len(ph["jobs"]) for ph in manifest["phases"])
     print(f"Built manifest with {len(manifest['phases'])} phases, "

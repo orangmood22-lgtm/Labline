@@ -57,6 +57,28 @@ Files that get overwritten on re-runs:
 - `AUTO_REVIEW.md` (when starting a new review loop, not within a loop)
 - `paper/main.tex`
 - State files: `REFINE_STATE.json`, `REVIEW_STATE.json`
+- Any load-bearing experiment-chain sidecars introduced for recovery or
+  verification (for example: delta assertion reports, audit JSON, or
+  resumability state files). If a rerun overwrites the previous latest
+  copy, preserve a timestamped history first.
+
+## Experiment-chain versioning guidance
+
+When the workflow writes load-bearing experiment-chain artifacts, keep
+plan / run / audit / claim artifacts versioned independently even if
+only one of them changed. Example classes:
+
+- **Plan artifacts** — `EXPERIMENT_PLAN.md`, `EXPERIMENT_TRACKER.md`
+- **Run artifacts** — result summaries, delta assertion reports,
+  implementation/deviation notes, implementation deviation sidecars
+- **Audit artifacts** — `EXPERIMENT_AUDIT.md`, `EXPERIMENT_AUDIT.json`
+- **Claim artifacts** — result-to-claim verdict outputs or narrative
+  summaries derived from them
+
+Reason: a later audit rerun may reinterpret the same result files, and a
+later claim rerun may change the supported claim without changing the raw
+results. Timestamp them separately so reviewers can reconstruct the chain
+of reasoning.
 
 ## What NOT to Timestamp
 

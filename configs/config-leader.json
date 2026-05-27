@@ -1,0 +1,16 @@
+{
+    "APIKEY": "sk-ILzsUdDwQaTe2JBym3xNzWdaejbBCXv42c2LuWbOgxVThLOL",
+    "Providers": [
+        {
+            "name": "claude",
+            "api_base_url": "https://how88.top",
+            "api_key": "sk-ILzsUdDwQaTe2JBym3xNzWdaejbBCXv42c2LuWbOgxVThLOL",
+            "models": [
+                "claude-opus-4-6"
+            ]
+        }
+    ],
+    "Router": {
+        "default": "claude,claude-opus-4-6"
+    }
+}

@@ -31,6 +31,30 @@ Then append one row per output file written:
 | `review` | /auto-review-loop |
 | `paper` | /paper-writing, /paper-write, /paper-compile |
 
+## Experiment-chain manifest guidance
+
+For load-bearing experiment workflows, record enough detail in the
+manifest description field that a later reviewer can reconstruct the
+plan → run → audit → claim chain without rereading the whole repo. At a
+minimum, manifest rows for these artifact classes should mention the
+upstream object they depend on:
+
+- **Plan artifacts** — mention the claim or milestone set they define.
+- **Run artifacts** — mention which milestone / run IDs / variants they
+  executed, and include any canonical drift or recovery receipt when it
+  changes what downstream stages should trust.
+- **Audit artifacts** — mention which plan/results set they audited, and
+  whether implementation deviations or recovery-state receipts were part
+  of the reviewed context.
+- **Claim artifacts** — mention which experiment or audit verdict they
+  interpret, especially when scope/confidence changed because of drift,
+  delta weakness, or recovery warnings.
+
+When practical, include short references such as claim IDs, block IDs,
+run IDs, or the source artifact filename in the description column.
+This keeps `MANIFEST.md` human-readable while still making cross-stage
+traceability possible.
+
 ## Pre-flight Check
 
 Before writing output, if the skill depends on a prerequisite file from a previous stage:

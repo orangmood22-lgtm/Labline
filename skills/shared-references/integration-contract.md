@@ -139,6 +139,53 @@ structured report callers can parse.
 A diagnostic-only verifier (no exit-1 blocking) is still valuable — it
 surfaces drift to humans. But do not market a diagnostic as a gate.
 
+## Experiment-chain contract vocabulary (for load-bearing research workflows)
+
+For experiment planning / implementation / auditing / claim judgment,
+ARIS should reuse a small shared vocabulary across artifacts instead of
+letting each skill invent new prose. This does **not** require a JSON-
+first migration; it means the same markdown sections and checklist terms
+must appear across the chain.
+
+Recommended contract terms:
+
+- **Expectation** — preconditions or assumptions that must be true
+  before a run is considered meaningful (e.g. intended split, baseline
+  availability, metric definition, required labels).
+- **Execution Spec** — what will actually be run: variants, datasets /
+  splits / tasks, metrics, seeds, key hyperparameters, and major
+  implementation constraints.
+- **Data Flow** — how inputs, labels / targets, model outputs, and saved
+  result files move through the evaluation path. This is the fastest way
+  to catch wrong-split, wrong-label, and dead-path bugs.
+- **Delta Assertion** — what concrete difference should exist between a
+  control / baseline and the modified system, plus how to detect the
+  "no real effect" failure mode before over-claiming.
+- **Evidence Mapping** — which artifacts support which claims, so
+  downstream audit and claim-gating can trace every paper claim back to
+  real files.
+- **Implementation Deviations** — explicit drift receipts describing how
+  actual implementation or execution differed from plan, what artifacts
+  changed, and whether the claim test remains valid. This is the bridge
+  between plan-time intent and audit/claim-time scope control.
+
+For this class of integration, the six required components above should
+be interpreted as:
+
+- the **predicate** decides when the contract applies (e.g. an
+  `EXPERIMENT_PLAN.md` exists)
+- the **helper / parser** reads the required sections consistently
+- the **artifact** preserves the plan / run / audit receipt
+- the **visible checklist** forces the executor to confront expectation /
+  split / delta / evidence / deviation requirements
+- the **backfill** lets a user regenerate the missing artifact or audit
+- the **verifier / diagnostic** checks that the chain stayed aligned from
+  plan to claim
+
+This vocabulary is intentionally small. If a new experiment-chain field
+cannot be expressed as one of the six terms above, it should probably
+stay local to one skill instead of becoming a cross-skill contract.
+
 ## Anti-patterns to refuse in review
 
 When reviewing a new integration proposal, reject any of:

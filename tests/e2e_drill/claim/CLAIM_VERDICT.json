@@ -1,0 +1,17 @@
+{
+  "claim_supported": "no",
+  "confidence": "low",
+  "what_results_support": "Pipeline runs without crash. Result files are generated.",
+  "what_results_dont_support": "Implementation conformance failed — planned claim coverage is broken. Core modification shows no observable effect (delta assertion failed). Claim-traceability-broken: evidence chain invalidated by upstream failures. ",
+  "missing_evidence": "Correct split evaluation required: plan says 'test' but actual is 'train'. ",
+  "suggested_claim_revision": "Cannot make any performance claim until split and delta issues are resolved. Re-run with correct test split and functioning attention module.",
+  "evidence_mapping_status": "broken",
+  "delta_assertion_status": "failed",
+  "implementation_deviation_impact": "breaks_claim_test",
+  "recovery_context_status": "none",
+  "integrity_status": "fail",
+  "plan_drift_tags": [
+    "[PLAN DRIFT] — unresolved implementation deviation affects claim coverage",
+    "[INTEGRITY CONCERN] — audit found issues, see EXPERIMENT_AUDIT"
+  ]
+}

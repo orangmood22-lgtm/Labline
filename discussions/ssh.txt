@@ -1,0 +1,17 @@
+在两个服务器挑一个有空卡的做
+服务器1：
+实验目录：/home/ai_worker/exps/exp0516
+ssh:ssh v100-ai
+环境：conda activate aris
+python                    3.10.18              h1a3bd86_0  
+torch                     2.6.0+cu118              pypi_0    pypi
+torchvision               0.21.0                   pypi_0    pypi
+
+服务器2：
+实验目录：/workspace/orangmood/aris/exp0516
+ssh:ssh 4090x8-root
+环境：conda activate yolo11
+python                    3.11.11              he870216_0    https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+torch                     2.6.0                    pypi_0    pypi
+torchvision               0.21.0                   pypi_0    pypi
+cuda 12.2

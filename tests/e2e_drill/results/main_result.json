@@ -1,0 +1,22 @@
+{
+  "block": "B1_main_result",
+  "claim_tested": "C1",
+  "dataset": "CIFAR-10",
+  "split_used": "train",
+  "planned_split": "test",
+  "results": {
+    "ToyClassifier": {
+      "accuracy": 0.782,
+      "predictions_hash": "abc123def456",
+      "num_samples": 50000
+    },
+    "BaselineMLP": {
+      "accuracy": 0.782,
+      "predictions_hash": "abc123def456",
+      "num_samples": 50000
+    }
+  },
+  "delta": 0.0,
+  "success_criterion": "delta >= 0.05",
+  "criterion_met": false
+}

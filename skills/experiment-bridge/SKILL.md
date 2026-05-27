@@ -57,8 +57,17 @@ Read `EXPERIMENT_PLAN.md` and extract:
    - Setup details (backbone, hyperparameters, seeds)
    - Success criterion
    - Priority (MUST-RUN vs NICE-TO-HAVE)
-3. **Compute budget** — total estimated GPU-hours
-4. **Method details** from `FINAL_PROPOSAL.md` — what exactly to implement
+3. **Contract sections required for downstream integrity checks:**
+   - **Expectation Declaration** — intended split, authoritative GT / target source, required baselines, stop conditions
+   - **Execution Spec** — per-block variants, datasets, metrics, seeds, key hyperparameters, and implementation constraints that must be preserved
+   - **Data Flow Summary** — input → preprocessing → model path → outputs → saved result files
+   - **Delta Assertion** — what concrete difference should appear between control and modified system, and how to detect "no real effect"
+   - **Evidence Mapping** — which blocks and result files are supposed to defend which claims
+4. **Compute budget** — total estimated GPU-hours
+5. **Method details** from `FINAL_PROPOSAL.md` — what exactly to implement
+
+If any of the required contract sections are missing or too vague to operationalize, stop and repair `EXPERIMENT_PLAN.md` before implementation instead of silently guessing.
+In particular, do not proceed if **Execution Spec** is missing block-level variants / metrics / seeds / key constraints, because downstream conformance and audit checks depend on that exact plan.
 
 Present a brief summary:
 
@@ -68,6 +77,7 @@ Present a brief summary:
 - Must-run experiments: [N]
 - Nice-to-have: [N]
 - Estimated GPU-hours: [X]
+- Delta assertion: [one-line summary]
 
 Proceeding to implementation.
 ```
@@ -96,11 +106,30 @@ For each milestone (in order), write the experiment scripts:
 
 3. **Follow the plan's run order** — implement sanity-stage experiments first, then baselines, then main method, then ablations.
 
-4. **Self-review before deploying:**
+4. **Implementation conformance self-check before review:**
    - Are all hyperparameters from EXPERIMENT_PLAN.md reflected in argparse?
-   - Is the random seed fixed and controllable?
-   - Are results saved in a parseable format (JSON/CSV)?
    - Does the code match FINAL_PROPOSAL.md's method description?
+   - Does the evaluation path use the exact split and authoritative GT source declared in **Expectation Declaration**?
+   - Does the implementation preserve the block-level variants, metrics, seeds, and key constraints declared in **Execution Spec**?
+   - Does the code preserve the declared **Data Flow Summary** (input → preprocessing → model path → outputs)?
+   - Is the planned **Delta Assertion** actually reachable in the implemented path, or is the modification bypassed / dead?
+   - Are the expected result files from **Evidence Mapping** written in parseable JSON/CSV form?
+
+5. **Write a deviation sidecar whenever implementation diverges from plan.** If you must change a split, metric, baseline, variant, seed, key hyperparameter, or implementation constraint, write `refine-logs/IMPLEMENTATION_DEVIATIONS.json` (plus a timestamped archive copy per `shared-references/output-versioning.md`) with one object per deviation using this minimum schema:
+   - `plan_reference` — the plan block / section / row being changed
+   - `deviation_type` — split | metric | baseline | variant | seed | hyperparameter | implementation_constraint | artifact | other
+   - `planned_value` — what the plan required
+   - `actual_value` — what was actually implemented or run
+   - `reason` — why the deviation happened
+   - `claim_impact` — none | narrow_scope | weakens_evidence | breaks_claim_test
+   - `artifact_impact` — which expected result files / tracker rows / audit inputs changed
+   - `status` — planned | accepted | unresolved
+   - `owner` — who decided / recorded the deviation
+   - `timestamp` — when the deviation record was written
+
+   If no deviations exist, write an explicit sidecar stating that the implementation matched plan at the checked scope instead of leaving downstream audit to guess.
+
+Do not silently "simplify" away a planned delta path, baseline, or evaluation constraint.
 
 ### Phase 2.5: Cross-Model Code Review (when CODE_REVIEW = true)
 
@@ -129,7 +158,10 @@ mcp__codex__codex:
     3. Are there any logic bugs (wrong loss function, incorrect data split, missing eval)?
     4. Is the evaluation metric computed correctly?
     5. **CRITICAL: Does evaluation use the dataset's actual ground truth labels — NOT another model's output as ground truth?** This is a common and severe bug.
-    6. Any potential issues (OOM risk, numerical instability, missing seeds)?
+    6. Does the implementation preserve the intended data flow from plan input → preprocessing → model path → outputs, or is the key modification bypassed?
+    7. Does the planned delta assertion appear reachable, observable, and strong enough to detect a no-effect implementation before large-scale deployment?
+    8. Do the saved outputs match the expected result artifacts for downstream audit / claim gating?
+    9. Any potential issues (OOM risk, numerical instability, missing seeds)?
 
     For each issue found, specify: CRITICAL / MAJOR / MINOR and the exact fix.
 ```
@@ -152,6 +184,9 @@ Wait for completion. Verify:
 - Metrics are computed and saved correctly
 - GPU memory usage is within bounds
 - Output format matches expectations
+- The planned **Delta Assertion** shows a detectable difference on the intended path (or at minimum proves the modification is live and not bypassed)
+
+If the sanity run completes but the delta assertion fails (identical outputs, identical metrics, unchanged critical activations, or other evidence of "no real effect"), treat that as a failure and debug before large-scale deployment. Do **not** scale a dead-path implementation just because it did not crash.
 
 If sanity fails → **auto-debug before giving up** (max 3 attempts):
 
@@ -303,6 +338,8 @@ Ready for Workflow 2:
 > - **[Output Versioning Protocol](../shared-references/output-versioning.md)** — write timestamped file first, then copy to fixed name
 > - **[Output Manifest Protocol](../shared-references/output-manifest.md)** — log every output to MANIFEST.md
 > - **[Output Language Protocol](../shared-references/output-language.md)** — respect the project's language setting
+>
+> Load-bearing run artifacts from this skill include `EXPERIMENT_RESULTS.md`, `EXPERIMENT_TRACKER.md`, parseable JSON/CSV result files, and `IMPLEMENTATION_DEVIATIONS.json` when plan conformance was checked or drift occurred.
 
 ## Key Rules
 
@@ -311,6 +348,7 @@ Ready for Workflow 2:
 - **Sanity first.** Never deploy a full suite without verifying the sanity stage passes.
 - **Reuse existing code.** Scan the project before writing new scripts. Extend, don't duplicate.
 - **Save everything as JSON/CSV.** The auto-review-loop needs parseable results, not just terminal output.
+- **Treat implementation deviations as a first-class output.** `IMPLEMENTATION_DEVIATIONS.json` is a load-bearing run artifact for downstream audit / claim gating, not an optional scratch note.
 - **Update the tracker.** `EXPERIMENT_TRACKER.md` should reflect real status after each run completes.
 - **Don't wait forever.** If an experiment exceeds 2x its estimated time, flag it and move on to the next milestone.
 - **Budget awareness.** Track GPU-hours against the plan's budget. Warn if approaching the limit.

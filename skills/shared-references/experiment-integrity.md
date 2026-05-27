@@ -34,6 +34,10 @@
 
 ## Evaluation Types (must be declared)
 
+These labels should match the plan's **Expectation Declaration** and be
+preserved through audit/claim artifacts so later stages do not silently
+upgrade a proxy evaluation into a stronger claim than the plan allowed.
+
 | Type | Label | What it means | Claim ceiling |
 |------|-------|---------------|---------------|
 | Real GT | `real_gt` | Dataset-provided ground truth | Full performance claims |
@@ -41,6 +45,11 @@
 | Self-supervised | `self_supervised_proxy` | No GT by design | Relative improvement only |
 | Simulation | `simulation_only` | Simulated environment | "In simulation" qualifier |
 | Human eval | `human_eval` | Human judges | Subject to inter-rater stats |
+
+If implementation or execution changes the intended evaluation type,
+write or update `refine-logs/IMPLEMENTATION_DEVIATIONS.json` so
+`/experiment-audit` and `/result-to-claim` can narrow claim scope
+explicitly instead of inferring silence as success.
 
 ## Who Checks
 

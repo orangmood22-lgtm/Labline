@@ -1,0 +1,40 @@
+# API 配置机制
+# 优先级: 个人 > 项目 > 组默认
+# 位置: ~/.aris/api.yaml (个人) 或 /aris/framework/deploy/api-default.yaml (组默认)
+
+# 支持多 provider，切换靠 active 字段
+active: "anthropic"
+
+providers:
+  anthropic:
+    # Coding plan (官方)
+    base_url: "https://api.anthropic.com"
+    api_key: ""             # 留空 = 读环境变量 ANTHROPIC_API_KEY
+    model: "claude-sonnet-4-20250514"
+
+  anthropic-proxy:
+    # 中转站
+    base_url: "https://your-proxy.com/anthropic"
+    api_key: ""
+    model: "claude-sonnet-4-20250514"
+
+  openai:
+    # Codex CLI 用
+    base_url: "https://api.openai.com/v1"
+    api_key: ""             # 留空 = 读 OPENAI_API_KEY
+    model: "gpt-5.5"
+    wire_api: "responses"
+
+  openai-proxy:
+    # 中转 (如 how88.top)
+    base_url: "https://how88.top/v1"
+    api_key: ""
+    model: "gpt-5.5"
+    wire_api: "responses"
+
+# VPN/代理 — 容器内自动设
+proxy:
+  enabled: false
+  http: ""                  # e.g. "http://host.docker.internal:7890"
+  https: ""
+  no_proxy: "127.0.0.1,localhost,10.*,172.16.*,192.168.*"

@@ -1,0 +1,16 @@
+{
+    "APIKEY": "sk-b7134b3696844a8dbb8f457ffe4aa493",
+    "Providers": [
+        {
+            "name": "deepseek",
+            "api_base_url": "https://api.deepseek.com/anthropic",
+            "api_key": "sk-b7134b3696844a8dbb8f457ffe4aa493",
+            "models": [
+                "deepseek-v4-pro[1m]"
+            ]
+        }
+    ],
+    "Router": {
+        "default": "deepseek,deepseek-v4-pro[1m]"
+    }
+}

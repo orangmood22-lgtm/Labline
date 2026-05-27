@@ -1,0 +1,60 @@
+{
+  "date": "2026-05-14",
+  "auditor": "e2e-drill-simulator (local, no Codex MCP)",
+  "overall_verdict": "fail",
+  "integrity_status": "fail",
+  "checks": {
+    "gt_provenance": {
+      "status": "pass",
+      "details": "Ground truth source is CIFAR-10 dataset labels (plan declares dataset-provided labels, eval uses torchvision)."
+    },
+    "score_normalization": {
+      "status": "pass",
+      "details": "No self-referencing normalization detected. Raw accuracy reported."
+    },
+    "result_existence": {
+      "status": "pass",
+      "details": "All expected result files exist: results/main_result.json, results/ablation_result.json"
+    },
+    "dead_code": {
+      "status": "warn",
+      "details": "ChannelAttention module is defined (class ChannelAttention) but never called in ToyClassifier.forward(). The attention module is a dead code path."
+    },
+    "scope": {
+      "status": "pass",
+      "details": "Evaluated on 50000 samples. Scope is adequate for a single-dataset claim."
+    },
+    "eval_type": "real_gt",
+    "split_correctness": {
+      "status": "fail",
+      "details": "SPLIT MISMATCH: Plan requires 'test' split, but evaluation ran on 'train' split. Result file shows split_used='train', num_samples=50000 (train has 50000, test has 10000). This is a data leakage risk — evaluation on training data does not validate generalization.",
+      "planned": "test",
+      "actual": "train"
+    },
+    "implementation_conformance": {
+      "status": "fail",
+      "details": "IMPLEMENTATION CONFORMANCE FAILURE: 2 unresolved deviation(s), 2 with claim_impact='breaks_claim_test'. Deviations: [split] planned='CIFAR-10 test split (10,000 images, train=False)' actual='CIFAR-10 train split (50,000 images, train=True)' impact=breaks_claim_test status=unresolved; [implementation_constraint] planned='ToyClassifier applies ChannelAttention module in forward(), producing different predictions from BaselineMLP' actual='ChannelAttention module is defined but never called in forward(); ToyClassifier forward path is identical to BaselineMLP' impact=breaks_claim_test status=unresolved",
+      "unresolved_count": 2,
+      "breaks_claim_count": 2
+    },
+    "delta_assertion": {
+      "status": "fail",
+      "details": "DELTA ASSERTION FAILED: ToyClassifier vs BaselineMLP delta=0.000000 (threshold=0.001), predictions_hash identical ('abc123def456'). The claimed core modification (channel attention) shows NO observable effect. Combined with dead-code detection (check D), the attention module is likely bypassed.",
+      "delta": 0.0,
+      "threshold": 0.001,
+      "predictions_identical": true
+    },
+    "evidence_mapping": {
+      "status": "fail",
+      "details": "EVIDENCE MAPPING BROKEN: Result files exist but cannot support claims due to split mismatch and/or zero delta. C1: file 'results/main_result.json' exists but criterion NOT met (delta=0.0) | C1: file 'results/ablation_result.json' exists but criterion NOT met (delta=0.002)"
+    }
+  },
+  "implementation_deviations_status": "present_with_unresolved_drift",
+  "recovery_context_status": "none",
+  "claims": [
+    {
+      "id": "C1",
+      "impact": "unsupported"
+    }
+  ]
+}

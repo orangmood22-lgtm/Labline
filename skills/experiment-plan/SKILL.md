@@ -92,12 +92,23 @@ For every kept block, fully specify:
 - **Success criterion**: what outcome would count as convincing evidence?
 - **Failure interpretation**: if the result is negative, what does it mean?
 - **Table / figure target**: where this result should appear in the paper
+- **Priority**: MUST-RUN / NICE-TO-HAVE
+
+In addition, the plan must make the downstream contract explicit using the shared experiment-chain vocabulary from `shared-references/integration-contract.md`:
+
+- **Expectation Declaration** — preconditions that must be true for the run to be meaningful (intended split, authoritative labels / targets, required baselines, checkpoints, hardware assumptions)
+- **Execution Spec** — exactly what will be run for each block (variants, datasets, metrics, seeds, key hyperparameters, major implementation constraints)
+- **Data Flow Summary** — how inputs, labels / targets, model outputs, and saved result files move through the evaluation path
+- **Delta Assertion** — what concrete difference should exist between the control / baseline and the modified system, plus how to detect the "no real effect" failure mode
+- **Evidence Mapping** — which blocks and result files are expected to support which claims downstream in `/experiment-audit` and `/result-to-claim`
 
 Special rules:
 
 - A **simplicity check** should usually compare the final method against either an overbuilt variant or a tempting extra component that the paper intentionally rejects.
 - A **frontier necessity check** should usually compare the chosen modern primitive against the strongest plausible simpler or older alternative.
 - If the proposal is intentionally non-frontier, say so explicitly and skip the frontier block instead of forcing one.
+- **Split / GT intent must be explicit.** Never leave the evaluation split or authoritative ground-truth source implicit.
+- **Every claim must map to concrete result artifacts.** If a claim cannot be tied to a specific block and output file, narrow or remove it.
 
 ### Phase 4: Turn the Plan Into an Execution Order
 
@@ -143,7 +154,13 @@ Use this structure:
 - Appendix can support:
 - Experiments intentionally cut:
 
-## Experiment Blocks
+## Expectation Declaration
+- Preconditions for a meaningful run:
+- Evaluation intent (split / authoritative GT):
+- Baseline availability assumptions:
+- Stop conditions before scale-up:
+
+## Execution Spec
 
 ### Block 1: [Name]
 - Claim tested:
@@ -159,6 +176,24 @@ Use this structure:
 
 ### Block 2: [Name]
 ...
+
+## Data Flow Summary
+- Inputs:
+- Transformation path:
+- Outputs:
+- Ground truth source:
+- Saved result files:
+
+## Delta Assertion
+- Control / baseline:
+- Expected concrete difference:
+- How to detect "no real effect":
+- Sanity trigger:
+
+## Evidence Mapping
+| Claim | Supporting Blocks | Expected Result Files | Notes for Audit / Claim Gate |
+|-------|-------------------|-----------------------|------------------------------|
+| C1    | B1, B2            | ...                   | ...                          |
 
 ## Run Order and Milestones
 | Milestone | Goal | Runs | Decision Gate | Cost | Risk |
@@ -181,6 +216,10 @@ Use this structure:
 - [ ] Simplicity is defended
 - [ ] Frontier contribution is justified or explicitly not claimed
 - [ ] Nice-to-have runs are separated from must-run runs
+- [ ] Expected split / GT source is explicit
+- [ ] Delta assertion is testable before scale-up
+- [ ] Every claim maps to concrete result files
+- [ ] Audit / claim gate has enough traceability to verify the chain
 ```
 
 #### Step 5.2: Write `refine-logs/EXPERIMENT_TRACKER.md`

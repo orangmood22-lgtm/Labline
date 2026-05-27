@@ -1,0 +1,12 @@
+{
+    "codex": {
+        "auth": {
+            "token": ""
+        }
+    },
+    "deepseekv4pro": {
+        "auth": {
+            "token": ""
+        }
+    }
+}

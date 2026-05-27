@@ -1,0 +1,18 @@
+{
+  "block": "B2_ablation",
+  "claim_tested": "C1 (novelty isolation)",
+  "dataset": "CIFAR-10",
+  "split_used": "train",
+  "planned_split": "test",
+  "results": {
+    "ToyClassifier_full": {
+      "accuracy": 0.782
+    },
+    "ToyClassifier_no_attention": {
+      "accuracy": 0.780
+    }
+  },
+  "delta": 0.002,
+  "success_criterion": "delta >= 0.02",
+  "criterion_met": false
+}

@@ -1,5 +1,12 @@
 # Project: {project-name}
 
+## 默认模式
+
+- caveman 模式默认开启（精简回复，保留技术准确度）
+- 代码修改遵循 TDD（仅限 Python/实验代码，文档/配置不要求）
+- 新设计/架构决策落地前必须 /grill-me 或 /grill-with-docs
+- 新用户首次使用建议跑 /git-guardrails
+
 ## Pipeline Status
 
 ```yaml

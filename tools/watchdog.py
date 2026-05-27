@@ -5,6 +5,11 @@ watchdog.py — Server-side unified monitoring daemon for ARIS.
 One process per server, monitors all registered tasks (training / download).
 Outputs per-task status JSON + aggregated summary.txt for low-frequency polling.
 
+Recovery contract:
+- `tasks.json`, per-task `status/*.json`, and `alerts.log` are the watchdog recovery receipts.
+- Persistent status files should let another process or later session distinguish running vs dead vs stalled without reconstructing state from terminal history.
+- See `skills/shared-references/recovery-state-contract.md` for the shared resumability expectations.
+
 Usage:
     # Start the daemon (runs in foreground, use tmux/screen to persist)
     python3 watchdog.py [--base-dir /tmp/aris-watchdog] [--interval 60]
@@ -37,6 +42,7 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -44,6 +50,26 @@ DEFAULT_BASE = "/tmp/aris-watchdog"
 DEFAULT_INTERVAL = 60
 SLOW_SPEED_THRESHOLD = 1 * 1024 * 1024  # 1 MB/s
 GPU_IDLE_THRESHOLD = 5  # percent
+
+
+def _atomic_write_text(path, content):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def _write_json_atomic(path, data):
+    _atomic_write_text(path, json.dumps(data, indent=2))
 
 
 def get_paths(base_dir):
@@ -92,7 +118,7 @@ def register_task(base_dir, task_json):
     task["registered_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     tasks.append(task)
 
-    paths["tasks"].write_text(json.dumps(tasks, indent=2))
+    _write_json_atomic(paths["tasks"], tasks)
     print(f"registered: {task['name']} ({task['type']}, {task['session_type']})")
 
 
@@ -106,7 +132,7 @@ def unregister_task(base_dir, name):
     except (json.JSONDecodeError, OSError):
         return
     tasks = [t for t in tasks if t["name"] != name]
-    paths["tasks"].write_text(json.dumps(tasks, indent=2))
+    _write_json_atomic(paths["tasks"], tasks)
     status_file = paths["status"] / f"{name}.json"
     if status_file.exists():
         status_file.unlink()
@@ -253,7 +279,7 @@ def check_training(task, status_dir):
 
 def write_status(path, data):
     """Write per-task status and append to alerts.log on anomalies."""
-    path.write_text(json.dumps(data))
+    _write_json_atomic(path, data)
 
     status = data.get("status", "OK")
     if status in ("DEAD", "STALLED", "IDLE", "ERROR"):
@@ -289,7 +315,7 @@ def write_summary(status_dir):
             continue
 
     summary = "\n".join(lines) if lines else "no tasks"
-    (status_dir / "summary.txt").write_text(summary)
+    _atomic_write_text(status_dir / "summary.txt", summary)
     return summary
 
 

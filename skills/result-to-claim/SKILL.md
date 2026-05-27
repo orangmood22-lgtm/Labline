@@ -23,17 +23,22 @@ Experiments produce numbers; this gate decides what those numbers *mean*. Collec
 
 Gather experiment data from whatever sources are available in the project:
 
-1. **W&B** (preferred): `wandb.Api().run("<entity>/<project>/<run_id>").history()` — metrics, training curves, comparisons
-2. **EXPERIMENT_LOG.md**: full results table with baselines and verdicts
-3. **EXPERIMENT_TRACKER.md**: check which experiments are DONE vs still running
-4. **Log files**: `ssh server "tail -100 /path/to/training.log"` if no other source
-5. **docs/research_contract.md**: intended claims and experiment design
+1. **`refine-logs/EXPERIMENT_PLAN.md`** (preferred planning contract): claim map, expectation declaration, execution spec, data flow summary, delta assertion, evidence mapping
+2. **`refine-logs/IMPLEMENTATION_DEVIATIONS.json`** (preferred drift receipt if implementation changed or was explicitly verified unchanged): plan drift records, claim-impact annotations, artifact-impact notes, or an explicit no-deviation receipt
+3. **W&B** (preferred runtime metrics if available): `wandb.Api().run("<entity>/<project>/<run_id>").history()` — metrics, training curves, comparisons
+4. **EXPERIMENT_LOG.md**: full results table with baselines and verdicts
+5. **EXPERIMENT_TRACKER.md**: check which experiments are DONE vs still running
+6. **Log files / result artifacts**: JSON, CSV, logs produced by the runs
+7. **docs/research_contract.md` or proposal docs**: intended claims and experiment design, if the plan is incomplete
 
 Assemble the key information:
-- What experiments were run (method, dataset, config)
+- What claims were intended to be tested
+- What experiments were run (method, dataset, split, config)
 - Main metrics and baseline comparisons (deltas)
-- The intended claim these experiments were designed to test
-- Any known confounds or caveats
+- Which result artifacts were expected to support each claim
+- Whether the planned execution spec (variants / seeds / metrics / constraints) was actually followed
+- What `IMPLEMENTATION_DEVIATIONS.json` says about drift, claim impact, artifact impact, and whether any unresolved deviations remain
+- Any known confounds, deviations, or caveats
 
 ### Step 2: Codex Judgment
 
@@ -47,10 +52,16 @@ mcp__codex__codex:
 
     I need you to judge whether experimental results support the intended claim.
 
-    Intended claim: [the claim these experiments test]
+    Planning contract:
+    - Claim map: [paste relevant rows from EXPERIMENT_PLAN.md]
+    - Expectation declaration: [split / GT / baseline assumptions]
+    - Execution spec: [planned variants / metrics / seeds / key implementation constraints]
+    - Delta assertion: [expected concrete difference and no-effect detector]
+    - Evidence mapping: [which result files are supposed to support which claims]
+    - Implementation deviations: [paste relevant entries from IMPLEMENTATION_DEVIATIONS.json, including claim_impact / artifact_impact / unresolved status]
 
     Experiments run:
-    [list experiments with method, dataset, metrics]
+    [list experiments with method, dataset, split, metrics]
 
     Results:
     [paste key numbers, comparison deltas, significance]
@@ -58,8 +69,8 @@ mcp__codex__codex:
     Baselines:
     [baseline numbers and sources — reproduced or from paper]
 
-    Known caveats:
-    [any confounding factors, limited datasets, missing comparisons]
+    Known caveats / deviations:
+    [confounds, missing comparisons, implementation deviations]
 
     Please evaluate:
     1. claim_supported: yes | partial | no
@@ -69,6 +80,8 @@ mcp__codex__codex:
     5. suggested_claim_revision: if the claim should be strengthened, weakened, or reframed
     6. next_experiments_needed: specific experiments to fill gaps (if any)
     7. confidence: high | medium | low
+    8. evidence_mapping_status: aligned | partial | broken
+    9. delta_assertion_status: satisfied | weak | failed | unavailable
 
     Be honest. Do not inflate claims beyond what the data supports.
     A single positive result on one dataset does not support a general claim.
@@ -86,6 +99,10 @@ Extract structured fields from Codex response:
 - suggested_claim_revision: "..."
 - next_experiments_needed: "..."
 - confidence: high | medium | low
+- evidence_mapping_status: aligned | partial | broken
+- delta_assertion_status: satisfied | weak | failed | unavailable
+- implementation_deviation_impact: none | narrow_scope | weakens_evidence | breaks_claim_test | unknown
+- recovery_context_status: none | reviewed | relevant_warning | unknown
 ```
 
 ### Step 3.5: Check Experiment Integrity (if audit exists)
@@ -95,8 +112,26 @@ Extract structured fields from Codex response:
 ```
 if EXPERIMENT_AUDIT.json exists:
     read integrity_status from file
+    read split_correctness / implementation_conformance / delta_assertion / evidence_mapping checks
     attach to verdict output:
         integrity_status: pass | warn | fail
+
+    if implementation_conformance == fail:
+        treat planned-claim coverage as broken unless the verdict is explicitly narrowed to the actually implemented scope
+
+    if IMPLEMENTATION_DEVIATIONS.json reports any item with status == "unresolved" or claim_impact == "breaks_claim_test":
+        treat the affected claim as unsupported unless the verdict is explicitly narrowed away from the deviated scope
+        append to verdict: "[PLAN DRIFT] — unresolved implementation deviation affects claim coverage"
+        downgrade confidence by one level unless already "low"
+
+    if IMPLEMENTATION_DEVIATIONS.json reports claim_impact == "narrow_scope" or "weakens_evidence":
+        require the verdict to state the narrower supported scope or missing evidence explicitly
+
+    if delta_assertion == fail:
+        treat the core mechanism claim as unsupported unless strong contrary evidence exists elsewhere
+
+    if evidence_mapping == fail:
+        label the verdict as claim-traceability-broken even if some numbers look positive
 
     if integrity_status == "fail":
         append to verdict: "[INTEGRITY CONCERN] — audit found issues, see EXPERIMENT_AUDIT.md"
@@ -110,9 +145,24 @@ else:
     (this does NOT block anything — pipeline continues normally)
 ```
 
-See `shared-references/experiment-integrity.md` for the full integrity protocol.
+### Step 3.6: Write Claim Verdict Artifact
 
-### Step 4: Route Based on Verdict
+Write a load-bearing verdict artifact (markdown, JSON, or both according to project conventions) that records at minimum:
+- claim_supported
+- confidence
+- what_results_support
+- what_results_dont_support
+- missing_evidence
+- suggested_claim_revision
+- evidence_mapping_status
+- delta_assertion_status
+- implementation_deviation_impact
+- recovery_context_status
+- integrity_status (if audit exists)
+
+This artifact is the receipt for downstream paper-writing or reviewer-facing claim edits. If the verdict is rerun, preserve timestamped history per `shared-references/output-versioning.md`.
+
+
 
 #### `no` — Claim not supported
 
@@ -203,6 +253,7 @@ if research-wiki/ exists:
 - If `confidence` is low, treat the judgment as inconclusive and add experiments rather than committing to a claim.
 - If Codex MCP is unavailable (call fails), CC makes its own judgment and marks it `[pending Codex review]` — do not block the pipeline.
 - Always record the verdict and reasoning in findings.md, regardless of outcome.
+- Final claim outputs must surface implementation deviation impact and any relevant recovery-state warnings when those affect scope or confidence.
 
 ## Review Tracing
 

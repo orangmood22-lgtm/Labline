@@ -57,6 +57,11 @@ from typing import Any
 _API_BASE = "https://api.semanticscholar.org/graph/v1"
 _USER_AGENT = "s2-fetch/1.1"
 _DEFAULT_TIMEOUT = 30
+_RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
+_RETRYABLE_PARSE_STATUS_CODES = {200, 502, 503, 504}
+# Shared recovery semantics: retryable_http / retryable_parse use bounded exponential backoff;
+# validation and deterministic logic failures should surface immediately.
+# See skills/shared-references/recovery-state-contract.md.
 
 # Good default for relevance search / single-paper fetch
 _DEFAULT_FIELDS = (
@@ -83,6 +88,10 @@ def _headers() -> dict[str, str]:
     return headers
 
 
+def _retry_delay_seconds(attempt: int, *, base: float = 1.5, cap: float = 20.0) -> float:
+    return min(base * (2 ** attempt), cap)
+
+
 def _request_json(url: str, *, retries: int = 2, timeout: int = _DEFAULT_TIMEOUT) -> dict[str, Any]:
     req = urllib.request.Request(url, headers=_headers())
     last_err: Exception | None = None
@@ -90,6 +99,7 @@ def _request_json(url: str, *, retries: int = 2, timeout: int = _DEFAULT_TIMEOUT
     for attempt in range(retries + 1):
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", 200)
                 raw = resp.read().decode("utf-8")
             return json.loads(raw)
         except urllib.error.HTTPError as exc:
@@ -99,8 +109,8 @@ def _request_json(url: str, *, retries: int = 2, timeout: int = _DEFAULT_TIMEOUT
             except Exception:
                 pass
 
-            if exc.code in (429, 500, 502, 503, 504) and attempt < retries:
-                time.sleep(1.5 * (attempt + 1))
+            if exc.code in _RETRYABLE_HTTP_CODES and attempt < retries:
+                time.sleep(_retry_delay_seconds(attempt))
                 last_err = exc
                 continue
 
@@ -110,11 +120,15 @@ def _request_json(url: str, *, retries: int = 2, timeout: int = _DEFAULT_TIMEOUT
             raise RuntimeError(message) from exc
         except urllib.error.URLError as exc:
             if attempt < retries:
-                time.sleep(1.5 * (attempt + 1))
+                time.sleep(_retry_delay_seconds(attempt))
                 last_err = exc
                 continue
             raise RuntimeError(f"Network error: {exc}") from exc
         except json.JSONDecodeError as exc:
+            if status in _RETRYABLE_PARSE_STATUS_CODES and attempt < retries:
+                time.sleep(_retry_delay_seconds(attempt))
+                last_err = exc
+                continue
             raise RuntimeError("Failed to parse JSON response from Semantic Scholar API") from exc
 
     raise RuntimeError(f"Request failed after retries: {last_err}")

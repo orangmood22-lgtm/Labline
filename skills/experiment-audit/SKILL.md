@@ -114,9 +114,40 @@ mcp__codex__codex:
     - simulation_only: simulated environment
     - human_eval: human judges
 
+    ### G. Split Correctness
+    Using `EXPERIMENT_PLAN.md` Expectation Declaration and the implementation/config files:
+    1. Which split was intended for each block?
+    2. Which split is actually used in code and result files?
+    3. Is there any train/val/test leakage or silent fallback to a different split?
+    FAIL if: evaluation runs on the wrong split without explicit labeling and justification.
+
+    ### H. Implementation Conformance
+    Compare `EXPERIMENT_PLAN.md` Execution Spec against the actual code/config:
+    1. Are the planned variants, baselines, seeds, and metrics the ones that actually ran?
+    2. Was any key implementation constraint silently changed?
+    3. If `refine-logs/IMPLEMENTATION_DEVIATIONS.json` exists, is it honest, complete, and consistent with the observed code / configs / result artifacts?
+    4. If the sidecar says there were no deviations, does the implementation actually support that claim?
+    WARN if: minor drift exists but the core claim remains testable.
+    FAIL if: the code meaningfully diverges from the planned claim test while results are still presented as if the plan was followed.
+
+    ### I. Delta Assertion / Core Modification Effect
+    Using the plan's Delta Assertion plus code and result artifacts:
+    1. Did the modified system produce a concrete difference from its control / baseline?
+    2. If outputs are identical or effectively unchanged, is the modification on the critical forward / evaluation path at all?
+    3. Is there evidence of a dead path, bypassed component, or no-op change?
+    FAIL if: the claimed core modification shows no observable effect and the paper still treats it as a meaningful experiment.
+
+    ### J. Evidence Mapping Traceability
+    Using `EXPERIMENT_PLAN.md` Evidence Mapping and downstream claim text:
+    1. Can each claim be traced to specific blocks and result files?
+    2. Do those files actually support the stated claim strength?
+    3. Are any claims relying on missing, mismatched, or non-audited artifacts?
+    WARN if: traceability is partial.
+    FAIL if: a central claim cannot be traced back to concrete evidence artifacts.
+
     ## Output Format
 
-    For each check (A-F), report:
+    For each check (A-J), report:
     - Status: PASS | WARN | FAIL
     - Evidence: exact file:line references
     - Details: what specifically was found
@@ -161,8 +192,25 @@ Parse the reviewer's response and write `EXPERIMENT_AUDIT.md`:
 ### F. Evaluation Type: [real_gt | synthetic_proxy | ...]
 [classification + evidence]
 
+### G. Split Correctness: [PASS|WARN|FAIL]
+[details]
+
+### H. Implementation Conformance: [PASS|WARN|FAIL]
+[details]
+
+### I. Delta Assertion / Core Modification Effect: [PASS|WARN|FAIL]
+[details]
+
+### J. Evidence Mapping Traceability: [PASS|WARN|FAIL]
+[details]
+
 ## Action Items
 - [specific fixes if WARN or FAIL]
+
+## Plan Drift and Recovery Context
+- **Implementation deviations sidecar**: [missing | no-deviation receipt | present with accepted drift | present with unresolved drift]
+- **Recovery state context**: [none | queue/watchdog/fetch state reviewed | resume/retry history relevant to this audit]
+- **Impact on audit confidence**: [none | lowers confidence | blocks claim coverage]
 
 ## Claim Impact
 - Claim 1: [supported | needs qualifier | unsupported]
@@ -183,8 +231,14 @@ Also write `EXPERIMENT_AUDIT.json` for machine consumption:
     "result_existence": {"status": "pass", "details": "..."},
     "dead_code": {"status": "pass", "details": "..."},
     "scope": {"status": "warn", "details": "..."},
-    "eval_type": "real_gt"
+    "eval_type": "real_gt",
+    "split_correctness": {"status": "pass", "details": "..."},
+    "implementation_conformance": {"status": "warn", "details": "..."},
+    "delta_assertion": {"status": "fail", "details": "..."},
+    "evidence_mapping": {"status": "warn", "details": "..."}
   },
+  "implementation_deviations_status": "present_with_unresolved_drift",
+  "recovery_context_status": "reviewed",
   "claims": [
     {"id": "C1", "impact": "supported"},
     {"id": "C2", "impact": "needs_qualifier"}
