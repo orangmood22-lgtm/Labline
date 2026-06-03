@@ -214,15 +214,44 @@ def compute_impact(nodes: dict, skill_name: str) -> dict:
 
 
 def generate_html(nodes: dict, dag_data: dict) -> str:
-    """Generate self-contained HTML visualization page."""
+    """Generate self-contained HTML visualization page using Cytoscape.js."""
     invoked_by = compute_invoked_by(nodes)
-    # Build nodes with invoked_by for the HTML
+
+    # Classify executor sub-roles
+    EXECUTOR_CODER = {"tdd", "diagnose", "git-guardrails", "experiment-bridge"}
+    EXECUTOR_DEPLOYER = {"run-experiment", "monitor-experiment", "sync", "framework-update", "system-profile", "vast-gpu", "serverless-modal", "experiment-queue", "training-check"}
+    EXECUTOR_WRITER = {"paper-write", "paper-compile", "paper-figure", "paper-illustration", "paper-illustration-image2", "paper-slides", "paper-poster", "paper-talk", "rebuttal", "claims-drafting", "formula-derivation", "figure-spec", "figure-description", "mermaid-diagram", "pixel-art", "slides-polish", "proof-writer", "proof-checker", "patent-pipeline", "patent-novelty-check", "patent-review", "grant-proposal", "invention-structuring", "specification-writing", "embodiment-description", "jurisdiction-format", "prior-art-search", "writing-systems-papers"}
+
+    # Build enriched nodes
     nodes_json = []
     for name in sorted(nodes.keys()):
         node = dict(nodes[name])
         node["invoked_by"] = invoked_by.get(name, [])
+        # Determine layer
+        caller = node.get("caller", "any")
+        if caller == "leader":
+            node["layer"] = "orchestration"
+        elif caller == "executor":
+            if name in EXECUTOR_CODER:
+                node["layer"] = "executor-coder"
+            elif name in EXECUTOR_DEPLOYER:
+                node["layer"] = "executor-deployer"
+            elif name in EXECUTOR_WRITER:
+                node["layer"] = "executor-writer"
+            else:
+                node["layer"] = "executor"
+        else:
+            node["layer"] = "tools"
         nodes_json.append(node)
     nodes_json_str = json.dumps(nodes_json, ensure_ascii=False, indent=2)
+
+    # Build edges
+    edges_json = []
+    for name in sorted(nodes.keys()):
+        for target in nodes[name].get("invokes", []):
+            if target in nodes:
+                edges_json.append({"source": name, "target": target})
+    edges_json_str = json.dumps(edges_json, ensure_ascii=False, indent=2)
 
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -230,260 +259,311 @@ def generate_html(nodes: dict, dag_data: dict) -> str:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ARIS Skill DAG</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.28/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5/dist/cytoscape-dagre.min.js"></script>
 <style>
-* {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }}
-#header {{ padding: 16px 24px; background: #16213e; border-bottom: 1px solid #0f3460; display: flex; align-items: center; gap: 16px; }}
-#header h1 {{ font-size: 20px; color: #e94560; }}
-#stats {{ display: flex; gap: 24px; font-size: 13px; color: #a0a0a0; }}
-#stats span {{ color: #e94560; font-weight: bold; }}
-#toolbar {{ padding: 12px 24px; background: #16213e; border-bottom: 1px solid #0f3460; display: flex; gap: 12px; align-items: center; }}
-#search {{ padding: 8px 12px; border-radius: 6px; border: 1px solid #0f3460; background: #1a1a2e; color: #e0e0e0; width: 300px; font-size: 14px; }}
-#search:focus {{ outline: none; border-color: #e94560; }}
-.filter-btn {{ padding: 6px 14px; border-radius: 6px; border: 1px solid #0f3460; background: transparent; color: #a0a0a0; cursor: pointer; font-size: 13px; }}
-.filter-btn.active {{ background: #e94560; color: white; border-color: #e94560; }}
-.filter-btn:hover {{ border-color: #e94560; }}
-#container {{ display: flex; height: calc(100vh - 110px); }}
-#graph {{ flex: 3; overflow: auto; padding: 24px; }}
-#sidebar {{ width: 360px; background: #16213e; border-left: 1px solid #0f3460; overflow-y: auto; padding: 0; }}
-#detail {{ padding: 20px; }}
-#detail h2 {{ color: #e94560; font-size: 18px; margin-bottom: 12px; word-break: break-all; }}
-#detail .caller-badge {{ display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }}
-.badge-leader {{ background: #ff9999; color: #660000; }}
-.badge-executor {{ background: #99ccff; color: #003366; }}
-.badge-any {{ background: #99ff99; color: #006600; }}
-.badge-unknown {{ background: #cccccc; color: #333333; }}
-.dep-section {{ margin-bottom: 16px; }}
-.dep-section h3 {{ font-size: 14px; color: #a0a0a0; margin-bottom: 8px; border-bottom: 1px solid #0f3460; padding-bottom: 4px; }}
-.dep-list {{ list-style: none; }}
-.dep-list li {{ padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 13px; cursor: pointer; }}
-.dep-list li:hover {{ background: #0f3460; }}
-.dep-list .cnt {{ color: #e94560; font-weight: bold; }}
-.impact-box {{ background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; padding: 12px; margin: 12px 0; }}
-.impact-box h4 {{ font-size: 13px; color: #e94560; margin-bottom: 8px; }}
-.impact-stat {{ display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }}
-.impact-stat .num {{ color: #e94560; font-weight: bold; }}
-#placeholder {{ text-align: center; padding: 60px 20px; color: #555; }}
-#placeholder p {{ margin: 8px 0; font-size: 14px; }}
-.mermaid {{ display: flex; justify-content: center; }}
-#export-bar {{ padding: 8px 24px; background: #16213e; border-top: 1px solid #0f3460; display: flex; gap: 8px; }}
-.export-btn {{ padding: 4px 12px; border-radius: 4px; border: 1px solid #0f3460; background: transparent; color: #a0a0a0; cursor: pointer; font-size: 12px; }}
-.export-btn:hover {{ border-color: #e94560; color: #e94560; }}
+:root {{
+  --bg: #fafafa; --surface: #ffffff; --surface2: #f5f5f7; --border: #d2d2d7;
+  --text: #1d1d1f; --text2: #6e6e73; --text3: #86868b; --accent: #0071e3;
+  --accent2: #2997ff; --danger: #ff3b30; --success: #34c759; --warning: #ff9500;
+  --orchestration: #bf5af2; --exec-coder: #0071e3; --exec-deployer: #30d158;
+  --exec-writer: #ff9500; --exec-other: #64d2ff; --tools: #8e8e93;
+  --radius: 12px; --shadow: 0 2px 8px rgba(0,0,0,0.04); --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+}}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }}
+#nav {{ position:sticky; top:0; z-index:100; background:rgba(250,250,250,0.8); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid var(--border); padding:12px 32px; display:flex; align-items:center; gap:20px; }}
+#nav h1 {{ font-size:18px; font-weight:600; letter-spacing:-0.02em; }}
+#nav h1 span {{ color:var(--accent); }}
+#stats {{ display:flex; gap:16px; font-size:12px; color:var(--text3); font-weight:500; }}
+#stats b {{ color:var(--text); font-weight:600; }}
+#toolbar {{ padding:10px 32px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }}
+#search {{ padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); width:260px; font-size:13px; font-family:inherit; transition:all .2s; }}
+#search:focus {{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,113,227,0.15); }}
+.btn {{ padding:5px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; font-size:12px; font-weight:500; font-family:inherit; transition:all .2s; }}
+.btn:hover {{ border-color:var(--accent); color:var(--accent); }}
+.btn.active {{ background:var(--accent); color:#fff; border-color:var(--accent); }}
+.btn-group {{ display:flex; gap:4px; }}
+.btn-group .btn {{ border-radius:0; }}
+.btn-group .btn:first-child {{ border-radius:20px 0 0 20px; }}
+.btn-group .btn:last-child {{ border-radius:0 20px 20px 0; }}
+#main {{ display:flex; height:calc(100vh - 98px); }}
+#cy {{ flex:1; background:var(--surface); position:relative; }}
+#cy canvas {{ left:0; }}
+#sidebar {{ width:340px; background:var(--surface); border-left:1px solid var(--border); overflow-y:auto; transition:width .3s; }}
+#sidebar.collapsed {{ width:0; overflow:hidden; }}
+.detail-header {{ padding:20px 20px 12px; border-bottom:1px solid var(--border); }}
+.detail-header h2 {{ font-size:16px; font-weight:600; letter-spacing:-0.01em; margin-bottom:6px; }}
+.badge {{ display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:600; margin-right:6px; }}
+.badge-orchestration {{ background:#f0e6ff; color:#7c3aed; }}
+.badge-executor-coder {{ background:#e6f0ff; color:#0071e3; }}
+.badge-executor-deployer {{ background:#e6ffe6; color:#16a34a; }}
+.badge-executor-writer {{ background:#fff5e6; color:#b45309; }}
+.badge-executor {{ background:#e6f9ff; color:#0891b2; }}
+.badge-tools {{ background:#f0f0f0; color:#6b7280; }}
+.impact-card {{ margin:16px 20px; background:var(--surface2); border-radius:var(--radius); padding:14px; }}
+.impact-card h4 {{ font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; }}
+.impact-row {{ display:flex; justify-content:space-between; padding:4px 0; font-size:13px; }}
+.impact-row .num {{ font-weight:600; color:var(--accent); }}
+.dep-section {{ padding:0 20px; margin-bottom:12px; }}
+.dep-section h3 {{ font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; padding:8px 0 6px; border-bottom:1px solid var(--border); }}
+.dep-list {{ list-style:none; }}
+.dep-list li {{ padding:5px 10px; margin:2px 0; border-radius:6px; font-size:13px; cursor:pointer; transition:background .15s; }}
+.dep-list li:hover {{ background:var(--surface2); }}
+#placeholder {{ text-align:center; padding:80px 20px; color:var(--text3); }}
+#placeholder h3 {{ font-size:14px; font-weight:500; margin-bottom:4px; }}
+#placeholder p {{ font-size:12px; }}
+#zoom-bar {{ position:absolute; bottom:20px; right:20px; display:flex; flex-direction:column; gap:4px; z-index:10; }}
+#zoom-bar button {{ width:36px; height:36px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); transition:all .2s; }}
+#zoom-bar button:hover {{ background:var(--surface2); border-color:var(--accent); color:var(--accent); }}
+#legend {{ position:absolute; top:16px; left:16px; background:rgba(255,255,255,0.9); backdrop-filter:blur(8px); border-radius:var(--radius); padding:12px 16px; font-size:11px; box-shadow:var(--shadow); z-index:10; }}
+#legend h4 {{ font-weight:600; margin-bottom:6px; font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; }}
+.legend-item {{ display:flex; align-items:center; gap:6px; margin:3px 0; }}
+.legend-dot {{ width:10px; height:10px; border-radius:3px; }}
+#layout-toggle {{ position:absolute; top:16px; right:16px; z-index:10; }}
 </style>
 </head>
 <body>
-<div id="header">
-  <h1>ARIS Skill DAG</h1>
+<div id="nav">
+  <h1>ARIS <span>Skill DAG</span></h1>
   <div id="stats">
-    Skills: <span id="stat-total">{len(nodes)}</span> &nbsp;|&nbsp;
-    Edges: <span id="stat-edges">{dag_data["stats"]["total_edges"]}</span> &nbsp;|&nbsp;
-    Leader: <span id="stat-leader">{dag_data["stats"]["caller_distribution"].get("leader", 0)}</span> &nbsp;|&nbsp;
-    Executor: <span id="stat-executor">{dag_data["stats"]["caller_distribution"].get("executor", 0)}</span> &nbsp;|&nbsp;
-    Any: <span id="stat-any">{dag_data["stats"]["caller_distribution"].get("any", 0)}</span>
+    <span><b>{len(nodes)}</b> skills</span>
+    <span><b>{dag_data["stats"]["total_edges"]}</b> edges</span>
+    <span><b>{dag_data["stats"]["caller_distribution"].get("leader", 0)}</b> leader</span>
+    <span><b>{dag_data["stats"]["caller_distribution"].get("executor", 0)}</b> executor</span>
+    <span><b>{dag_data["stats"]["caller_distribution"].get("any", 0)}</b> any</span>
   </div>
 </div>
 <div id="toolbar">
   <input type="text" id="search" placeholder="Search skills..." />
-  <button class="filter-btn active" data-filter="all">All</button>
-  <button class="filter-btn" data-filter="leader">Leader</button>
-  <button class="filter-btn" data-filter="executor">Executor</button>
-  <button class="filter-btn" data-filter="any">Any</button>
-  <button class="filter-btn" data-filter="impact">Impact Mode</button>
+  <div class="btn-group">
+    <button class="btn active" data-filter="all">All</button>
+    <button class="btn" data-filter="orchestration">Orchestration</button>
+    <button class="btn" data-filter="executor-coder">Coder</button>
+    <button class="btn" data-filter="executor-deployer">Deployer</button>
+    <button class="btn" data-filter="executor-writer">Writer</button>
+    <button class="btn" data-filter="tools">Tools</button>
+  </div>
+  <button class="btn" id="impact-btn" data-filter="impact">⚡ Impact</button>
+  <div class="btn-group" id="layout-btns">
+    <button class="btn active" data-layout="dagre-tb">↓ TB</button>
+    <button class="btn" data-layout="dagre-lr">→ LR</button>
+    <button class="btn" data-layout="breadthfirst">◎ BFS</button>
+    <button class="btn" data-layout="concentric">◉ Circle</button>
+  </div>
 </div>
-<div id="container">
-  <div id="graph">
-    <div class="mermaid" id="mermaid-graph"></div>
+<div id="main">
+  <div id="cy">
+    <div id="legend">
+      <h4>Layers</h4>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--orchestration)"></div>Orchestration</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--exec-coder)"></div>Executor · Coder</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--exec-deployer)"></div>Executor · Deployer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--exec-writer)"></div>Executor · Writer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--exec-other)"></div>Executor · Other</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--tools)"></div>Tools / Search</div>
+    </div>
+    <div id="zoom-bar">
+      <button onclick="cy.zoom(cy.zoom()*1.3);cy.center()">+</button>
+      <button onclick="cy.zoom(cy.zoom()/1.3);cy.center()">−</button>
+      <button onclick="cy.fit(undefined,50)">⊡</button>
+    </div>
   </div>
   <div id="sidebar">
-    <div id="placeholder">
-      <p>Click a skill node to see details</p>
-      <p style="font-size:12px">Impact Mode: click a node to see what it affects</p>
-    </div>
+    <div id="placeholder"><h3>Select a skill</h3><p>Click a node to see details & impact</p></div>
     <div id="detail" style="display:none"></div>
   </div>
 </div>
-<div id="export-bar">
-  <button class="export-btn" onclick="copyMermaid()">Copy Mermaid</button>
-  <button class="export-btn" onclick="downloadSVG()">Download SVG</button>
-</div>
-
 <script>
 const DAG_NODES = {nodes_json_str};
-
+const DAG_EDGES = {edges_json_str};
 const nodeMap = {{}};
 DAG_NODES.forEach(n => nodeMap[n.name] = n);
 
 let currentFilter = 'all';
 let impactMode = false;
 let selectedSkill = null;
+let currentLayout = 'dagre-tb';
 
-mermaid.initialize({{ startOnLoad: false, securityLevel: 'loose', theme: 'dark',
-  flowchart: {{ htmlLabels: true, curve: 'basis' }} }});
+const LAYER_COLORS = {{
+  'orchestration': '#bf5af2', 'executor-coder': '#0071e3', 'executor-deployer': '#30d158',
+  'executor-writer': '#ff9500', 'executor': '#64d2ff', 'tools': '#8e8e93'
+}};
+const LAYER_BG = {{
+  'orchestration': '#f0e6ff', 'executor-coder': '#e6f0ff', 'executor-deployer': '#e6ffe6',
+  'executor-writer': '#fff5e6', 'executor': '#e6f9ff', 'tools': '#f0f0f0'
+}};
 
-function buildMermaidDef(filter, searchTerm, highlightSkill) {{
-  const lines = ['graph TD'];
-  const filtered = DAG_NODES.filter(n => {{
-    if (filter && filter !== 'all' && filter !== 'impact' && n.caller !== filter) return false;
-    if (searchTerm && !n.name.includes(searchTerm.toLowerCase())) return false;
-    return true;
+const cyElements = [];
+DAG_NODES.forEach(n => {{
+  cyElements.push({{
+    data: {{
+      id: n.name, label: n.name, caller: n.caller, layer: n.layer,
+      invokes: n.invokes || [], invoked_by: n.invoked_by || [],
+      produces: n.produces || [], consumes: n.consumes || []
+    }}
   }});
-  const names = new Set(filtered.map(n => n.name));
-  // Always include highlight skill and its deps
-  if (highlightSkill) {{
-    names.add(highlightSkill);
-    (nodeMap[highlightSkill].invokes || []).forEach(n => names.add(n));
-    (nodeMap[highlightSkill].invoked_by || []).forEach(n => names.add(n));
+}});
+DAG_EDGES.forEach(e => {{
+  cyElements.push({{ data: {{ source: e.source, target: e.target }} }});
+}});
+
+const cy = cytoscape({{
+  container: document.getElementById('cy'),
+  elements: cyElements,
+  style: [
+    {{ selector: 'node', style: {{
+      'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center',
+      'font-size': 10, 'font-family': 'Inter, sans-serif', 'font-weight': 500,
+      'color': '#1d1d1f', 'text-wrap': 'wrap', 'text-max-width': 80,
+      'width': 28, 'height': 28, 'shape': 'round-rectangle',
+      'corner-radius': 6, 'border-width': 2, 'border-opacity': 0.8,
+      'background-color': 'mapData(layer, "orchestration", 0, "tools", 1, #8e8e93)',
+      'border-color': '#d2d2d7', 'padding': 4,
+      'transition-property': 'border-color, border-width, opacity',
+      'transition-duration': '0.15s'
+    }}}},
+    {{ selector: 'node[layer="orchestration"]', style: {{ 'background-color': '#f0e6ff', 'border-color': '#bf5af2' }} }},
+    {{ selector: 'node[layer="executor-coder"]', style: {{ 'background-color': '#e6f0ff', 'border-color': '#0071e3' }} }},
+    {{ selector: 'node[layer="executor-deployer"]', style: {{ 'background-color': '#e6ffe6', 'border-color': '#30d158' }} }},
+    {{ selector: 'node[layer="executor-writer"]', style: {{ 'background-color': '#fff5e6', 'border-color': '#ff9500' }} }},
+    {{ selector: 'node[layer="executor"]', style: {{ 'background-color': '#e6f9ff', 'border-color': '#64d2ff' }} }},
+    {{ selector: 'node[layer="tools"]', style: {{ 'background-color': '#f0f0f0', 'border-color': '#8e8e93' }} }},
+    {{ selector: 'node:active', style: {{ 'border-width': 3, 'overlay-opacity': 0 }} }},
+    {{ selector: 'node.selected', style: {{ 'border-width': 3, 'border-color': '#0071e3', 'font-weight': 700 }} }},
+    {{ selector: 'node.dimmed', style: {{ 'opacity': 0.2 }} }},
+    {{ selector: 'node.highlighted', style: {{ 'opacity': 1, 'border-width': 3 }} }},
+    {{ selector: 'edge', style: {{
+      'width': 1.2, 'line-color': '#d2d2d7', 'curve-style': 'bezier',
+      'target-arrow-shape': 'triangle', 'target-arrow-color': '#d2d2d7',
+      'arrow-scale': 0.6, 'opacity': 0.6
+    }}}},
+    {{ selector: 'edge.highlighted', style: {{ 'line-color': '#0071e3', 'target-arrow-color': '#0071e3', 'width': 2, 'opacity': 1 }} }},
+    {{ selector: 'edge.dimmed', style: {{ 'opacity': 0.08 }} }}
+  ],
+  layout: {{ name: 'dagre', rankDir: 'TB', spacingFactor: 1.2, padding: 50 }},
+  minZoom: 0.3, maxZoom: 4, wheelSensitivity: 0.3
+}});
+
+// Click handler
+cy.on('tap', 'node', evt => {{
+  const node = evt.target;
+  onNodeClick(node.id());
+}});
+
+cy.on('tap', evt => {{
+  if (evt.target === cy) {{
+    cy.elements().removeClass('selected dimmed highlighted');
+    document.getElementById('detail').style.display = 'none';
+    document.getElementById('placeholder').style.display = 'block';
+    selectedSkill = null;
   }}
-
-  const leaderN = [], executorN = [], anyN = [];
-  filtered.forEach(n => {{
-    const inv = (n.invokes || []).filter(t => names.has(t));
-    inv.forEach(t => lines.push('    ' + n.name.replace(/-/g,'_') + ' --> ' + t.replace(/-/g,'_')));
-    if (n.caller === 'leader') leaderN.push(n.name.replace(/-/g,'_'));
-    else if (n.caller === 'executor') executorN.push(n.name.replace(/-/g,'_'));
-    else anyN.push(n.name.replace(/-/g,'_'));
-  }});
-
-  lines.push('');
-  if (leaderN.length) lines.push('    classDef leader fill:#ff9999,stroke:#cc0000,color:#660000');
-  if (executorN.length) lines.push('    classDef executor fill:#99ccff,stroke:#0066cc,color:#003366');
-  if (anyN.length) lines.push('    classDef any fill:#99ff99,stroke:#009900,color:#006600');
-  // Batch classes (Mermaid has limits per class line)
-  const batch = (arr, cls) => {{
-    for (let i = 0; i < arr.length; i += 20)
-      lines.push('    class ' + arr.slice(i, i+20).join(',') + ' ' + cls);
-  }};
-  if (leaderN.length) batch(leaderN, 'leader');
-  if (executorN.length) batch(executorN, 'executor');
-  if (anyN.length) batch(anyN, 'any');
-
-  if (highlightSkill) {{
-    lines.push('    classDef highlighted fill:#e94560,stroke:#fff,color:#fff');
-    lines.push('    class ' + highlightSkill.replace(/-/g,'_') + ' highlighted');
-  }}
-  return lines.join('\\n');
-}}
-
-async function renderGraph(filter, search, highlight) {{
-  const def = buildMermaidDef(filter, search, highlight);
-  try {{
-    const {{ svg }} = await mermaid.render('mermaid-svg', def);
-    document.getElementById('mermaid-graph').innerHTML = svg;
-    // Add click handlers to nodes
-    document.querySelectorAll('.node').forEach(el => {{
-      el.style.cursor = 'pointer';
-      el.addEventListener('click', () => {{
-        const id = el.id?.replace(/^flowchart-/, '').replace(/-\\d+$/, '') || '';
-        const name = id.replace(/_/g, '-');
-        if (nodeMap[name]) onNodeClick(name);
-      }});
-    }});
-  }} catch(e) {{
-    console.error('Mermaid render error:', e);
-  }}
-}}
+}});
 
 function onNodeClick(name) {{
   selectedSkill = name;
   const n = nodeMap[name];
-  const detail = document.getElementById('detail');
+  cy.elements().removeClass('selected dimmed highlighted');
+  cy.$('#'+name).addClass('selected');
+
+  if (impactMode) {{
+    // Highlight impact chain
+    const downIds = new Set([name]);
+    const upIds = new Set([name]);
+    let q = [name];
+    while(q.length) {{ let c=q.shift(); (nodeMap[c]?.invoked_by||[]).forEach(d => {{ if(!downIds.has(d)){{downIds.add(d);q.push(d);}} }}); }}
+    q = [name];
+    while(q.length) {{ let c=q.shift(); (nodeMap[c]?.invokes||[]).forEach(d => {{ if(!upIds.has(d)){{upIds.add(d);q.push(d);}} }}); }}
+    const impactIds = new Set([...downIds, ...upIds]);
+    cy.nodes().forEach(nd => {{
+      if (impactIds.has(nd.id())) nd.addClass('highlighted');
+      else nd.addClass('dimmed');
+    }});
+    cy.edges().forEach(ed => {{
+      if (impactIds.has(ed.source().id()) && impactIds.has(ed.target().id())) ed.addClass('highlighted');
+      else ed.addClass('dimmed');
+    }});
+  }}
+
+  // Sidebar detail
   const placeholder = document.getElementById('placeholder');
+  const detail = document.getElementById('detail');
   placeholder.style.display = 'none';
   detail.style.display = 'block';
 
-  const callerClass = 'badge-' + (n.caller || 'unknown');
   const upstream = n.invokes || [];
   const downstream = n.invoked_by || [];
   const produces = n.produces || [];
   const consumes = n.consumes || [];
 
-  // Compute transitive impact
   let transDown = new Set(), transUp = new Set();
-  function bfsDown(start) {{
-    let q = [start], visited = new Set();
-    while(q.length) {{
-      let cur = q.shift();
-      for (let dep of (nodeMap[cur]?.invoked_by || [])) {{
-        if (!visited.has(dep)) {{ visited.add(dep); transDown.add(dep); q.push(dep); }}
-      }}
-    }}
-  }}
-  function bfsUp(start) {{
-    let q = [start], visited = new Set();
-    while(q.length) {{
-      let cur = q.shift();
-      for (let dep of (nodeMap[cur]?.invokes || [])) {{
-        if (!visited.has(dep)) {{ visited.add(dep); transUp.add(dep); q.push(dep); }}
-      }}
-    }}
-  }}
-  bfsDown(name); bfsUp(name);
+  (function bfsDown(s) {{ let q=[s],v=new Set(); while(q.length){{ let c=q.shift(); (nodeMap[c]?.invoked_by||[]).forEach(d => {{ if(!v.has(d)){{v.add(d);transDown.add(d);q.push(d);}} }}); }} }})(name);
+  (function bfsUp(s) {{ let q=[s],v=new Set(); while(q.length){{ let c=q.shift(); (nodeMap[c]?.invokes||[]).forEach(d => {{ if(!v.has(d)){{v.add(d);transUp.add(d);q.push(d);}} }}); }} }})(name);
+
+  const layerBadge = `<span class="badge badge-${{n.layer}}">${{n.layer}}</span>`;
+  const callerBadge = `<span class="badge badge-${{n.caller==='executor'?'executor':n.layer}}">${{n.caller}}</span>`;
 
   detail.innerHTML = `
-    <h2>${{name}}</h2>
-    <span class="caller-badge ${{callerClass}}">${{n.caller || 'unknown'}}</span>
-    <div class="impact-box">
+    <div class="detail-header">
+      <h2>${{name}}</h2>
+      ${{layerBadge}} ${{callerBadge}}
+    </div>
+    <div class="impact-card">
       <h4>Impact Analysis</h4>
-      <div class="impact-stat"><span>Direct downstream</span><span class="num">${{downstream.length}}</span></div>
-      <div class="impact-stat"><span>Transitive downstream</span><span class="num">${{transDown.size}}</span></div>
-      <div class="impact-stat"><span>Direct upstream</span><span class="num">${{upstream.length}}</span></div>
-      <div class="impact-stat"><span>Transitive upstream</span><span class="num">${{transUp.size}}</span></div>
+      <div class="impact-row"><span>Direct downstream</span><span class="num">${{downstream.length}}</span></div>
+      <div class="impact-row"><span>Transitive downstream</span><span class="num">${{transDown.size}}</span></div>
+      <div class="impact-row"><span>Direct upstream</span><span class="num">${{upstream.length}}</span></div>
+      <div class="impact-row"><span>Transitive upstream</span><span class="num">${{transUp.size}}</span></div>
     </div>
-    <div class="dep-section">
-      <h3>Invokes (${{upstream.length}})</h3>
-      <ul class="dep-list">${{upstream.map(s => '<li onclick="onNodeClick(\\''+s+'\\')">' + s + '</li>').join('')}}</ul>
-    </div>
-    <div class="dep-section">
-      <h3>Invoked by (${{downstream.length}})</h3>
-      <ul class="dep-list">${{downstream.map(s => '<li onclick="onNodeClick(\\''+s+'\\')">' + s + '</li>').join('')}}</ul>
-    </div>
-    ${{produces.length ? '<div class="dep-section"><h3>Produces</h3><ul class="dep-list">' + produces.map(s => '<li>' + s + '</li>').join('') + '</ul></div>' : ''}}
-    ${{consumes.length ? '<div class="dep-section"><h3>Consumes</h3><ul class="dep-list">' + consumes.map(s => '<li>' + s + '</li>').join('') + '</ul></div>' : ''}}
-    <div class="dep-section">
-      <h3>Full Transitive Downstream (${{transDown.size}})</h3>
-      <ul class="dep-list">${{[...transDown].sort().map(s => '<li onclick="onNodeClick(\\''+s+'\\')">' + s + '</li>').join('')}}</ul>
-    </div>
+    <div class="dep-section"><h3>Invokes (${{upstream.length}})</h3>
+      <ul class="dep-list">${{upstream.map(s=>'<li onclick="onNodeClick(\\''+s+'\\')">'+s+'</li>').join('')}}</ul></div>
+    <div class="dep-section"><h3>Invoked by (${{downstream.length}})</h3>
+      <ul class="dep-list">${{downstream.map(s=>'<li onclick="onNodeClick(\\''+s+'\\')">'+s+'</li>').join('')}}</ul></div>
+    ${{produces.length?'<div class="dep-section"><h3>Produces</h3><ul class="dep-list">'+produces.map(s=>'<li>'+s+'</li>').join('')+'</ul></div>':''}}
+    ${{consumes.length?'<div class="dep-section"><h3>Consumes</h3><ul class="dep-list">'+consumes.map(s=>'<li>'+s+'</li>').join('')+'</ul></div>':''}}
   `;
-
-  if (impactMode) renderGraph(currentFilter, document.getElementById('search').value, name);
 }}
 
 // Search
 document.getElementById('search').addEventListener('input', e => {{
-  renderGraph(currentFilter, e.target.value, impactMode ? selectedSkill : null);
+  const term = e.target.value.toLowerCase();
+  cy.nodes().forEach(n => {{
+    if (!term || n.id().includes(term)) n.style('opacity', 1);
+    else n.style('opacity', 0.15);
+  }});
 }});
 
-// Filter buttons
-document.querySelectorAll('.filter-btn').forEach(btn => {{
+// Filter
+document.querySelectorAll('#toolbar .btn[data-filter]').forEach(btn => {{
   btn.addEventListener('click', () => {{
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#toolbar .btn[data-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const f = btn.dataset.filter;
     impactMode = f === 'impact';
     currentFilter = impactMode ? 'all' : f;
-    renderGraph(currentFilter, document.getElementById('search').value, impactMode ? selectedSkill : null);
+    cy.elements().removeClass('selected dimmed highlighted');
+    cy.nodes().forEach(n => {{
+      if (currentFilter === 'all' || n.data('layer') === currentFilter || (!impactMode && n.data('caller') === currentFilter))
+        n.style('opacity', 1);
+      else n.style('opacity', 0.1);
+    }});
   }});
 }});
 
-function copyMermaid() {{
-  const def = buildMermaidDef(currentFilter, document.getElementById('search').value, impactMode ? selectedSkill : null);
-  navigator.clipboard.writeText(def).then(() => alert('Mermaid copied!'));
-}}
-
-function downloadSVG() {{
-  const svg = document.querySelector('#mermaid-graph svg');
-  if (!svg) return;
-  const data = new XMLSerializer().serializeToString(svg);
-  const blob = new Blob([data], {{type: 'image/svg+xml'}});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'skill-dag.svg'; a.click();
-  URL.revokeObjectURL(url);
-}}
-
-// Initial render
-renderGraph('all', '', null);
+// Layout switch
+document.querySelectorAll('#layout-btns .btn').forEach(btn => {{
+  btn.addEventListener('click', () => {{
+    document.querySelectorAll('#layout-btns .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const l = btn.dataset.layout;
+    let layoutOpts = {{ name: 'dagre', rankDir: 'TB', spacingFactor: 1.2, padding: 50 }};
+    if (l === 'dagre-lr') layoutOpts = {{ name: 'dagre', rankDir: 'LR', spacingFactor: 1.2, padding: 50 }};
+    else if (l === 'breadthfirst') layoutOpts = {{ name: 'breadthfirst', spacingFactor: 1.5, padding: 50 }};
+    else if (l === 'concentric') layoutOpts = {{ name: 'concentric', spacingFactor: 1.2, padding: 50 }};
+    cy.layout(layoutOpts).run();
+  }});
+}});
 </script>
 </body>
 </html>'''
