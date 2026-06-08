@@ -81,6 +81,10 @@ RUN pip install --no-cache-dir \
 # ─── Directory structure ─────────────────────────────────────────────────────
 RUN mkdir -p /aris/framework /aris/projects /aris/shared/datasets /aris/shared/pretrained
 
+# ─── Clean stale proxy config from nvidia/cuda base image ────────────────────
+RUN sed -i '/http_proxy/d' /etc/environment \
+    && sed -i '/https_proxy/d' /etc/environment
+
 # ─── User setup (non-root) ───────────────────────────────────────────────────
 ARG USERNAME=researcher
 ARG UID=1000

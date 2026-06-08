@@ -232,12 +232,15 @@ EOF
 如果用 Anthropic 官方 API 或 Claude Coding Plan:
 
 ```env
-# .env 里配代理
-HTTP_PROXY=http://host.docker.internal:7890
-HTTPS_PROXY=http://host.docker.internal:7890
+# .env 里配代理（Docker bridge 网络）
+# 172.17.0.1 是 Docker 默认网桥 IP，所有容器都能访问
+HTTP_PROXY=http://172.17.0.1:7897
+HTTPS_PROXY=http://172.17.0.1:7897
 ```
 
-`host.docker.internal` 会自动解析到宿主机。宿主机跑 Clash/V2Ray 监听 7890 即可。
+宿主机跑 Clash/V2Ray 监听 `*:7897`（所有接口）即可。
+
+> **注意**: 不要用 `--network host`，用默认 bridge 网络。entrypoint 会自动将代理配置写入 `/etc/environment`，`docker exec` 的 PAM 会话也能正确读取。
 
 ## 客户端选择
 

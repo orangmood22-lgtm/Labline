@@ -29,6 +29,11 @@ if [ -n "$HTTP_PROXY" ]; then
     export http_proxy="$HTTP_PROXY"
     export https_proxy="${HTTPS_PROXY:-$HTTP_PROXY}"
     export no_proxy="${NO_PROXY:-127.0.0.1,localhost}"
+    # Write to /etc/environment for PAM sessions (docker exec)
+    sudo sed -i '/http_proxy/d' /etc/environment 2>/dev/null || true
+    sudo sed -i '/https_proxy/d' /etc/environment 2>/dev/null || true
+    echo "http_proxy=\"$http_proxy\"" | sudo tee -a /etc/environment >/dev/null
+    echo "https_proxy=\"$https_proxy\"" | sudo tee -a /etc/environment >/dev/null
 fi
 
 # ─── SSH key from mount ──────────────────────────────────────────────────────
