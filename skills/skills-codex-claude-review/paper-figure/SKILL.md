@@ -1,6 +1,6 @@
 ---
 name: "paper-figure"
-description: "Generate publication-quality figures and tables from experiment results. Use when user says \"画图\", \"作图\", \"generate figures\", \"paper figures\", or needs plots for a paper."
+description: "Generate publication-quality figures and tables from experiment results. Use when user says \\"画图\\", \\"作图\\", \\"generate figures\\", \\"paper figures\\", or needs plots for a paper."
 ---
 
 > Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Install this package **after** `skills/skills-codex/*`.
@@ -248,13 +248,6 @@ figures/
 ├── latex_includes.tex           # LaTeX snippets for all figures
 └── TABLE_*.tex                  # standalone table LaTeX files
 ```
-
-## Output Protocols
-
-> Follow these shared protocols for all output files:
-> - **[Output Versioning Protocol](../../shared-references/output-versioning.md)** — write timestamped file first, then copy to fixed name
-> - **[Output Manifest Protocol](../../shared-references/output-manifest.md)** — log every output to MANIFEST.md
-> - **[Output Language Protocol](../../shared-references/output-language.md)** — respect the project's language setting
 
 ## Key Rules
 

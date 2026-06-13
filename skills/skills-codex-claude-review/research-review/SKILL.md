@@ -12,6 +12,7 @@ Get a multi-round critical review of research work from an external LLM with max
 ## Constants
 
 - **REVIEWER_MODEL = `claude-review`** — Claude reviewer invoked through the local `claude-review` MCP bridge. Set `CLAUDE_REVIEW_MODEL` if you need a specific Claude model override.
+- **REVIEWER_BACKEND = `codex`** — Default: Codex xhigh reviewer. Use `--reviewer: oracle-pro` only when explicitly requested; if Oracle is unavailable, warn and fall back to Codex xhigh.
 
 ## Context: $ARGUMENTS
 
@@ -54,6 +55,21 @@ After this start call, immediately save the returned `jobId` and poll `mcp__clau
 ### Step 3: Iterative Dialogue (Rounds 2-N)
 Use `mcp__claude-review__review_reply_start` with the saved completed `threadId`, then poll `mcp__claude-review__review_status` with the returned `jobId` until `done=true` to continue the conversation:
 
+```
+mcp__claude-review__review_reply_start:
+  target: [saved reviewer id from Step 2]
+  prompt: |
+    Please continue the review using the revised materials below.
+
+    Revised files:
+    - /absolute/path/to/file1
+    - /absolute/path/to/file2
+
+    Focus on unresolved weaknesses and whether the revision actually fixed them.
+```
+
+After this start call, immediately save the returned `jobId` and poll `mcp__claude-review__review_status` with a bounded `waitSeconds` until `done=true`. Treat the completed status payload's `response` as the reviewer output, and save the completed `threadId` for any follow-up round.
+
 For each round:
 1. **Respond** to criticisms with evidence/counterarguments
 2. **Ask targeted follow-ups** on the most actionable points
@@ -81,6 +97,10 @@ Save the full interaction and conclusions to a review document in the project ro
 - Paper outline if discussed
 
 Update project memory/notes with key review conclusions.
+
+### Step 6: Review Tracing
+
+Save a trace for every `spawn_agent`, `send_input`, or `oracle-pro` review call following `../shared-references/review-tracing.md`. Record the reviewer route, saved agent id, prompt summary, raw response path, decisions, and action items. This preserves the Claude mainline Review Tracing semantics while using Codex-native reviewer calls.
 
 ## Key Rules
 
