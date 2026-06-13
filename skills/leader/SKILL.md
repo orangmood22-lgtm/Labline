@@ -76,6 +76,7 @@ examples:
 
 - 通过 mcp__codex__codex 调用 GPT-5.5 做独立审查。
 - 维护 `PIPELINE_STATE.json`，每个 stage 完成后更新。
+- 读取 `.aris/status/agents/*.json` 或 `.aris/tools/agent_status.py summary` 获取运行中 agent 状态；Leader 不编辑 agent-owned status file。
 - `MAX_CONSECUTIVE_FAILURES=3`，超过触发止损审查。
 - `AUTO_PROCEED=true`，Gate 自动通过。
 
@@ -92,6 +93,16 @@ examples:
 ```json
 {"pipeline_id":"...","current_stage":"idle","stages_completed":[],"gates_passed":[],"consecutive_failures":0,"executor_tasks":[],"reviewer_verdicts":[],"timestamp":"..."}
 ```
+
+## Agent Status Stream
+
+所有派生 agent 遵循 `skills/shared-references/agent-status-stream.md`：
+
+- Leader 派发任务时给出 `agent_id`
+- Agent 启动、进入长任务、阻塞、完成时用 `.aris/tools/agent_status.py` 写自己的状态文件
+- 长运行任务必须写 job handle（tmux/screen/watchdog/queue/log/result path）
+- Leader 到达 `next_expected_update` 后可自动做只读检查
+- Leader 不通过状态流重启任务、杀进程、部署代码、改配置或修改产物
 
 ---
 
@@ -151,10 +162,12 @@ Agent:
   description: "Implement experiment code (Coder)"
   prompt: |
     你是 Coder，只负责写代码。
+    agent_id: coder-${pipeline_id}-phase2
 
     ## 首先
     Read .claude/skills/shared-references/agent-guide.md 了解可用 skills 和约束。
     Read .claude/skills/coder/SKILL.md 了解 Coder 职责边界。
+    Read .claude/skills/shared-references/agent-status-stream.md 了解状态汇报协议。
 
     ## 任务
     读 refine-logs/EXPERIMENT_PLAN.md 实现代码。
@@ -166,6 +179,7 @@ Agent:
 
     ## 约束
     - caveman 模式开启
+    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=coder-${pipeline_id}-phase2 的状态
     - 遵循 executor-blocked-protocol：遇阻塞先自行尝试 2 种绕过，全失败写 BLOCKED_REPORT.md 后停止
     - 不走自审、偏离计划写 IMPLEMENTATION_DEVIATIONS.json、无偏离写 no-deviation 声明
     - 只写代码不部署。完成后列出所有文件路径
@@ -186,10 +200,12 @@ Agent:
   description: "Deploy sanity experiment (Deployer)"
   prompt: |
     你是 Deployer，只负责部署和监控。
+    agent_id: deployer-${pipeline_id}-sanity
 
     ## 首先
     Read .claude/skills/shared-references/agent-guide.md 了解可用 skills 和约束。
     Read .claude/skills/deployer/SKILL.md 了解 Deployer 职责边界。
+    Read .claude/skills/shared-references/agent-status-stream.md 了解状态汇报协议。
 
     ## 任务
     读 CLAUDE.md 获取服务器信息。将代码同步到服务器，运行 sanity 实验。
@@ -202,6 +218,8 @@ Agent:
 
     ## 约束
     - caveman 模式开启
+    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=deployer-${pipeline_id}-sanity 的状态
+    - 启动远程训练后必须写 job handle 和 next_expected_update
     - 遵循 executor-blocked-protocol
     - 禁止 tail -f 轮询，用 Monitor 或 run_in_background
 ```
@@ -216,10 +234,12 @@ Agent:
   run_in_background: true
   prompt: |
     你是 Deployer，只负责部署和监控。
+    agent_id: deployer-${pipeline_id}-full
 
     ## 首先
     Read .claude/skills/shared-references/agent-guide.md 了解可用 skills 和约束。
     Read .claude/skills/deployer/SKILL.md 了解 Deployer 职责边界。
+    Read .claude/skills/shared-references/agent-status-stream.md 了解状态汇报协议。
 
     ## 任务
     读 EXPERIMENT_PLAN.md，按 run order 部署所有 MUST-RUN block。
@@ -232,6 +252,8 @@ Agent:
 
     ## 约束
     - caveman 模式开启
+    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=deployer-${pipeline_id}-full 的状态
+    - 每个长运行任务必须写 job handle 和 next_expected_update；正式训练前 20 分钟每 +5m 更新/检查一次，稳定后 +30m 到 +60m
     - 遵循 executor-blocked-protocol
     - 禁止 tail 轮询
 ```
@@ -269,16 +291,19 @@ Agent:
   description: "Write paper (Writer)"
   prompt: |
     你是 Writer，只负责写作。
+    agent_id: writer-${pipeline_id}-paper
 
     ##首先
     Read .claude/skills/shared-references/agent-guide.md 了解可用 skills 和约束。
     Read .claude/skills/writer/SKILL.md 了解 Writer 职责边界。
+    Read .claude/skills/shared-references/agent-status-stream.md 了解状态汇报协议。
 
     ## 任务
     读实验结果（refine-logs/EXPERIMENT_RESULTS/）和实验计划（refine-logs/EXPERIMENT_PLAN.md）。
     用 /paper-writing 或直接写论文。
 
     ## 约束
+    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=writer-${pipeline_id}-paper 的状态
     - 学术严谨：claim 必须有实验结果支撑，不夸大
     - 数据一致：论文中的数字必须与实验结果文件一致
 ```

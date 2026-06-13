@@ -14,6 +14,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [v0.2.0] - 2026-06-13
+
+### Added
+- Agent Status Stream: project-local per-agent status snapshots under `.aris/status/` so Leader can observe running Coder, Deployer, Writer, and Reviewer roles without reading full transcripts.
+- `tools/agent_status.py` CLI with `start`, `update`, `finish`, `list`, `summary`, and `validate` commands.
+- Shared Agent Status Stream protocol and role guidance for long-running job handles, expected update timing, read-only status checks, and reviewer transport metadata.
+- Maintainer validation report for local GPU smoke testing on the 3090x2 development container.
+
+### Changed
+- Leader, Coder, Deployer, Writer, templates, and reviewer-independence guidance now reference the Agent Status Stream protocol.
+- Release tag tooling now uses `${PYTHON:-python3}` instead of assuming `python3.8` is installed.
+
+### Fixed
+- `.aris/status/` is ignored as project-local runtime state and should not be committed.
+
+---
+
 ## [v0.1.0] - 2026-06-13
 
 ### Added

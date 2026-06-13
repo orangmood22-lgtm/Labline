@@ -45,11 +45,13 @@ examples:
 
 ```
 1. 读 agent-guide.md 了解约束
-2. 读实验结果（refine-logs/EXPERIMENT_RESULTS/）
-3. 读实验计划（refine-logs/EXPERIMENT_PLAN.md）获取 claims
-4. 读 Reviewer 审稿意见（如有）
-5. 按学术规范写作
-6. 列出所有产出文件路径
+2. 用 .aris/tools/agent_status.py start 写 Writer 状态
+3. 读实验结果（refine-logs/EXPERIMENT_RESULTS/）
+4. 读实验计划（refine-logs/EXPERIMENT_PLAN.md）获取 claims
+5. 读 Reviewer 审稿意见（如有）
+6. 写作开始/章节完成/阻塞/完成时用 .aris/tools/agent_status.py update 或 finish 更新状态
+7. 按学术规范写作
+8. 列出所有产出文件路径
 ```
 
 ## 写作规范
@@ -62,6 +64,7 @@ examples:
 ## 约束
 
 - **caveman 模式**：写作时可关闭，输出完整学术语言
+- **状态汇报**：遵循 `skills/shared-references/agent-status-stream.md`；记录当前章节、输出路径、引用的结果文件和阻塞，不编造实验状态
 - **不伪造结果**：只引用实际存在的实验结果文件
 - **不自己验证**：写完交给 Leader 送 Reviewer 审查
 

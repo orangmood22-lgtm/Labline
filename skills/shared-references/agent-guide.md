@@ -33,13 +33,22 @@
 - 累计 ≥3 个不同阻塞全失败 → 整个任务停止
 - **Leader 绝不替代执行**
 
-### 4. 角色边界
+### 4. Agent Status Stream
+
+详见 `agent-status-stream.md`（同目录）。
+
+- Agent 启动、进入长任务、遇阻塞、完成时更新自己的 Agent Status File
+- 长训练、下载、队列、远程部署必须写 job handle（tmux/screen/watchdog/queue/log/result path）
+- 不手写 JSON；优先用 `.aris/tools/agent_status.py`
+- Leader 只读状态摘要，不把状态流当任务队列或 agent 聊天室
+
+### 5. 角色边界
 
 - **Leader** 只读/判/派。不写代码、不跑命令、不画图
 - **Executor** → 三种专用角色：Coder / Deployer / Writer
 - **Reviewer** 只看原始文件，不看 Executor 转述
 
-### 5. Executor 角色分层
+### 6. Executor 角色分层
 
 Leader 派发任务时使用专用角色：
 
@@ -49,7 +58,7 @@ Leader 派发任务时使用专用角色：
 | **Deployer** | SSH 同步、启动训练、监控实验 | executor |
 | **Writer** | 写论文、文档、Rebuttal | executor |
 
-### 6. 模型分层
+### 7. 模型分层
 
 | 角色 | 模型 | Agent 参数 |
 |------|------|-----------|

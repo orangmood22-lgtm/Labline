@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHECKER="$SCRIPT_DIR/check_release_ready.py"
+PYTHON_BIN="${PYTHON:-python3}"
 REPO="."
 APPLY=0
 PUSH_TAG=0
@@ -44,8 +45,8 @@ if [[ "$PUSH_TAG" -eq 1 && "$APPLY" -ne 1 ]]; then
   exit 2
 fi
 
-python3.8 "$CHECKER" --repo "$REPO" "${ARGS[@]}"
-VERSION="$(python3.8 "$CHECKER" --repo "$REPO" "${ARGS[@]}" --print-version-only)"
+"$PYTHON_BIN" "$CHECKER" --repo "$REPO" "${ARGS[@]}"
+VERSION="$("$PYTHON_BIN" "$CHECKER" --repo "$REPO" "${ARGS[@]}" --print-version-only)"
 
 if [[ "$APPLY" -ne 1 ]]; then
   echo "DRY RUN: would create annotated tag $VERSION in $REPO"

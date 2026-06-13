@@ -76,6 +76,38 @@ _Avoid_: implicit version inference from arbitrary commit messages
 The first formal ARIS framework release from the current `main` line, tagged `v0.1.0`. It establishes the baseline that research projects can pin before later patch and minor releases.
 _Avoid_: treating pre-`v0.1.0` branch names as framework versions
 
+**Agent Status Stream**:
+A shared local visibility channel that lets the Leader observe what delegated agents are doing while they run. It is for liveness, progress, blockers, and artifact pointers; it is not a task queue, planning surface, or peer-to-peer agent coordination mechanism.
+_Avoid_: agent chat room, hidden scheduler, replacing Pipeline Status
+
+**Agent Status Snapshot**:
+The compact current-state view that the Leader reads from the Agent Status Stream during normal orchestration. It summarizes each active agent's role, task, liveness, current action, blockers, artifact pointers, and expected next update without exposing the full event history.
+_Avoid_: full transcript, verbose scratch log, agent memory dump
+
+**Agent Status File**:
+A per-agent local file that contains exactly one agent's current Agent Status Snapshot. Each delegated agent owns its own status file, while the Leader reads those files to aggregate progress without requiring agents to write into a shared mutable snapshot.
+_Avoid_: shared agent state file, central writable scratchpad
+
+**Long-Running Job Handle**:
+A durable pointer to a long-running task that can be checked independently of the agent that launched it, such as a tmux or screen session name, queue state file, watchdog task name, log path, or result directory. The Leader treats the job handle as the source of truth for task liveness when an agent status file stops updating.
+_Avoid_: foreground SSH command, agent transcript as progress source
+
+**Expected Update Time**:
+The next time an agent or its associated long-running job is expected to provide a meaningful new signal. It is a pacing hint for Leader observation, not a deadline or failure condition by itself.
+_Avoid_: timeout, SLA, polling loop
+
+**Read-Only Status Check**:
+A non-mutating check that the Leader may perform when an Expected Update Time arrives, such as reading status files, queue state, watchdog summaries, logs, or monitor outputs. It must not restart jobs, change configuration, deploy code, or mutate project artifacts.
+_Avoid_: recovery action, automatic intervention
+
+**Reviewer Role**:
+The independent review role in ARIS that audits plans, code, results, claims, citations, or paper artifacts from original inputs. The role may be implemented through an MCP-backed model call, a spawned agent, or a separate CLI session depending on platform, but its independence contract is the same.
+_Avoid_: equating Reviewer with Codex MCP only, executor self-review
+
+**Project Runtime State**:
+Local, non-versioned state written inside a research project while ARIS workflows run, such as agent status snapshots and transient coordination metadata. The ARIS framework repository provides tools and protocols for this state but must not contain real project runtime state.
+_Avoid_: framework-owned runtime status, committed agent snapshots
+
 ## Example Dialogue
 
 Developer: "This is a new skill workflow, so I will open a feature branch from `dev`."

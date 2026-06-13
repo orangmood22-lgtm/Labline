@@ -5,23 +5,30 @@ Maintainer-facing module log for ARIS framework development. This file is more d
 ## [Unreleased]
 
 ### skills
+- Added Agent Status Stream protocol and wired Leader/Coder/Deployer/Writer role instructions to project-local status snapshots.
+- Updated reviewer-independence guidance so Reviewer status may carry transport/input-scope metadata without carrying review reasoning or executor summaries.
 - Normalized skill DAG governance so formal edges come only from frontmatter `invokes`.
 - Added `platform`, `status`, and dependency metadata to key Codex/Claude dual-client skills.
 - Added Codex mirrors for the newly added skill set.
 - Enhanced `skills-codex-claude-review` overlays with reviewer bias guard, edit whitelist, reviewer memory, debate protocol, and broader venue support.
 
 ### tools
+- Added `tools/agent_status.py` for schema-v1 per-agent status snapshots with `start`, `update`, `finish`, `list`, `summary`, and `validate`.
+- Made release tag tooling use `${PYTHON:-python3}` instead of assuming `python3.8`.
 - Added guarded release tooling under `tools/release/`.
 - Made `mcp-servers/codex-review/bridge.py` resolve its sibling `server.py` by default instead of using a hard-coded developer path.
 - Added Python 3.8 compatibility fixes to selected tools and tests.
 - Updated catalog generation/translation coverage for newer role and DAG-check skills.
 
 ### templates
+- Added Agent Status Stream rules to Claude/Codex project templates.
 - Reworked `templates/README.md` into a structured template index.
 - Generalized `project.yaml.tmpl` server examples and framework metadata.
 - Updated idea candidate template paths to the current project file layout.
 
 ### docs
+- Added ADR-0002 and `to-developer/plans/AGENT_STATUS_STREAM.md` for the status-stream architecture and rollout plan.
+- Added local GPU validation report under `to-developer/logs/`.
 - Added `docs/LANGGRAPH_EVALUATION.md`.
 - Added `docs/README.md` and `mcp-servers/README.md` indexes.
 - Updated repository paths and removed obsolete ARIS-Code/Matt Pocock/image assets.
@@ -36,6 +43,8 @@ Maintainer-facing module log for ARIS framework development. This file is more d
 - Made Codex review bridge portable across local paths.
 
 ### tests
+- Added Agent Status Stream CLI behavior tests and local GPU smoke validation.
+- Updated release tooling tests to use the current Python executable in direct-run mode.
 - Added skill DAG contract tests.
 - Added Codex review bridge path resolution test.
 - Added release tooling tests.

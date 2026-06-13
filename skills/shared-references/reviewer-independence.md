@@ -13,6 +13,7 @@ Cross-model adversarial collaboration only works if the reviewer forms its own a
 - **File paths** — let the reviewer read file contents directly
 - **Structural metadata** — e.g., "The paper has 8 sections", "Experiments are in experiments/"
 - **Venue constraints** — e.g., "ICLR format, 9-page limit"
+- **Status metadata** — e.g., reviewer transport, input scope, trace path, and target artifact path from Agent Status Stream
 
 ## What CANNOT be passed (counts as "subjective interference")
 
@@ -24,6 +25,7 @@ Cross-model adversarial collaboration only works if the reviewer forms its own a
 - ❌ Previous review rounds' feedback or critique (let the reviewer assess the current state fresh)
 - ❌ Executor's description of what was changed since last round (e.g., "I fixed X, Y, Z")
 - ❌ Statements asserting the current approach's strengths
+- ❌ Agent status summaries as a substitute for raw files
 
 ## Why this matters
 
@@ -73,6 +75,7 @@ This protocol applies to ALL cross-model review calls in ARIS:
 - `/rebuttal` — stress test
 - `/meta-optimize` — patch review
 - Any skill that sends artifacts to `mcp__codex__codex` or `mcp__codex__codex-reply`
+- Any spawned Reviewer agent, CLI reviewer session, or external reviewer API transport
 
 ## Exception
 

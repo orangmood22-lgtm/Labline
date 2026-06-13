@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -68,7 +69,7 @@ def test_release_checker_accepts_clean_patch_release():
         init_release_repo(repo)
         result = run(
             [
-                "python3.8",
+                sys.executable,
                 str(CHECKER),
                 "--repo",
                 str(repo),
@@ -119,3 +120,21 @@ def test_tag_release_apply_creates_local_tag_without_push():
         )
         tags = run(["git", "tag", "--list", "v0.1.1"], repo)
         assert tags.stdout.strip() == "v0.1.1"
+
+
+if __name__ == "__main__":
+    tests = [
+        test_bump_version_patch_and_minor,
+        test_release_checker_accepts_clean_patch_release,
+        test_tag_release_dry_run_does_not_create_tag,
+        test_tag_release_apply_creates_local_tag_without_push,
+    ]
+    failed = 0
+    for test in tests:
+        try:
+            test()
+            print(f"OK {test.__name__}")
+        except Exception as exc:
+            failed += 1
+            print(f"FAIL {test.__name__}: {exc}")
+    sys.exit(1 if failed else 0)

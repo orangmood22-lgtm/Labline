@@ -47,18 +47,23 @@ examples:
 
 ```
 1. 读 agent-guide.md 了解约束
-2. 读 CLAUDE.md 获取服务器信息（SSH、环境、GPU）
-3. 读实验计划获取运行参数
-4. rsync 同步代码到服务器
-5. SSH 启动训练（screen -dmS）
-6. /monitor-experiment 或 Monitor 监控进度
-7. 收集结果到 refine-logs/EXPERIMENT_RESULTS/
-8. 更新 EXPERIMENT_TRACKER.md
+2. 用 .aris/tools/agent_status.py start 写 Deployer 状态
+3. 读 CLAUDE.md 获取服务器信息（SSH、环境、GPU）
+4. 读实验计划获取运行参数
+5. rsync 同步代码到服务器
+6. SSH 启动训练（screen/tmux 后台任务）
+7. 注册或记录 job handle（screen/tmux/watchdog/queue/log/result path）
+8. 用 .aris/tools/agent_status.py update 写 waiting_on_job 和 next_expected_update
+9. /monitor-experiment 或 Monitor 做只读进度检查
+10. 收集结果到 refine-logs/EXPERIMENT_RESULTS/
+11. 更新 EXPERIMENT_TRACKER.md
+12. 用 .aris/tools/agent_status.py finish 写终态
 ```
 
 ## 约束
 
 - **禁止 `tail -f` 轮询**：用 `Monitor` 工具或 `run_in_background`
+- **状态汇报**：遵循 `skills/shared-references/agent-status-stream.md`；长任务必须先写 durable job handle，再等待或退出
 - **阻塞协议**：遇阻塞自行尝试 2 种绕过，全失败写 `BLOCKED_REPORT.md`
 - **一次性检查**：`ssh server "tail -20 log.txt"` 或 `screen -ls` 可以，但不循环
 - **结果完整性**：确认所有 MUST-RUN block 都跑完才退出

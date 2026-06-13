@@ -45,6 +45,9 @@ patent/
 # OMC runtime state
 .omc/
 
+# ARIS project-local runtime state
+.aris/status/
+
 # Developer-local private notes
 to-developer/discussions/settings*.json
 to-developer/discussions/ssh.txt

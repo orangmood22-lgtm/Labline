@@ -13,6 +13,7 @@
 
 - 禁止 `tail -f` 或循环 `tail` 轮询实验 → 用 `$monitor-experiment` 或 background tasks
 - Executor 遇阻塞遵循 `executor-blocked-protocol.md`：自救 2 次，失败写 `BLOCKED_REPORT.md`
+- Agent 启动、进入长任务、阻塞、完成时遵循 `agent-status-stream.md` 更新自己的状态文件；`.aris/status/` 不提交
 - Leader 不写代码/不跑命令，Executor 不自审，Reviewer 只看原始文件
 - Skill 分层：编排层(leader) / 执行层(executor) / 工具层(any) / 检索层(any)，不要越层调用
 
