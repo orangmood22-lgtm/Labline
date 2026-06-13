@@ -25,8 +25,8 @@ npm install -g @anthropic-ai/claude-code
 ### 第 2 步：克隆 MCP Servers
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
-cd Auto-claude-code-research-in-sleep/mcp-servers/llm-chat
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
+cd Auto-research-in-sleep/mcp-servers/llm-chat
 pip install -r requirements.txt
 cd ../..
 ```
@@ -124,7 +124,7 @@ claude
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Auto-claude-code-research                │
+│                    Auto-research-in-sleep                │
 │                    (Sleep Mode Research)                    │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -186,10 +186,10 @@ claude
 
 ## 参考
 
-- [Auto-claude-code-research-in-sleep 主项目](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep)
-- [方案 A：GLM + GPT](./README.md#alt-a-glm--gpt)
-- [方案 B：GLM + MiniMax](./README.md#alt-b-glm--minimax)
+- [Auto-research-in-sleep 主项目](https://github.com/orangmood22-lgtm/Auto-research-in-sleep)
+- [MiniMax MCP Guide](MINIMAX_MCP_GUIDE.md)
+- [LLM API Mix Match Guide](LLM_API_MIX_MATCH_GUIDE.md)
 
 ---
 
-*此配置方案由社区贡献，适用于 Auto-claude-code-research-in-sleep 项目*
+*此配置方案由社区贡献，适用于 Auto-research-in-sleep 项目*

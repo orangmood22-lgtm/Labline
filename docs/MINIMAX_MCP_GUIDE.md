@@ -1,6 +1,6 @@
 # MiniMax MCP 集成指南
 
-本文档说明如何在 Auto-claude-code-research-in-sleep 项目中使用 MiniMax API 替代 OpenAI Codex MCP 进行研究审查。
+本文档说明如何在 Auto-research-in-sleep 项目中使用 MiniMax API 替代 OpenAI Codex MCP 进行研究审查。
 
 ## 背景
 
@@ -72,7 +72,7 @@ pip3 install -r mcp-servers/minimax-chat/requirements.txt
 
 ## 改写所有 Skills（重要！）
 
-`auto-review-loop-minimax` 只是**一个** skill 的 MiniMax 版。项目中有 **12 个 skill** 使用 Codex MCP (`mcp__codex__codex`) 调用 GPT-5.4 做审查。如果你想全面切换到 MiniMax，需要让 Claude Code 把它们全部改写。
+`auto-review-loop-minimax` 只是**一个** skill 的 MiniMax 版。项目中有多个 reviewer-aware skill 使用 Codex MCP (`mcp__codex__codex`) 调用 GPT-5.4 做审查。如果你想全面切换到 MiniMax，需要让 Claude Code 把它们全部改写。
 
 安装完 MCP 服务器后，在 Claude Code 对话中执行：
 

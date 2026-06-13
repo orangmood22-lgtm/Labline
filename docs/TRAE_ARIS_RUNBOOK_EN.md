@@ -20,7 +20,7 @@ It is recommended to create a dedicated Trae agent for ARIS workflows to avoid c
 ### 2.1 Clone the repository and configure Skills
 
 ```powershell
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
 ```
 
 **Two ways to install Skills in Trae:**
@@ -39,11 +39,11 @@ Method 2: Manual copy to skills directory
 ```powershell
 # Global installation (available in all projects)
 New-Item -ItemType Directory -Path "$env:USERPROFILE\.trae\skills" -Force
-Copy-Item -Path "C:\path\to\Auto-claude-code-research-in-sleep\skills\*" -Destination "$env:USERPROFILE\.trae\skills\" -Recurse -Force
+Copy-Item -Path "C:\path\to\Auto-research-in-sleep\skills\*" -Destination "$env:USERPROFILE\.trae\skills\" -Recurse -Force
 
 # Project-level installation (available only in current project)
 New-Item -ItemType Directory -Path ".\.trae\skills" -Force
-Copy-Item -Path "C:\path\to\Auto-claude-code-research-in-sleep\skills\*" -Destination ".\.trae\skills\" -Recurse -Force
+Copy-Item -Path "C:\path\to\Auto-research-in-sleep\skills\*" -Destination ".\.trae\skills\" -Recurse -Force
 ```
 
 After installation, simply describe your needs in natural language within the corresponding scope to trigger the relevant skill.
@@ -89,7 +89,7 @@ You can use `llm-chat` with OpenAI-compatible providers such as DeepSeek/GLM/Min
 1) Create virtual environment and install dependencies
 
 ```powershell
-cd D:\path\to\Auto-claude-code-research-in-sleep
+cd D:\path\to\Auto-research-in-sleep
 python -m venv .venv
 .\.venv\Scripts\pip install -r mcp-servers\llm-chat\requirements.txt
 ```
@@ -100,8 +100,8 @@ python -m venv .venv
 {
   "mcpServers": {
     "llm-chat": {
-      "command": "/path/to/Auto-claude-code-research-in-sleep/.venv/Scripts/python.exe",
-      "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
+      "command": "/path/to/Auto-research-in-sleep/.venv/Scripts/python.exe",
+      "args": ["/path/to/Auto-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_BASE_URL": "https://api.deepseek.com/v1",
         "LLM_API_KEY": "your_key",

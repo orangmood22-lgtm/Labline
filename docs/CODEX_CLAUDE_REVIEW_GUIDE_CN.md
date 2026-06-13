@@ -23,8 +23,8 @@
 ## 安装
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
-cd Auto-claude-code-research-in-sleep
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
+cd Auto-research-in-sleep
 
 mkdir -p ~/.codex/skills
 cp -a skills/skills-codex/* ~/.codex/skills/

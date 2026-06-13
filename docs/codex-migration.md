@@ -20,8 +20,8 @@ ARIS project migrated from Claude Code to Codex CLI, following the guide at http
 
 ### Phase 2: Skills Migration
 
-- `.agents/skills/` — 91 symlinks pointing to `skills/` (Codex auto-discovers from here)
-- `.claude/skills/` — 91 symlinks (Claude Code, kept for dual-track)
+- `.agents/skills/` — symlinks pointing to `skills/` (Codex auto-discovers from here)
+- `.claude/skills/` — symlinks for Claude Code, kept for dual-track
 - Both point to the same canonical `skills/*/SKILL.md` files
 - `install_aris.sh` now supports `--codex` flag
 
@@ -45,7 +45,7 @@ Three profiles in `~/.codex/config.toml`:
 
 ## What Did NOT Change
 
-- **98 SKILL.md files** — frontmatter is compatible, Codex ignores unknown fields
+- **94 user-facing skills** — frontmatter is compatible, Codex ignores unknown fields
 - **Skill content** — same canonical files, no rewrites needed
 - **Shared references** — 24 files in `skills/shared-references/`, unchanged
 - **Experiment chain contract** — same vocabulary, same protocols
@@ -93,7 +93,7 @@ codex exec -p reviewer "..." # Reviewer session
 
 - [x] `AGENTS.md` exists and is readable
 - [x] `~/.codex/AGENTS.md` exists with global conventions
-- [x] `.agents/skills/` has 91 symlinks matching `.claude/skills/`
+- [x] `.agents/skills/` symlinks match `.claude/skills/`
 - [x] `~/.codex/config.toml` has leader/executor/reviewer profiles
 - [x] `~/.codex/hooks/` has 3 hook scripts (executable)
 - [x] `install_aris.sh` supports `--codex` flag

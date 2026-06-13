@@ -83,8 +83,8 @@ ModelScope 同时提供两套 API 端点，分别对应 ARIS 的两个角色：
 ### Step 1：克隆仓库
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
-cd Auto-claude-code-research-in-sleep
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
+cd Auto-research-in-sleep
 ```
 
 ### Step 2：安装 Python 依赖
@@ -138,7 +138,7 @@ cp -r skills/* ~/.claude/skills/
 
 ### Step 6：改写所有使用 Codex MCP 的 Skills
 
-项目中有 **12 个 skill** 调用 `mcp__codex__codex`（依赖 OpenAI Responses API，ModelScope 不支持）。在启动 Claude Code 后执行以下指令，让它自动完成改写：
+项目中有多个 reviewer-aware skill 调用 `mcp__codex__codex`（依赖 OpenAI Responses API，ModelScope 不支持）。在启动 Claude Code 后执行以下指令，让它自动完成改写：
 
 ```
 Read skills/auto-review-loop-llm/SKILL.md as a reference.

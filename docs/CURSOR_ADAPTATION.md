@@ -18,7 +18,7 @@
 ### 2.1 Clone the repo
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
 ```
 
 > **Important:** Open this repo (or add it as a workspace folder) in Cursor. The `@skills/...` references throughout this guide use Cursor's `@`-file feature, which only resolves files within your open workspace. If you work in a separate project, either copy the `skills/` folder into it or add the ARIS repo as a second workspace folder (File → Add Folder to Workspace).
@@ -53,7 +53,7 @@ If you don't have an OpenAI API key, use the [`llm-chat`](../mcp-servers/llm-cha
 
 1. Create a virtual environment and install the required dependency (the server needs `httpx`):
    ```bash
-   cd /path/to/Auto-claude-code-research-in-sleep
+   cd /path/to/Auto-research-in-sleep
    python3 -m venv .venv
     .venv/bin/pip install -r mcp-servers/llm-chat/requirements.txt
    ```
@@ -63,8 +63,8 @@ If you don't have an OpenAI API key, use the [`llm-chat`](../mcp-servers/llm-cha
    {
      "mcpServers": {
        "llm-chat": {
-         "command": "/path/to/Auto-claude-code-research-in-sleep/.venv/bin/python3",
-         "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
+         "command": "/path/to/Auto-research-in-sleep/.venv/bin/python3",
+         "args": ["/path/to/Auto-research-in-sleep/mcp-servers/llm-chat/server.py"],
          "env": {
            "LLM_BASE_URL": "https://api.deepseek.com/v1",
            "LLM_API_KEY": "your_key",

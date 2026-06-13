@@ -52,8 +52,8 @@ Antigravity supports multiple models as the **executor** (the model that runs AR
 ### 3.1 Install skills
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
-cd Auto-claude-code-research-in-sleep
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
+cd Auto-research-in-sleep
 
 # Option A: Global install (available across all projects)
 mkdir -p ~/.gemini/antigravity/skills
@@ -108,7 +108,7 @@ If you don't have an OpenAI API key, use the [`llm-chat`](../mcp-servers/llm-cha
 
 1. Create a virtual environment and install the required dependency:
    ```bash
-   cd /path/to/Auto-claude-code-research-in-sleep
+   cd /path/to/Auto-research-in-sleep
    python3 -m venv .venv
    .venv/bin/pip install -r mcp-servers/llm-chat/requirements.txt
    ```
@@ -118,8 +118,8 @@ If you don't have an OpenAI API key, use the [`llm-chat`](../mcp-servers/llm-cha
    {
      "mcpServers": {
        "llm-chat": {
-         "command": "/path/to/Auto-claude-code-research-in-sleep/.venv/bin/python3",
-         "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
+         "command": "/path/to/Auto-research-in-sleep/.venv/bin/python3",
+         "args": ["/path/to/Auto-research-in-sleep/mcp-servers/llm-chat/server.py"],
          "env": {
            "LLM_BASE_URL": "https://api.deepseek.com/v1",
            "LLM_API_KEY": "your_key",

@@ -848,4 +848,4 @@ Gitea (http://gitea:3000)
 
 → 见 [docs/SKILL_CATALOG.md](SKILL_CATALOG.md)（英文）| [docs/SKILL_CATALOG_CN.md](SKILL_CATALOG_CN.md)（中文）
 
-共 90 个 skill，12 个分类。自动生成，运行 `python3 tools/generate_skill_catalog.py` 更新。
+当前 skill 数量和分类以自动生成目录为准。运行 `python3 tools/generate_skill_catalog.py` 更新。

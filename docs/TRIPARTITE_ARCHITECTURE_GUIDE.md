@@ -119,8 +119,8 @@ bash $ARIS_REPO/tools/install_aris_codex.sh . --aris-repo $ARIS_REPO --quiet
 安装完成后，你的项目目录下会多出：
 
 ```
-.claude/skills/     ← 75 个 Claude Code skill（symlink 到 ARIS 仓库）
-.agents/skills/     ← 69 个 Codex CLI skill（symlink 到 ARIS 仓库）
+.claude/skills/     ← 当前用户 skill（symlink 到 ARIS 仓库）
+.agents/skills/     ← 当前 Codex skill（symlink 到 ARIS 仓库）
 .aris/              ← 安装清单
 ```
 
