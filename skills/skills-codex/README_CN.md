@@ -4,7 +4,7 @@
 
 ## 当前范围
 
-- 基座覆盖：主线 `skills/` 的 `67` 个 skill 全量同步
+- 基座覆盖：主线 `skills/` 的 `94` 个用户 skill 全量同步
 - 支持目录：`shared-references/`
 - reviewer-heavy skill 的默认 reviewer 契约：
   - 首轮：`spawn_agent`
@@ -19,7 +19,7 @@
 Codex 路线默认推荐项目级安装：
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git ~/aris_repo
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git ~/aris_repo
 cd ~/your-project
 
 bash ~/aris_repo/tools/install_aris_codex.sh .

@@ -1,67 +1,9 @@
 graph TD
-    alphaxiv --> arxiv
-    alphaxiv --> deepxiv
-    alphaxiv --> novelty-check
-    alphaxiv --> research-lit
-    arxiv --> novelty-check
-    arxiv --> research-lit
     auto-paper-improvement-loop --> kill-argument
     coder --> tdd
     deployer --> monitor-experiment
-    exa-search --> arxiv
-    experiment-audit --> auto-review-loop
-    experiment-audit --> experiment-bridge
-    experiment-audit --> paper-write
-    experiment-audit --> research-pipeline
-    experiment-audit --> result-to-claim
-    experiment-bridge --> auto-review-loop
-    experiment-bridge --> experiment-queue
-    experiment-bridge --> idea-discovery
-    experiment-bridge --> paper-writing
-    experiment-bridge --> research-pipeline
-    experiment-bridge --> run-experiment
-    experiment-plan --> auto-review-loop
-    experiment-plan --> research-refine
-    experiment-plan --> research-refine-pipeline
-    experiment-plan --> run-experiment
-    gemini-search --> arxiv
-    gemini-search --> novelty-check
-    gemini-search --> research-lit
-    gemini-search --> semantic-scholar
-    grant-proposal --> auto-review-loop
-    grant-proposal --> experiment-bridge
-    grant-proposal --> idea-discovery
-    grant-proposal --> novelty-check
-    grant-proposal --> paper-illustration
-    grant-proposal --> paper-writing
-    grant-proposal --> research-lit
-    grant-proposal --> research-refine
-    grant-proposal --> research-review
-    idea-creator --> auto-review-loop
-    idea-creator --> novelty-check
-    idea-creator --> research-review
-    idea-creator --> research-wiki
-    idea-creator --> run-experiment
-    idea-discovery --> arxiv
-    idea-discovery --> auto-review-loop
-    idea-discovery --> experiment-bridge
-    idea-discovery --> idea-creator
-    idea-discovery --> novelty-check
-    idea-discovery --> research-lit
-    idea-discovery --> research-pipeline
-    idea-discovery --> research-refine
-    idea-discovery --> research-refine-pipeline
-    idea-discovery --> research-review
-    idea-discovery --> run-experiment
-    idea-discovery-robot --> auto-review-loop
-    idea-discovery-robot --> idea-creator
-    idea-discovery-robot --> novelty-check
-    idea-discovery-robot --> research-lit
-    idea-discovery-robot --> research-review
-    idea-discovery-robot --> run-experiment
-    init-research --> leader
-    kill-argument --> auto-paper-improvement-loop
     leader --> diagnose
+    leader --> experiment-plan
     leader --> experiment-queue
     leader --> monitor-experiment
     leader --> paper-writing
@@ -69,91 +11,24 @@ graph TD
     leader --> sync
     leader --> tdd
     leader --> training-check
-    meta-optimize --> arxiv
-    meta-optimize --> auto-review-loop
-    openalex --> arxiv
-    openalex --> novelty-check
-    openalex --> research-lit
-    openalex --> semantic-scholar
-    paper-plan --> paper-compile
-    paper-plan --> paper-figure
-    paper-plan --> paper-write
-    paper-slides --> slides-polish
+    paper-illustration-image2 --> figure-spec
+    paper-illustration-image2 --> paper-figure
     paper-talk --> citation-audit
     paper-talk --> paper-claim-audit
     paper-talk --> paper-slides
     paper-talk --> slides-polish
-    paper-writing --> auto-paper-improvement-loop
-    paper-writing --> auto-review-loop
-    paper-writing --> citation-audit
-    paper-writing --> figure-spec
-    paper-writing --> idea-discovery
-    paper-writing --> kill-argument
-    paper-writing --> mermaid-diagram
-    paper-writing --> paper-claim-audit
-    paper-writing --> paper-compile
-    paper-writing --> paper-figure
-    paper-writing --> paper-illustration
-    paper-writing --> paper-illustration-image2
-    paper-writing --> paper-plan
-    paper-writing --> paper-write
-    paper-writing --> proof-checker
-    paper-writing --> research-pipeline
-    paper-writing --> run-experiment
-    patent-pipeline --> auto-review-loop
-    patent-pipeline --> claims-drafting
-    patent-pipeline --> embodiment-description
-    patent-pipeline --> experiment-bridge
-    patent-pipeline --> figure-description
-    patent-pipeline --> grant-proposal
-    patent-pipeline --> idea-discovery
-    patent-pipeline --> invention-structuring
-    patent-pipeline --> jurisdiction-format
-    patent-pipeline --> paper-writing
-    patent-pipeline --> patent-novelty-check
-    patent-pipeline --> patent-review
-    patent-pipeline --> prior-art-search
-    patent-pipeline --> research-refine
-    patent-pipeline --> specification-writing
-    rebuttal --> experiment-bridge
-    research-pipeline --> auto-paper-improvement-loop
-    research-pipeline --> auto-review-loop
-    research-pipeline --> experiment-queue
-    research-pipeline --> idea-discovery
-    research-pipeline --> monitor-experiment
-    research-pipeline --> paper-compile
-    research-pipeline --> paper-figure
-    research-pipeline --> paper-write
-    research-pipeline --> paper-writing
-    research-pipeline --> run-experiment
-    research-refine --> auto-review-loop
-    research-refine --> experiment-plan
-    research-refine --> idea-creator
-    research-refine --> research-refine-pipeline
-    research-refine --> run-experiment
-    research-refine-pipeline --> experiment-plan
-    research-refine-pipeline --> research-refine
-    research-refine-pipeline --> run-experiment
-    research-wiki --> idea-creator
     resubmit-pipeline --> auto-paper-improvement-loop
+    resubmit-pipeline --> citation-audit
+    resubmit-pipeline --> kill-argument
     resubmit-pipeline --> overleaf-sync
     resubmit-pipeline --> paper-claim-audit
     resubmit-pipeline --> paper-compile
     resubmit-pipeline --> proof-checker
-    result-to-claim --> idea-creator
-    semantic-scholar --> arxiv
-    semantic-scholar --> novelty-check
-    semantic-scholar --> research-lit
-    serverless-modal --> run-experiment
-    specification-writing --> embodiment-description
-    specification-writing --> figure-description
-    sync --> init-research
-    vast-gpu --> run-experiment
-    writing-systems-papers --> paper-write
+    skill-dag-check --> write-a-skill
 
     classDef leader fill:#ff9999,stroke:#cc0000
-    class auto-paper-improvement-loop,auto-review-loop,auto-review-loop-llm,auto-review-loop-minimax,citation-audit,dse-loop,experiment-audit,experiment-plan,framework-update,idea-discovery,idea-discovery-robot,init-research,kill-argument,leader,meta-optimize,paper-claim-audit,paper-talk,paper-writing,patent-pipeline,rebuttal leader
+    class auto-paper-improvement-loop,auto-review-loop,auto-review-loop-llm,auto-review-loop-minimax,dse-loop,experiment-plan,framework-update,idea-discovery,idea-discovery-robot,init-research,kill-argument,leader,meta-optimize,paper-talk,paper-writing,patent-pipeline,rebuttal,research-pipeline,research-refine,research-refine-pipeline leader
     classDef executor fill:#99ccff,stroke:#0066cc
-    class ablation-planner,analyze-results,claims-drafting,coder,deployer,diagnose,embodiment-description,experiment-bridge,experiment-queue,figure-description,figure-spec,formula-derivation,grant-proposal,invention-structuring,jurisdiction-format,mermaid-diagram,monitor-experiment,overleaf-sync,paper-compile,paper-figure executor
+    class ablation-planner,claims-drafting,coder,deployer,diagnose,embodiment-description,experiment-bridge,experiment-queue,figure-description,figure-spec,formula-derivation,grant-proposal,invention-structuring,jurisdiction-format,mermaid-diagram,monitor-experiment,overleaf-sync,paper-compile,paper-figure,paper-illustration executor
     classDef any fill:#99ff99,stroke:#009900
-    class alphaxiv,arxiv,caveman,comm-lit-review,deepxiv,exa-search,feishu-notify,gemini-search,git-guardrails,grill-me,grill-with-docs,handoff,idea-creator,novelty-check,openalex,pixel-art,prior-art-search,qzcli,research-lit,research-review any
+    class alphaxiv,analyze-results,arxiv,caveman,citation-audit,comm-lit-review,deepxiv,exa-search,experiment-audit,feishu-notify,gemini-search,git-guardrails,grill-me,grill-with-docs,handoff,idea-creator,novelty-check,openalex,paper-claim-audit,patent-novelty-check any

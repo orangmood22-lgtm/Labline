@@ -4,6 +4,8 @@ description: Search research papers via Gemini for broad literature discovery. U
 argument-hint: [search-query]
 allowed-tools: Bash(*), Read, Write, mcp__gemini-cli__*
 caller: any
+platform: both
+status: needs-adaptation
 examples:
   - "/gemini-search multimodal learning"
   - "search papers with gemini"

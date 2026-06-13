@@ -4,7 +4,7 @@ Codex-native mirror and adaptation layer for the main ARIS `skills/` package.
 
 ## Scope
 
-- Base mirror coverage: all `67` mainline skills under `skills/`
+- Base mirror coverage: all `94` user-facing mainline skills under `skills/`
 - Support directory: `shared-references/`
 - Default reviewer contract for reviewer-heavy skills:
   - round 1: `spawn_agent`
@@ -21,7 +21,7 @@ This package is still an appendage to the Claude mainline, not a separate Codex-
 Project-local install is the default path for Codex:
 
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git ~/aris_repo
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git ~/aris_repo
 cd ~/your-project
 
 bash ~/aris_repo/tools/install_aris_codex.sh .

@@ -3,6 +3,10 @@ name: coder
 description: 代码实现角色 - 只写代码、测试、重构，不做部署、SSH、论文写作
 argument-hint: "实现什么？（描述代码任务）"
 caller: executor
+platform: both
+status: active
+invokes:
+  - tdd
 allowed-tools:
   - Read
   - Write

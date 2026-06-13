@@ -4,6 +4,10 @@ description: "Autonomously improve a generated paper via GPT-5.4 xhigh review �
 argument-hint: "[paper-directory] [— style-ref: <source>] [— edit-whitelist <path>]"
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex, mcp__codex__codex-reply
 caller: leader
+platform: both
+status: active
+invokes:
+  - kill-argument
 examples:
   - "/auto-paper-improvement-loop papers/main"
   - "改论文 for submission"

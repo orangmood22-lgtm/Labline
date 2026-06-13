@@ -4,6 +4,12 @@ description: "一键创建新科研项目。自动: mkdir → git init → insta
 argument-hint: "项目名 [--size full|small] [--server SSH别名] [--remote GIT_URL] [--direction 研究方向]"
 allowed-tools: Bash(*), Read, Write, Edit, Agent
 caller: leader
+platform: both
+status: needs-adaptation
+produces:
+  - project.yaml
+  - CLAUDE.md
+  - AGENTS.md
 examples:
   - "/init-research exp0604 --direction few-shot detection"
   - "创建新项目 freq-proto"

@@ -1,9 +1,14 @@
 ---
 name: paper-illustration-image2
-description: "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for Claude Code users who want a GPT-image-style renderer without modifying the original skill."
+description: "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for ARIS users who want a GPT-image-style renderer without modifying the original skill."
 argument-hint: [description-or-method-file]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, mcp__codex-image2__generate, mcp__codex-image2__generate_start, mcp__codex-image2__generate_status, mcp__codex__codex, mcp__codex__codex-reply
 caller: executor
+platform: both
+status: needs-doc-adaptation
+invokes:
+  - paper-figure
+  - figure-spec
 examples:
   - "/paper-illustration-image2 model architecture"
   - "generate figure via Codex image"
@@ -12,7 +17,7 @@ examples:
 
 # Paper Illustration Image2
 
-Generate publication-quality paper figures using **Claude as the planner/reviewer**
+Generate publication-quality paper figures using the **current agent as the planner/reviewer**
 and a **local Codex app-server MCP bridge** as the raster renderer.
 
 ## Core Design Philosophy

@@ -2,182 +2,144 @@
 
 > 让 AI 在你睡觉时做科研。醒来发现论文已写好、实验已跑完、审稿意见已回复。
 
-ARIS 是一套基于 AI 编程助手（Claude Code / Codex CLI）的自动化科研框架。82 个 skill 覆盖从文献调研到论文投稿的完整流程，三边架构确保研究质量，Docker 容器化支持多人协作。
+ARIS 是一套面向 Claude Code / Codex CLI 的自动化科研框架。当前主线包含 **94 个用户可调用 skill**，覆盖文献调研、实验规划、代码实现、GPU 部署、论文写作、审稿回复、专利和项目同步。
 
 ## 核心特性
 
-**三边架构** — Leader（规划）+ Executor（执行）+ Reviewer（审查），跨模型协作避免自我审查盲区
+**三边架构** — Leader（规划）+ Executor（执行）+ Reviewer（审查），用跨模型/跨窗口审查减少自我确认偏差。
 
-**82 个研究 Skill** — 文献检索、实验规划、代码实现、论文撰写、审稿回复、专利申请……一条命令触发完整 pipeline
+**双客户端轨道** — Claude Code 使用 `/skill-name`，Codex CLI 使用 `$skill-name`；项目模板同时提供 `CLAUDE.md` 和 `AGENTS.md`。
 
-**项目分离** — 框架（skills/tools/templates）与科研项目（code/data/results）独立管理，一套框架支撑多个研究方向。详见 `docs/FRAMEWORK_STRUCTURE.md`
+**项目分离** — 框架目录只放 `skills/`、`tools/`、`templates/`、`mcp-servers/`；科研项目目录只放代码、数据、论文、结果。详见 [docs/FRAMEWORK_STRUCTURE.md](docs/FRAMEWORK_STRUCTURE.md)。
 
-**轻量安装** — 项目通过 symlink 接入框架，不复制源码，框架更新自动传播
+**轻量安装** — 安装器用 symlink 接入框架，多个项目共享一套框架，框架更新自动传播。
 
-**多人部署** — Docker 容器化，每人独立环境，共享数据集和 GPU 资源
-
-**多端支持** — Claude Code (Terminal/VSCode)、Codex CLI、Cursor、Trae、Claude Desktop
-
-## 架构
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    ARIS Framework                     │
-├──────────┬──────────────┬──────────┬────────────────┤
-│ skills/  │ templates/   │ tools/   │ deploy/        │
-│ 82 skills│ 项目模板     │ 安装/同步│ Docker 部署    │
-└──────────┴──────────────┴──────────┴────────────────┘
-        │ install_aris.sh (symlink)
-        ▼
-┌─────────────────────────────────────────────────────┐
-│              Research Project (per user)              │
-├──────────┬──────────┬──────────┬────────────────────┤
-│ code/    │ paper/   │ data/    │ refine-logs/       │
-│ 实验代码 │ 论文 TeX │ 数据集   │ 实验计划/日志     │
-└──────────┴──────────┴──────────┴────────────────────┘
-```
-
-### 三边协作
-
-| 角色 | 模型 | 职责 | 禁止 |
-|------|------|------|------|
-| **Leader** | Claude Opus | 规划、决策、止损、分发任务 | 不写代码、不跑实验 |
-| **Executor** | Claude Opus | 代码实现、实验部署、论文撰写 | 不做自审 |
-| **Reviewer** | GPT-5.5 (Codex) | 代码审查、实验审计、claim 判定 | 只看原始文件 |
+**可部署** — 支持本地、SSH GPU 服务器、Docker 多人环境、Vast.ai、Modal、Overleaf、飞书通知等工作流。
 
 ## 快速开始
 
-详见 [QUICK_START.md](QUICK_START.md)。
-
 ```bash
-# 个人使用（已有 Claude Code）
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
-cd Auto-research-in-sleep
-bash tools/install_aris.sh /path/to/your/project
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git ~/aris-framework
+bash ~/aris-framework/tools/install_aris.sh /path/to/your/project
+```
 
-# 多人部署（Docker）
-cd deploy && cp .env.example .env && vim .env
-docker compose up -d
+更多步骤见 [QUICK_START.md](QUICK_START.md)。服务器部署见 [deploy/DEPLOY_GUIDE.md](deploy/DEPLOY_GUIDE.md)。
+
+## 项目结构
+
+```text
+aris-framework/
+├── skills/              # 94 个用户 skill + Codex/Claude overlay
+├── templates/           # 项目、实验、论文、专利、配置模板
+├── tools/               # 安装、同步、检索、实验队列、审计工具
+├── mcp-servers/         # Claude/Codex/Gemini/MiniMax/Feishu MCP 或桥接服务
+├── deploy/              # Docker / GPU 服务器部署配置
+├── docs/                # 操作、适配、架构、catalog、DAG 文档
+├── tests/               # 回归测试
+├── QUICK_START.md
+└── README.md
 ```
 
 ## Skill 一览
 
-78 个 skill，覆盖 11 个分类：
+完整 skill 目录由脚本生成：
 
-| 分类 | 数量 | 代表 skill |
-|------|------|-----------|
-| Pipeline/编排 | 5 | `/leader` `/init-research` `/research-pipeline` |
-| 研究发现 | 8 | `/idea-discovery` `/novelty-check` `/research-lit` |
-| 搜索/数据源 | 7 | `/arxiv` `/semantic-scholar` `/gemini-search` |
-| 实验 | 10 | `/experiment-plan` `/run-experiment` `/experiment-audit` |
-| 论文撰写 | 13 | `/paper-writing` `/rebuttal` `/auto-paper-improvement-loop` |
-| 论文演示 | 4 | `/paper-slides` `/paper-poster` `/paper-talk` |
-| 图表/可视化 | 8 | `/paper-figure` `/figure-spec` `/mermaid-diagram` |
-| 审查/质量 | 6 | `/kill-argument` `/proof-checker` `/citation-audit` |
-| 专利/公文 | 8 | `/patent-pipeline` `/grant-proposal` `/specification-writing` |
-| 工具/同步 | 6 | `/sync` `/framework-update` `/overleaf-sync` |
-| 计算资源 | 3 | `/vast-gpu` `/serverless-modal` `/system-profile` |
+- [docs/SKILL_CATALOG.md](docs/SKILL_CATALOG.md)
+- [docs/SKILL_CATALOG_CN.md](docs/SKILL_CATALOG_CN.md)
 
-完整目录（含用法示例）：[docs/SKILL_CATALOG.md](docs/SKILL_CATALOG.md) | [中文版](docs/SKILL_CATALOG_CN.md)
+常用入口：
 
-## 部署方式
+| 场景 | Skill |
+|------|-------|
+| 总编排 | `$leader`, `$research-pipeline`, `$init-research` |
+| 文献/想法 | `$research-lit`, `$idea-discovery`, `$novelty-check` |
+| 实验 | `$experiment-plan`, `$experiment-bridge`, `$run-experiment`, `$experiment-queue` |
+| 论文 | `$paper-writing`, `$paper-plan`, `$paper-write`, `$paper-figure`, `$paper-compile` |
+| 审查 | `$review`, `$research-review`, `$experiment-audit`, `$paper-claim-audit`, `$citation-audit` |
+| 同步/部署 | `$sync`, `$framework-update`, `$deployer`, `$vast-gpu`, `$serverless-modal` |
+| 开发辅助 | `$tdd`, `$diagnose`, `$coder`, `$writer`, `$caveman`, `$handoff` |
 
-### 方式一：个人安装（推荐入门）
+## 功能目录索引
 
-前置：已安装 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 或 [Codex CLI](https://github.com/openai/codex)
+### 文档
 
-```bash
-# 克隆框架
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git ~/aris-framework
+| 路径 | 内容 |
+|------|------|
+| [docs/README.md](docs/README.md) | docs 全量索引 |
+| [docs/FRAMEWORK_STRUCTURE.md](docs/FRAMEWORK_STRUCTURE.md) | 框架/项目边界 |
+| [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md) | 日常操作手册 |
+| [docs/TRIPARTITE_ARCHITECTURE_GUIDE.md](docs/TRIPARTITE_ARCHITECTURE_GUIDE.md) | 三边架构 |
+| [docs/codex-migration.md](docs/codex-migration.md) | Codex 迁移说明 |
+| [docs/DOC_DEPENDENCIES.md](docs/DOC_DEPENDENCIES.md) | 文档依赖关系 |
+| [docs/LANGGRAPH_EVALUATION.md](docs/LANGGRAPH_EVALUATION.md) | LangGraph 是否适合引入 ARIS |
+| [deploy/DEPLOY_GUIDE.md](deploy/DEPLOY_GUIDE.md) | Docker / 服务器部署 |
+| [AGENT_GUIDE.md](AGENT_GUIDE.md) | AI Agent 阅读指南 |
 
-# 在你的科研项目中安装 skills
-bash ~/aris-framework/tools/install_aris.sh /path/to/my-research
-```
+### MCP / 桥接服务
 
-### 方式二：Docker 多人部署（推荐团队）
+| 路径 | 功能 |
+|------|------|
+| [mcp-servers/README.md](mcp-servers/README.md) | MCP 服务索引 |
+| `mcp-servers/claude-review/` | Claude reviewer bridge |
+| `mcp-servers/codex-review/` | Codex/OpenAI-compatible reviewer bridge |
+| `mcp-servers/gemini-review/` | Gemini reviewer bridge |
+| `mcp-servers/llm-chat/` | 通用 OpenAI-compatible chat MCP |
+| `mcp-servers/minimax-chat/` | MiniMax chat MCP |
+| `mcp-servers/feishu-bridge/` | 飞书 HTTP 通知/回复桥 |
+| `mcp-servers/codex-image2/` | Codex app-server 图像生成桥 |
 
-详见 [deploy/DEPLOY_GUIDE.md](deploy/DEPLOY_GUIDE.md)
+### 模板
 
-```bash
-cd deploy
-cp .env.example .env   # 配置用户、API key、数据集路径
-docker compose up -d   # 启动 Gitea + 用户容器
-```
+| 路径 | 功能 |
+|------|------|
+| [templates/README.md](templates/README.md) | 模板全量索引 |
+| `templates/AGENTS_MD_TEMPLATE.md` | Codex 项目指令模板 |
+| `templates/CLAUDE_MD_TEMPLATE.md` | Claude Code 项目状态模板 |
+| `templates/project.yaml.tmpl` | ARIS 项目元数据模板 |
+| `templates/api-config.yaml.tmpl` | API provider 配置模板 |
+| `templates/EXPERIMENT_*` | 实验计划/日志/预期声明模板 |
+| `templates/RESEARCH_*`, `templates/IDEA_*` | 研究简报、contract、idea 候选池 |
+| `templates/PAPER_PLAN_TEMPLATE.md`, `templates/NARRATIVE_REPORT_TEMPLATE.md` | 论文写作输入 |
+| `templates/PATENT_*`, `templates/INVENTION_BRIEF_TEMPLATE.md` | 专利 pipeline 输入 |
 
-每人一个容器，共享：
-- 框架代码（只读）
-- 数据集（只读）
-- 预训练模型（读写）
+### 工具
 
-## 项目结构
-
-```
-aris-framework/
-├── skills/              # 82 个 skill 定义（SKILL.md）
-│   ├── leader/          # 三边架构 Leader
-│   ├── experiment-plan/ # 实验规划
-│   ├── paper-writing/   # 论文撰写
-│   ├── sync/            # 代码同步
-│   └── ...
-├── templates/           # 项目模板
-│   ├── project.yaml.tmpl
-│   ├── CLAUDE_MD_TEMPLATE.md
-│   └── EXPERIMENT_PLAN_TEMPLATE.md
-├── tools/               # 安装器、同步脚本、辅助工具
-│   ├── install_aris.sh
-│   ├── sync.sh
-│   └── watchdog.py
-├── deploy/              # Docker 部署配置
-│   ├── Dockerfile
-│   ├── docker-compose.yaml
-│   └── DEPLOY_GUIDE.md
-├── mcp-servers/         # MCP 服务器（Codex review）
-├── docs/                # 详细文档
-├── tests/               # 回归测试
-├── QUICK_START.md       # 快速开始
-└── README.md            # 本文件
-```
+| 路径 | 功能 |
+|------|------|
+| `tools/install_aris.sh`, `tools/install_aris.ps1` | 安装 Claude/Codex skills 到项目 |
+| `tools/install_aris_codex.sh` | Codex-only 安装器 |
+| `tools/smart_update.sh`, `tools/smart_update_codex.sh`, `tools/smart_update.ps1` | 框架更新/重建 symlink |
+| `tools/sync.sh` | git + 远程部署同步 |
+| `tools/watchdog.py` | 实验 watchdog |
+| `tools/experiment_queue/` | SSH 多 GPU 实验队列 |
+| `tools/arxiv_fetch.py`, `tools/semantic_scholar_fetch.py`, `tools/openalex_fetch.py`, `tools/deepxiv_fetch.py`, `tools/exa_search.py` | 论文/网页检索 |
+| `tools/research_wiki.py` | 研究知识库 |
+| `tools/generate_skill_catalog.py`, `tools/translate_skill_catalog.py`, `tools/generate_skill_dag.py` | skill catalog / DAG 生成 |
+| `tools/figure_renderer.py`, `tools/extract_paper_style.py`, `tools/paper_illustration_image2.py` | 图表/论文视觉辅助 |
+| `tools/overleaf_setup.sh`, `tools/overleaf_audit.sh` | Overleaf 同步审计 |
+| `tools/verify_paper_audits.sh`, `tools/verify_wiki_coverage.sh`, `tools/save_trace.sh` | 审计和 trace 辅助 |
+| `tools/meta_opt/` | meta optimization hook 辅助 |
 
 ## 客户端兼容
 
 | 客户端 | 支持度 | 说明 |
 |--------|--------|------|
-| Claude Code (Terminal) | 完整 | 推荐，所有 skill 可用 |
-| Claude Code (VSCode) | 完整 | Remote SSH 到容器 |
-| Codex CLI | 完整 | 有独立 skill 镜像 (`skills-codex/`) |
-| Cursor | 部分 | 见 `docs/CURSOR_ADAPTATION.md` |
-| Trae | 部分 | 见 `docs/TRAE_ARIS_RUNBOOK_CN.md` |
-| Claude Desktop | 有限 | 无法用 skills，仅 API 对话 |
+| Claude Code | 完整 | 使用 `/skill-name`；兼容 `CLAUDE.md` |
+| Codex CLI | 完整 | 使用 `$skill-name`；兼容 `AGENTS.md` 和 `.agents/skills/` |
+| Cursor | 部分 | 见 [docs/CURSOR_ADAPTATION.md](docs/CURSOR_ADAPTATION.md) |
+| Trae | 部分 | 见 [docs/TRAE_ARIS_RUNBOOK_CN.md](docs/TRAE_ARIS_RUNBOOK_CN.md) |
+| Antigravity / OpenClaw / ModelScope | 部分 | 见 `docs/*ADAPTATION*` 与 [docs/MODELSCOPE_GUIDE.md](docs/MODELSCOPE_GUIDE.md) |
 
-## API 配置
+## 维护
 
-支持多种 API 来源：
+新增/删除 skill 后运行：
 
-- Anthropic 官方（需海外 IP）
-- Anthropic 中转站（国内可用）
-- Claude Coding Plan（需 VPN）
-- OpenAI / 中转站（Codex Reviewer 用）
-- 免费方案：ModelScope（见 `docs/MODELSCOPE_GUIDE.md`）
+```bash
+python3 tools/generate_skill_catalog.py
+python3 tools/translate_skill_catalog.py
+```
 
-详见 [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md#api-配置)
-
-## 文档
-
-| 文档 | 内容 |
-|------|------|
-| [QUICK_START.md](QUICK_START.md) | 5 分钟上手 |
-| [docs/SKILL_CATALOG_CN.md](docs/SKILL_CATALOG_CN.md) | Skill 完整目录（中文） |
-| [docs/SKILL_CATALOG.md](docs/SKILL_CATALOG.md) | Skill 完整目录（英文） |
-| [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md) | 详细操作手册 |
-| [deploy/DEPLOY_GUIDE.md](deploy/DEPLOY_GUIDE.md) | Docker 部署指南 |
-| [docs/TRIPARTITE_ARCHITECTURE_GUIDE.md](docs/TRIPARTITE_ARCHITECTURE_GUIDE.md) | 三边架构详解 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 |
-| [AGENT_GUIDE.md](AGENT_GUIDE.md) | AI Agent 阅读指南 |
-
-## 社区
-
-- GitHub Issues: bug 报告、功能建议
-- 每人 fork 自己的分支，必要时开会合并
+文档依赖见 [docs/DOC_DEPENDENCIES.md](docs/DOC_DEPENDENCIES.md)。
 
 ## 致谢
 

@@ -3,6 +3,10 @@ name: deployer
 description: 部署角色 - 只做 SSH 同步、启动训练、监控实验、收集结果，不写代码
 argument-hint: "部署什么？（描述部署任务）"
 caller: executor
+platform: both
+status: active
+invokes:
+  - monitor-experiment
 allowed-tools:
   - Read
   - Bash

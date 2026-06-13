@@ -3,6 +3,17 @@ name: resubmit-pipeline
 description: "Workflow 5: orchestrate a text-only resubmit of a polished paper to a different venue under hard constraints (no new experiments, no bib edits, no framework changes, never overwrite prior submissions). Phase 0 physical isolation, Phase 0.5 health + anonymity check, Phase 1 audit (proof / claim / citation), Phase 2 microedits via auto-loop with edit-whitelist + citation-audit --soft-only, Phase 3 kill-argument adversarial gate, Phase 4 final compile + Overleaf push via /overleaf-sync. Use when user says \"resubmit pipeline\", \"重投流程\", \"port paper to <new venue>\", \"resubmit to <venue>\", \"tighten paper for resubmission\", or has a rejected/withdrawn paper to move to a different top venue under tight time budget."
 argument-hint: "[paper-base-dir] [— target-venue: <name>] [— review-corpus: <path>]"
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, spawn_agent
+caller: leader
+platform: both
+status: needs-codex-reviewer-routing
+invokes:
+  - proof-checker
+  - paper-claim-audit
+  - citation-audit
+  - auto-paper-improvement-loop
+  - kill-argument
+  - paper-compile
+  - overleaf-sync
 ---
 
 # Resubmit Pipeline: Text-Only Microedit Mode

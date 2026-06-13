@@ -1,6 +1,6 @@
 # ARIS Skill Catalog
 
-> 自动生成于 2026-05-27 11:47。共 90 个 skill，12 个分类。
+> 自动生成于 2026-06-13 15:39。共 94 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/generate_skill_catalog.py`
 
@@ -15,9 +15,9 @@
 - [图表/可视化](#图表可视化)（8）
 - [审查/质量](#审查质量)（6）
 - [专利/公文](#专利公文)（8）
-- [工具/同步](#工具同步)（6）
+- [工具/同步](#工具同步)（7）
 - [计算资源](#计算资源)（3）
-- [开发工具](#开发工具)（12）
+- [开发工具](#开发工具)（15）
 
 ---
 
@@ -815,6 +815,14 @@
 /research-wiki init
 ```
 
+### `/skill-dag-check`
+
+**Analyze skill dependency impact before modification. Shows upstream dependencies, downstream dependents, and artifact flow. Use when planning to mo...**
+
+```
+/skill-dag-check
+```
+
 ### `/sync`
 
 **一键同步科研项目：封装 git add/commit/push/pull + 远程部署。用户不需要懂 git。**
@@ -871,6 +879,26 @@
 
 ```
 /caveman
+```
+
+### `/coder`
+
+**代码实现角色 - 只写代码、测试、重构，不做部署、SSH、论文写作**
+
+参数：`实现什么？（描述代码任务）`
+
+```
+/coder
+```
+
+### `/deployer`
+
+**部署角色 - 只做 SSH 同步、启动训练、监控实验、收集结果，不写代码**
+
+参数：`部署什么？（描述部署任务）`
+
+```
+/deployer
 ```
 
 ### `/diagnose`
@@ -953,6 +981,16 @@
 
 ```
 /write-a-skill
+```
+
+### `/writer`
+
+**论文写作角色 - 只写论文、文档、Rebuttal，不写代码、不做部署**
+
+参数：`写什么？（描述写作任务）`
+
+```
+/writer
 ```
 
 ### `/zoom-out`

@@ -4,6 +4,18 @@ description: "三边架构总编排：自动用 Agent 工具派生 Executor、Co
 argument-hint: [research-direction-or-plan-path]
 allowed-tools: Read, Grep, Glob, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply, WebSearch, WebFetch
 caller: leader
+platform: both
+status: active
+invokes:
+  - experiment-plan
+  - tdd
+  - diagnose
+  - run-experiment
+  - monitor-experiment
+  - sync
+  - experiment-queue
+  - training-check
+  - paper-writing
 examples:
   - "/leader 频域特征+原型学习做小样本增量目标检测"
   - "run full research pipeline for this idea"

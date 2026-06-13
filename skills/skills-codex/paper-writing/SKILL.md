@@ -442,7 +442,7 @@ skipping audits while claiming to have run them.
 ```
 
 > `<ARIS_REPO>` placeholder — replace with the absolute path to your ARIS
-> clone (e.g. `~/Desktop/Auto-claude-code-research-in-sleep`). In a Codex
+> clone (e.g. `~/aris-framework` or `~/Auto-research-in-sleep`). In a Codex
 > project install, derive it from `.aris/installed-skills-codex.txt`:
 > `ARIS_REPO="$(awk -F '\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt)"`.
 > For an unmanaged flat symlink install, use the skill directory symlink:

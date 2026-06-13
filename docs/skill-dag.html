@@ -80,7 +80,7 @@ body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; backgrou
   <h1>ARIS <span>Skill DAG</span></h1>
   <div id="stats">
     <span><b>94</b> skills</span>
-    <span><b>151</b> edges</span>
+    <span><b>26</b> edges</span>
     <span><b>22</b> leader</span>
     <span><b>11</b> reviewer</span>
     <span><b>37</b> executor</span>
@@ -143,7 +143,7 @@ const DAG_NODES = [
     "name": "alphaxiv",
     "caller": "any",
     "description": "Quick single-paper lookup via AlphaXiv LLM-optimized summaries with tiered source fallback. Use when user says \"explain this paper\", \"summarize paper\", pastes an arXiv/AlphaXiv URL, or provides a bare arXiv ID for quick understanding - not for broad literature search.",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv",
       "deepxiv",
       "novelty-check",
@@ -173,7 +173,7 @@ const DAG_NODES = [
     "name": "arxiv",
     "caller": "any",
     "description": "Search, download, and summarize academic papers from arXiv. Use when user says \"search arxiv\", \"download paper\", \"fetch arxiv\", \"arxiv search\", \"get paper pdf\", or wants to find and save papers from arXiv to the local paper library.",
-    "invokes": [
+    "inferred_mentions": [
       "novelty-check",
       "research-lit"
     ],
@@ -182,15 +182,7 @@ const DAG_NODES = [
       "search arxiv for transformer",
       "/arxiv 2301.12345"
     ],
-    "invoked_by": [
-      "alphaxiv",
-      "exa-search",
-      "gemini-search",
-      "idea-discovery",
-      "meta-optimize",
-      "openalex",
-      "semantic-scholar"
-    ],
+    "invoked_by": [],
     "layer": "tools"
   },
   {
@@ -200,15 +192,14 @@ const DAG_NODES = [
     "invokes": [
       "kill-argument"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/auto-paper-improvement-loop papers/main",
       "改论文 for submission",
       "iteratively polish the paper"
     ],
     "invoked_by": [
-      "kill-argument",
-      "paper-writing",
-      "research-pipeline",
       "resubmit-pipeline"
     ],
     "layer": "orchestration"
@@ -222,20 +213,7 @@ const DAG_NODES = [
       "review until it passes",
       "iterate on the method section"
     ],
-    "invoked_by": [
-      "experiment-audit",
-      "experiment-bridge",
-      "experiment-plan",
-      "grant-proposal",
-      "idea-creator",
-      "idea-discovery",
-      "idea-discovery-robot",
-      "meta-optimize",
-      "paper-writing",
-      "patent-pipeline",
-      "research-pipeline",
-      "research-refine"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
@@ -285,7 +263,7 @@ const DAG_NODES = [
     ],
     "invoked_by": [
       "paper-talk",
-      "paper-writing"
+      "resubmit-pipeline"
     ],
     "layer": "reviewer"
   },
@@ -298,9 +276,7 @@ const DAG_NODES = [
       "撰写权利要求 for the new method",
       "draft patent claims for this invention"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
@@ -310,6 +286,8 @@ const DAG_NODES = [
     "invokes": [
       "tdd"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/coder implement the model architecture",
       "写代码实现 FreqProtoNet",
@@ -339,9 +317,7 @@ const DAG_NODES = [
       "find trending papers on RL",
       "progressive read of this paper"
     ],
-    "invoked_by": [
-      "alphaxiv"
-    ],
+    "invoked_by": [],
     "layer": "tools"
   },
   {
@@ -351,6 +327,8 @@ const DAG_NODES = [
     "invokes": [
       "monitor-experiment"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/deployer sync to 3090x2 and start training",
       "部署实验到远程服务器",
@@ -394,17 +372,14 @@ const DAG_NODES = [
       "撰写实施例 for the invention",
       "write detailed description"
     ],
-    "invoked_by": [
-      "patent-pipeline",
-      "specification-writing"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "exa-search",
     "caller": "any",
     "description": "AI-powered web search via Exa with content extraction. Use when user says \"exa search\", \"web search with content\", \"find similar pages\", or needs broad web results beyond academic databases (arXiv, Semantic Scholar).",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv"
     ],
     "examples": [
@@ -419,7 +394,7 @@ const DAG_NODES = [
     "name": "experiment-audit",
     "caller": "reviewer",
     "description": "Audit experiment integrity before claiming results. Uses cross-model review (GPT-5.4) to check for fake ground truth, score normalization fraud, phantom results, and insufficient scope. Use when user says \"审计实验\", \"check experiment integrity\", \"audit results\", \"实验诚实度\", or after experiments complete before writing claims.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "experiment-bridge",
       "paper-write",
@@ -438,7 +413,7 @@ const DAG_NODES = [
     "name": "experiment-bridge",
     "caller": "executor",
     "description": "Workflow 1.5: Bridge between idea discovery and auto review. Reads EXPERIMENT_PLAN.md, implements experiment code, deploys to GPU, collects initial results. Use when user says \"实现实验\", \"implement experiments\", \"bridge\", \"从计划到跑实验\", \"deploy the plan\", or has an experiment plan ready to execute.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "experiment-queue",
       "idea-discovery",
@@ -451,20 +426,14 @@ const DAG_NODES = [
       "实现实验 from the plan",
       "deploy the experiment plan"
     ],
-    "invoked_by": [
-      "experiment-audit",
-      "grant-proposal",
-      "idea-discovery",
-      "patent-pipeline",
-      "rebuttal"
-    ],
+    "invoked_by": [],
     "layer": "executor-coder"
   },
   {
     "name": "experiment-plan",
     "caller": "leader",
     "description": "Turn a refined research proposal or method idea into a detailed, claim-driven experiment roadmap. Use after `research-refine`, or when the user asks for a detailed experiment plan, ablation matrix, evaluation protocol, run order, compute budget, or paper-ready validation that supports the core problem, novelty, simplicity, and any LLM / VLM / Diffusion / RL-based contribution.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "research-refine",
       "research-refine-pipeline",
@@ -476,8 +445,7 @@ const DAG_NODES = [
       "plan ablation studies"
     ],
     "invoked_by": [
-      "research-refine",
-      "research-refine-pipeline"
+      "leader"
     ],
     "layer": "orchestration"
   },
@@ -491,9 +459,7 @@ const DAG_NODES = [
       "队列实验 run all seeds"
     ],
     "invoked_by": [
-      "experiment-bridge",
-      "leader",
-      "research-pipeline"
+      "leader"
     ],
     "layer": "executor-deployer"
   },
@@ -518,10 +484,7 @@ const DAG_NODES = [
       "附图处理 for patent figures",
       "describe the patent drawings"
     ],
-    "invoked_by": [
-      "patent-pipeline",
-      "specification-writing"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
@@ -534,7 +497,7 @@ const DAG_NODES = [
       "generate workflow figure from spec"
     ],
     "invoked_by": [
-      "paper-writing"
+      "paper-illustration-image2"
     ],
     "layer": "executor-writer"
   },
@@ -554,6 +517,8 @@ const DAG_NODES = [
     "name": "framework-update",
     "caller": "leader",
     "description": "一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。",
+    "platform": "both",
+    "status": "needs-safety-confirmation",
     "examples": [
       "/framework-update",
       "更新框架",
@@ -566,12 +531,14 @@ const DAG_NODES = [
     "name": "gemini-search",
     "caller": "any",
     "description": "Search research papers via Gemini for broad literature discovery. Use when user says \"gemini search\", \"gemini papers\", \"search with gemini\", or wants AI-powered literature discovery beyond arXiv/Semantic Scholar indexes.",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv",
       "novelty-check",
       "research-lit",
       "semantic-scholar"
     ],
+    "platform": "both",
+    "status": "needs-adaptation",
     "examples": [
       "/gemini-search multimodal learning",
       "search papers with gemini",
@@ -583,7 +550,9 @@ const DAG_NODES = [
   {
     "name": "git-guardrails",
     "caller": "any",
-    "description": "Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, branch -D, etc.) before they execute. Use when user wants to prevent destructive git operations, add git safety hooks, or block git push/reset in Claude Code.",
+    "description": "Set up Claude Code or Codex guardrails to block dangerous git commands (push, reset --hard, clean, branch -D, etc.) before they execute. Use when user wants to prevent destructive git operations, add git safety hooks, or block git push/reset.",
+    "platform": "both",
+    "status": "needs-codex-adaptation",
     "examples": [
       "/git-guardrails",
       "add git safety hooks",
@@ -596,7 +565,7 @@ const DAG_NODES = [
     "name": "grant-proposal",
     "caller": "executor",
     "description": "Draft a structured grant proposal from research ideas and literature. Supports KAKENHI (Japan), NSF (US), NSFC (China, including 面上/青年/优青/杰青/海外优青/重点), ERC (EU), DFG (Germany), SNSF (Switzerland), ARC (Australia), NWO (Netherlands), and generic formats. Use when user says \"write grant\", \"grant proposal\", \"申請書\", \"write KAKENHI\", \"科研費\", \"基金申请\", \"写基金\", \"NSF proposal\", or wants to turn research ideas into a funding application.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "experiment-bridge",
       "idea-discovery",
@@ -612,9 +581,7 @@ const DAG_NODES = [
       "写基金 面上项目",
       "draft NSF proposal for detection research"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
@@ -657,7 +624,7 @@ const DAG_NODES = [
     "name": "idea-creator",
     "caller": "any",
     "description": "Generate and rank research ideas given a broad direction. Use when user says \"找idea\", \"brainstorm ideas\", \"generate research ideas\", \"what can we work on\", or wants to explore a research area for publishable directions.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "novelty-check",
       "research-review",
@@ -669,20 +636,14 @@ const DAG_NODES = [
       "找idea for few-shot learning",
       "brainstorm research ideas for robotics"
     ],
-    "invoked_by": [
-      "idea-discovery",
-      "idea-discovery-robot",
-      "research-refine",
-      "research-wiki",
-      "result-to-claim"
-    ],
+    "invoked_by": [],
     "layer": "tools"
   },
   {
     "name": "idea-discovery",
     "caller": "leader",
     "description": "Workflow 1: Full idea discovery pipeline. Orchestrates research-lit → idea-creator → novelty-check → research-review to go from a broad research direction to validated, pilot-tested ideas. Use when user says \"找idea全流程\", \"idea discovery pipeline\", \"从零开始找方向\", or wants the complete idea exploration workflow.",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv",
       "auto-review-loop",
       "experiment-bridge",
@@ -700,20 +661,14 @@ const DAG_NODES = [
       "找idea全流程 for few-shot learning",
       "discover research ideas in robotics"
     ],
-    "invoked_by": [
-      "experiment-bridge",
-      "grant-proposal",
-      "paper-writing",
-      "patent-pipeline",
-      "research-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
     "name": "idea-discovery-robot",
     "caller": "leader",
     "description": "Workflow 1 adaptation for robotics and embodied AI. Orchestrates robotics-aware literature survey, idea generation, novelty check, and critical review to go from a broad robotics direction to benchmark-grounded, simulation-first ideas. Use when user says \"robotics idea discovery\", \"机器人找idea\", \"embodied AI idea\", \"机器人方向探索\", \"sim2real 选题\", or wants ideas for manipulation, locomotion, navigation, drones, humanoids, or general robot learning.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "idea-creator",
       "novelty-check",
@@ -733,17 +688,22 @@ const DAG_NODES = [
     "name": "init-research",
     "caller": "leader",
     "description": "一键创建新科研项目。自动: mkdir → git init → install skills → CLAUDE.md → project.yaml → push to git remote。",
-    "invokes": [
+    "inferred_mentions": [
       "leader"
+    ],
+    "platform": "both",
+    "status": "needs-adaptation",
+    "produces": [
+      "project.yaml",
+      "CLAUDE.md",
+      "AGENTS.md"
     ],
     "examples": [
       "/init-research exp0604 --direction few-shot detection",
       "创建新项目 freq-proto",
       "init research project for robotics"
     ],
-    "invoked_by": [
-      "sync"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
@@ -755,9 +715,7 @@ const DAG_NODES = [
       "构建发明 for patent",
       "structure the invention disclosure"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
@@ -769,17 +727,21 @@ const DAG_NODES = [
       "格式转换 for US filing",
       "compile patent for EP"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "kill-argument",
     "caller": "leader",
     "description": "Two-thread adversarial review: a fresh reviewer constructs the strongest 200-word rejection memo, then a second fresh reviewer defends the paper point-by-point and surfaces still-unresolved critical issues. Use when user says \"kill argument\", \"adversarial review\", \"hostile review\", \"rebuttal preparation\", \"reviewer-2 simulation\", or before submitting a theory paper that has already passed standard review rounds.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-paper-improvement-loop"
+    ],
+    "platform": "both",
+    "status": "active",
+    "produces": [
+      "KILL_ARGUMENT.md",
+      "KILL_ARGUMENT.json"
     ],
     "examples": [
       "/kill-argument papers/main",
@@ -788,7 +750,7 @@ const DAG_NODES = [
     ],
     "invoked_by": [
       "auto-paper-improvement-loop",
-      "paper-writing"
+      "resubmit-pipeline"
     ],
     "layer": "orchestration"
   },
@@ -798,6 +760,7 @@ const DAG_NODES = [
     "description": "三边架构总编排：自动用 Agent 工具派生 Executor、Codex MCP 调 Reviewer。一个窗口全流程。",
     "invokes": [
       "diagnose",
+      "experiment-plan",
       "experiment-queue",
       "monitor-experiment",
       "paper-writing",
@@ -806,14 +769,14 @@ const DAG_NODES = [
       "tdd",
       "training-check"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/leader 频域特征+原型学习做小样本增量目标检测",
       "run full research pipeline for this idea",
       "orchestrate paper writing and review"
     ],
-    "invoked_by": [
-      "init-research"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
@@ -825,16 +788,14 @@ const DAG_NODES = [
       "generate sequence diagram for API",
       "create ER diagram for database"
     ],
-    "invoked_by": [
-      "paper-writing"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "meta-optimize",
     "caller": "leader",
     "description": "Analyze ARIS usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired by Meta-Harness (Lee et al., 2026). Use when user says \"优化技能\", \"meta optimize\", \"improve skills\", \"分析使用记录\", or wants to optimize ARIS's own harness components based on accumulated experience.",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv",
       "auto-review-loop"
     ],
@@ -857,8 +818,7 @@ const DAG_NODES = [
     ],
     "invoked_by": [
       "deployer",
-      "leader",
-      "research-pipeline"
+      "leader"
     ],
     "layer": "executor-deployer"
   },
@@ -871,29 +831,21 @@ const DAG_NODES = [
       "查新 this method",
       "has anyone done incremental detection with prototypes"
     ],
-    "invoked_by": [
-      "alphaxiv",
-      "arxiv",
-      "gemini-search",
-      "grant-proposal",
-      "idea-creator",
-      "idea-discovery",
-      "idea-discovery-robot",
-      "openalex",
-      "semantic-scholar"
-    ],
+    "invoked_by": [],
     "layer": "reviewer"
   },
   {
     "name": "openalex",
     "caller": "any",
     "description": "Search academic papers via OpenAlex API for open citation data, institutional affiliations, and funding information. Use when user says \"openalex search\", \"search openalex\", \"open citation graph\", or wants comprehensive academic metadata beyond arXiv/Semantic Scholar.",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv",
       "novelty-check",
       "research-lit",
       "semantic-scholar"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/openalex transformer architecture",
       "search openalex for citations",
@@ -927,7 +879,6 @@ const DAG_NODES = [
     ],
     "invoked_by": [
       "paper-talk",
-      "paper-writing",
       "resubmit-pipeline"
     ],
     "layer": "reviewer"
@@ -942,9 +893,6 @@ const DAG_NODES = [
       "build the PDF for submission"
     ],
     "invoked_by": [
-      "paper-plan",
-      "paper-writing",
-      "research-pipeline",
       "resubmit-pipeline"
     ],
     "layer": "executor-writer"
@@ -959,9 +907,7 @@ const DAG_NODES = [
       "generate all paper figures"
     ],
     "invoked_by": [
-      "paper-plan",
-      "paper-writing",
-      "research-pipeline"
+      "paper-illustration-image2"
     ],
     "layer": "executor-writer"
   },
@@ -974,31 +920,32 @@ const DAG_NODES = [
       "生成图表 for method overview",
       "AI绘图 for the pipeline"
     ],
-    "invoked_by": [
-      "grant-proposal",
-      "paper-writing"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "paper-illustration-image2",
     "caller": "executor",
-    "description": "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for Claude Code users who want a GPT-image-style renderer without modifying the original skill.",
+    "description": "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for ARIS users who want a GPT-image-style renderer without modifying the original skill.",
+    "invokes": [
+      "figure-spec",
+      "paper-figure"
+    ],
+    "platform": "both",
+    "status": "needs-doc-adaptation",
     "examples": [
       "/paper-illustration-image2 model architecture",
       "generate figure via Codex image",
       "alternative illustration pipeline"
     ],
-    "invoked_by": [
-      "paper-writing"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "paper-plan",
     "caller": "executor",
     "description": "Generate a structured paper outline from review conclusions and experiment results. Use when user says \"写大纲\", \"paper outline\", \"plan the paper\", \"论文规划\", or wants to create a paper plan before writing.",
-    "invokes": [
+    "inferred_mentions": [
       "paper-compile",
       "paper-figure",
       "paper-write"
@@ -1008,9 +955,7 @@ const DAG_NODES = [
       "写大纲 for ICLR submission",
       "plan the paper structure"
     ],
-    "invoked_by": [
-      "paper-writing"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
@@ -1029,7 +974,7 @@ const DAG_NODES = [
     "name": "paper-slides",
     "caller": "executor",
     "description": "Generate conference presentation slides (beamer LaTeX → PDF + editable PPTX) from a compiled paper, with speaker notes and full talk script. Use when user says \"做PPT\", \"做幻灯片\", \"make slides\", \"conference talk\", \"presentation slides\", \"生成slides\", \"写演讲稿\", or wants beamer slides for a conference talk.",
-    "invokes": [
+    "inferred_mentions": [
       "slides-polish"
     ],
     "examples": [
@@ -1052,6 +997,8 @@ const DAG_NODES = [
       "paper-slides",
       "slides-polish"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/paper-talk papers/main --minutes 15",
       "做 talk for ICLR",
@@ -1069,20 +1016,14 @@ const DAG_NODES = [
       "写论文 introduction section",
       "draft the method section in LaTeX"
     ],
-    "invoked_by": [
-      "experiment-audit",
-      "paper-plan",
-      "paper-writing",
-      "research-pipeline",
-      "writing-systems-papers"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "paper-writing",
     "caller": "leader",
     "description": "Workflow 3: Full paper writing pipeline. Orchestrates paper-plan → paper-figure → figure-spec/paper-illustration/mermaid-diagram → paper-write → paper-compile → auto-paper-improvement-loop to go from a narrative report to a polished PDF. At `— effort: max | beast` (or explicit `— assurance: submission`), Phase 6 gates the Final Report on `tools/verify_paper_audits.sh`; the PDF is labelled `submission-ready` only when the external verifier is green. Use when user says \"写论文全流程\", \"write paper pipeline\", \"从报告到PDF\", \"paper writing\", or wants the complete paper generation workflow.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-paper-improvement-loop",
       "auto-review-loop",
       "citation-audit",
@@ -1107,11 +1048,7 @@ const DAG_NODES = [
       "generate paper from experiment results"
     ],
     "invoked_by": [
-      "experiment-bridge",
-      "grant-proposal",
-      "leader",
-      "patent-pipeline",
-      "research-pipeline"
+      "leader"
     ],
     "layer": "orchestration"
   },
@@ -1124,16 +1061,14 @@ const DAG_NODES = [
       "专利查新 for this idea",
       "is this invention patentable"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "reviewer"
   },
   {
     "name": "patent-pipeline",
     "caller": "leader",
     "description": "Full patent drafting pipeline from invention description to jurisdiction-formatted filing documents. Supports CN (CNIPA), US (USPTO), EP (EPO). Supports invention patents and utility models. Use when user says \"写专利\", \"patent pipeline\", \"专利申请\", \"draft patent\", \"写权利要求书\", or wants to draft a complete patent application.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "claims-drafting",
       "embodiment-description",
@@ -1167,9 +1102,7 @@ const DAG_NODES = [
       "专利审查 for my application",
       "get examiner review of claims"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "reviewer"
   },
   {
@@ -1193,9 +1126,7 @@ const DAG_NODES = [
       "现有技术检索 for this method",
       "find prior art for the invention"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "reviewer"
   },
   {
@@ -1208,7 +1139,6 @@ const DAG_NODES = [
       "verify this mathematical proof"
     ],
     "invoked_by": [
-      "paper-writing",
       "resubmit-pipeline"
     ],
     "layer": "reviewer"
@@ -1241,7 +1171,7 @@ const DAG_NODES = [
     "name": "rebuttal",
     "caller": "leader",
     "description": "Workflow 4: Submission rebuttal pipeline. Parses external reviews, enforces coverage and grounding, drafts a safe text-only rebuttal under venue limits, and manages follow-up rounds. Use when user says \"rebuttal\", \"reply to reviewers\", \"ICML rebuttal\", \"OpenReview response\", or wants to answer external reviews safely.",
-    "invokes": [
+    "inferred_mentions": [
       "experiment-bridge"
     ],
     "examples": [
@@ -1261,23 +1191,14 @@ const DAG_NODES = [
       "find papers on prototype networks",
       "literature review for incremental detection"
     ],
-    "invoked_by": [
-      "alphaxiv",
-      "arxiv",
-      "gemini-search",
-      "grant-proposal",
-      "idea-discovery",
-      "idea-discovery-robot",
-      "openalex",
-      "semantic-scholar"
-    ],
+    "invoked_by": [],
     "layer": "tools"
   },
   {
     "name": "research-pipeline",
     "caller": "leader",
     "description": "Full research pipeline: Workflow 1 (idea discovery) → implementation → Workflow 2 (auto review loop) → Workflow 3 (paper writing, optional). Goes from a broad research direction all the way to a polished PDF. Use when user says \"全流程\", \"full pipeline\", \"从找idea到投稿\", \"end-to-end research\", or wants the complete autonomous research lifecycle.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-paper-improvement-loop",
       "auto-review-loop",
       "experiment-queue",
@@ -1294,19 +1215,14 @@ const DAG_NODES = [
       "全流程 for few-shot learning",
       "run full research pipeline"
     ],
-    "invoked_by": [
-      "experiment-audit",
-      "experiment-bridge",
-      "idea-discovery",
-      "paper-writing"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
     "name": "research-refine",
     "caller": "leader",
     "description": "Turn a vague research direction into a problem-anchored, elegant, frontier-aware, implementation-oriented method plan via iterative GPT-5.4 review. Use when the user says \"refine my approach\", \"帮我细化方案\", \"decompose this problem\", \"打磨idea\", \"refine research plan\", \"细化研究方案\", or wants a concrete research method that stays simple, focused, and top-venue ready instead of a vague or overbuilt idea.",
-    "invokes": [
+    "inferred_mentions": [
       "auto-review-loop",
       "experiment-plan",
       "idea-creator",
@@ -1318,20 +1234,14 @@ const DAG_NODES = [
       "帮我细化方案 for incremental learning",
       "refine the research plan"
     ],
-    "invoked_by": [
-      "experiment-plan",
-      "grant-proposal",
-      "idea-discovery",
-      "patent-pipeline",
-      "research-refine-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
     "name": "research-refine-pipeline",
     "caller": "leader",
     "description": "Run an end-to-end workflow that chains `research-refine` and `experiment-plan`. Use when the user wants a one-shot pipeline from vague research direction to focused final proposal plus detailed experiment roadmap, or asks to \"串起来\", build a pipeline, do it end-to-end, or generate both the method and experiment plan together.",
-    "invokes": [
+    "inferred_mentions": [
       "experiment-plan",
       "research-refine",
       "run-experiment"
@@ -1341,11 +1251,7 @@ const DAG_NODES = [
       "串起来 method and experiment plan",
       "end-to-end research planning"
     ],
-    "invoked_by": [
-      "experiment-plan",
-      "idea-discovery",
-      "research-refine"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
@@ -1357,19 +1263,14 @@ const DAG_NODES = [
       "review my research idea",
       "get external review of the paper"
     ],
-    "invoked_by": [
-      "grant-proposal",
-      "idea-creator",
-      "idea-discovery",
-      "idea-discovery-robot"
-    ],
+    "invoked_by": [],
     "layer": "reviewer"
   },
   {
     "name": "research-wiki",
     "caller": "any",
     "description": "Persistent research knowledge base that accumulates papers, ideas, experiments, claims, and their relationships across the entire research lifecycle. Inspired by Karpathy's LLM Wiki pattern. Use when user says \"知识库\", \"research wiki\", \"add paper\", \"wiki query\", \"查知识库\", or wants to build/query a persistent field map.",
-    "invokes": [
+    "inferred_mentions": [
       "idea-creator"
     ],
     "examples": [
@@ -1377,9 +1278,7 @@ const DAG_NODES = [
       "知识库 add this paper",
       "research-wiki ingest papers/"
     ],
-    "invoked_by": [
-      "idea-creator"
-    ],
+    "invoked_by": [],
     "layer": "tools"
   },
   {
@@ -1388,11 +1287,15 @@ const DAG_NODES = [
     "description": "Workflow 5: orchestrate a text-only resubmit of a polished paper to a different venue under hard constraints (no new experiments, no bib edits, no framework changes, never overwrite prior submissions). Phase 0 physical isolation, Phase 0.5 health + anonymity check, Phase 1 audit (proof / claim / citation), Phase 2 microedits via auto-loop with edit-whitelist + citation-audit --soft-only, Phase 3 kill-argument adversarial gate, Phase 4 final compile + Overleaf push via /overleaf-sync. Use when user says \"resubmit pipeline\", \"重投流程\", \"port paper to <new venue>\", \"resubmit to <venue>\", \"tighten paper for resubmission\", or has a rejected/withdrawn paper to move to a different top venue under tight time budget.",
     "invokes": [
       "auto-paper-improvement-loop",
+      "citation-audit",
+      "kill-argument",
       "overleaf-sync",
       "paper-claim-audit",
       "paper-compile",
       "proof-checker"
     ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/resubmit-pipeline papers/main --target-venue CVPR",
       "重投流程 to NeurIPS",
@@ -1405,7 +1308,7 @@ const DAG_NODES = [
     "name": "result-to-claim",
     "caller": "leader",
     "description": "Use when experiments complete to judge what claims the results support, what they don't, and what evidence is still missing. Codex MCP evaluates results against intended claims and routes to next action (pivot, supplement, or confirm). Use after experiments finish — before writing the paper or running ablations.",
-    "invokes": [
+    "inferred_mentions": [
       "idea-creator"
     ],
     "examples": [
@@ -1413,15 +1316,15 @@ const DAG_NODES = [
       "what claims do these results support",
       "judge if experiments validate the method"
     ],
-    "invoked_by": [
-      "experiment-audit"
-    ],
+    "invoked_by": [],
     "layer": "orchestration"
   },
   {
     "name": "review",
     "caller": "reviewer",
     "description": "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/PRD asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\".",
+    "platform": "both",
+    "status": "needs-runtime-adaptation",
     "examples": [
       "/review main",
       "review since last commit",
@@ -1440,18 +1343,7 @@ const DAG_NODES = [
       "deploy training to vast.ai"
     ],
     "invoked_by": [
-      "experiment-bridge",
-      "experiment-plan",
-      "idea-creator",
-      "idea-discovery",
-      "idea-discovery-robot",
-      "leader",
-      "paper-writing",
-      "research-pipeline",
-      "research-refine",
-      "research-refine-pipeline",
-      "serverless-modal",
-      "vast-gpu"
+      "leader"
     ],
     "layer": "executor-deployer"
   },
@@ -1459,7 +1351,7 @@ const DAG_NODES = [
     "name": "semantic-scholar",
     "caller": "any",
     "description": "Search published venue papers (IEEE, ACM, Springer, etc.) via Semantic Scholar API. Complements /arxiv (preprints) with citation counts, venue metadata, and TLDR. Use when user says \"search semantic scholar\", \"find IEEE papers\", \"find journal papers\", \"venue papers\", \"citation search\", or wants published literature beyond arXiv preprints.",
-    "invokes": [
+    "inferred_mentions": [
       "arxiv",
       "novelty-check",
       "research-lit"
@@ -1469,17 +1361,14 @@ const DAG_NODES = [
       "find IEEE papers on detection",
       "search for highly cited papers"
     ],
-    "invoked_by": [
-      "gemini-search",
-      "openalex"
-    ],
+    "invoked_by": [],
     "layer": "tools"
   },
   {
     "name": "serverless-modal",
     "caller": "executor",
     "description": "Run GPU workloads on Modal — training, fine-tuning, inference, batch processing. Zero-config serverless: no SSH, no Docker, auto scale-to-zero. Use when user says \"modal run\", \"modal training\", \"modal inference\", \"deploy to modal\", \"need a GPU\", \"run on modal\", \"serverless GPU\", or needs remote GPU compute.",
-    "invokes": [
+    "inferred_mentions": [
       "run-experiment"
     ],
     "examples": [
@@ -1494,6 +1383,9 @@ const DAG_NODES = [
     "name": "skill-dag-check",
     "caller": "any",
     "description": "Analyze skill dependency impact before modification. Shows upstream dependencies, downstream dependents, and artifact flow. Use when planning to modify, rename, or remove a skill, or when investigating skill relationships.",
+    "invokes": [
+      "write-a-skill"
+    ],
     "examples": [
       "/skill-dag-check paper-write",
       "analyze skill dependencies",
@@ -1512,7 +1404,6 @@ const DAG_NODES = [
       "per-page review the PPTX"
     ],
     "invoked_by": [
-      "paper-slides",
       "paper-talk"
     ],
     "layer": "executor-writer"
@@ -1521,7 +1412,7 @@ const DAG_NODES = [
     "name": "specification-writing",
     "caller": "executor",
     "description": "Write the full patent specification from claims and invention disclosure. Use when user says \"撰写说明书\", \"write specification\", \"写说明书\", \"patent description\", or wants to draft the complete patent specification.",
-    "invokes": [
+    "inferred_mentions": [
       "embodiment-description",
       "figure-description"
     ],
@@ -1530,17 +1421,20 @@ const DAG_NODES = [
       "撰写说明书 for the patent",
       "write full patent specification"
     ],
-    "invoked_by": [
-      "patent-pipeline"
-    ],
+    "invoked_by": [],
     "layer": "executor-writer"
   },
   {
     "name": "sync",
     "caller": "executor",
     "description": "一键同步科研项目：封装 git add/commit/push/pull + 远程部署。用户不需要懂 git。",
-    "invokes": [
+    "inferred_mentions": [
       "init-research"
+    ],
+    "platform": "both",
+    "status": "needs-safety-confirmation",
+    "consumes": [
+      "project.yaml"
     ],
     "examples": [
       "/sync push",
@@ -1583,6 +1477,11 @@ const DAG_NODES = [
     "name": "to-issues",
     "caller": "any",
     "description": "Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices. Use when user wants to convert a plan into issues, create implementation tickets, or break down work into issues.",
+    "platform": "both",
+    "status": "needs-issue-backend",
+    "produces": [
+      "docs/issues/*.md"
+    ],
     "examples": [
       "/to-issues from the PRD",
       "break plan into issues",
@@ -1595,6 +1494,11 @@ const DAG_NODES = [
     "name": "to-prd",
     "caller": "any",
     "description": "Turn the current conversation context into a PRD and publish it to the project issue tracker. Use when user wants to create a PRD from the current context.",
+    "platform": "both",
+    "status": "needs-issue-backend",
+    "produces": [
+      "docs/prd/*.md"
+    ],
     "examples": [
       "/to-prd",
       "create PRD from this discussion",
@@ -1621,7 +1525,7 @@ const DAG_NODES = [
     "name": "vast-gpu",
     "caller": "executor",
     "description": "Rent, manage, and destroy GPU instances on vast.ai. Use when user says \"rent gpu\", \"vast.ai\", \"rent a server\", \"cloud gpu\", or needs on-demand GPU without owning hardware.",
-    "invokes": [
+    "inferred_mentions": [
       "run-experiment"
     ],
     "examples": [
@@ -1641,7 +1545,9 @@ const DAG_NODES = [
       "create a new skill for data processing",
       "build a skill for my workflow"
     ],
-    "invoked_by": [],
+    "invoked_by": [
+      "skill-dag-check"
+    ],
     "layer": "tools"
   },
   {
@@ -1660,7 +1566,7 @@ const DAG_NODES = [
     "name": "writing-systems-papers",
     "caller": "executor",
     "description": "Paragraph-level structural blueprint for 10-12 page systems papers targeting OSDI, SOSP, ASPLOS, NSDI, and EuroSys. Provides page allocation, paragraph templates, and writing patterns. Use when user says \"写系统论文\", \"systems paper structure\", \"OSDI paper\", \"SOSP paper\", or wants fine-grained structural guidance for a systems conference submission.",
-    "invokes": [
+    "inferred_mentions": [
       "paper-write"
     ],
     "examples": [
@@ -1686,30 +1592,6 @@ const DAG_NODES = [
 ];
 const DAG_EDGES = [
   {
-    "source": "alphaxiv",
-    "target": "arxiv"
-  },
-  {
-    "source": "alphaxiv",
-    "target": "deepxiv"
-  },
-  {
-    "source": "alphaxiv",
-    "target": "novelty-check"
-  },
-  {
-    "source": "alphaxiv",
-    "target": "research-lit"
-  },
-  {
-    "source": "arxiv",
-    "target": "novelty-check"
-  },
-  {
-    "source": "arxiv",
-    "target": "research-lit"
-  },
-  {
     "source": "auto-paper-improvement-loop",
     "target": "kill-argument"
   },
@@ -1722,220 +1604,12 @@ const DAG_EDGES = [
     "target": "monitor-experiment"
   },
   {
-    "source": "exa-search",
-    "target": "arxiv"
-  },
-  {
-    "source": "experiment-audit",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "experiment-audit",
-    "target": "experiment-bridge"
-  },
-  {
-    "source": "experiment-audit",
-    "target": "paper-write"
-  },
-  {
-    "source": "experiment-audit",
-    "target": "research-pipeline"
-  },
-  {
-    "source": "experiment-audit",
-    "target": "result-to-claim"
-  },
-  {
-    "source": "experiment-bridge",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "experiment-bridge",
-    "target": "experiment-queue"
-  },
-  {
-    "source": "experiment-bridge",
-    "target": "idea-discovery"
-  },
-  {
-    "source": "experiment-bridge",
-    "target": "paper-writing"
-  },
-  {
-    "source": "experiment-bridge",
-    "target": "research-pipeline"
-  },
-  {
-    "source": "experiment-bridge",
-    "target": "run-experiment"
-  },
-  {
-    "source": "experiment-plan",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "experiment-plan",
-    "target": "research-refine"
-  },
-  {
-    "source": "experiment-plan",
-    "target": "research-refine-pipeline"
-  },
-  {
-    "source": "experiment-plan",
-    "target": "run-experiment"
-  },
-  {
-    "source": "gemini-search",
-    "target": "arxiv"
-  },
-  {
-    "source": "gemini-search",
-    "target": "novelty-check"
-  },
-  {
-    "source": "gemini-search",
-    "target": "research-lit"
-  },
-  {
-    "source": "gemini-search",
-    "target": "semantic-scholar"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "experiment-bridge"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "idea-discovery"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "novelty-check"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "paper-illustration"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "paper-writing"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "research-lit"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "research-refine"
-  },
-  {
-    "source": "grant-proposal",
-    "target": "research-review"
-  },
-  {
-    "source": "idea-creator",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "idea-creator",
-    "target": "novelty-check"
-  },
-  {
-    "source": "idea-creator",
-    "target": "research-review"
-  },
-  {
-    "source": "idea-creator",
-    "target": "research-wiki"
-  },
-  {
-    "source": "idea-creator",
-    "target": "run-experiment"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "arxiv"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "experiment-bridge"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "idea-creator"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "novelty-check"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "research-lit"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "research-pipeline"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "research-refine"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "research-refine-pipeline"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "research-review"
-  },
-  {
-    "source": "idea-discovery",
-    "target": "run-experiment"
-  },
-  {
-    "source": "idea-discovery-robot",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "idea-discovery-robot",
-    "target": "idea-creator"
-  },
-  {
-    "source": "idea-discovery-robot",
-    "target": "novelty-check"
-  },
-  {
-    "source": "idea-discovery-robot",
-    "target": "research-lit"
-  },
-  {
-    "source": "idea-discovery-robot",
-    "target": "research-review"
-  },
-  {
-    "source": "idea-discovery-robot",
-    "target": "run-experiment"
-  },
-  {
-    "source": "init-research",
-    "target": "leader"
-  },
-  {
-    "source": "kill-argument",
-    "target": "auto-paper-improvement-loop"
+    "source": "leader",
+    "target": "diagnose"
   },
   {
     "source": "leader",
-    "target": "diagnose"
+    "target": "experiment-plan"
   },
   {
     "source": "leader",
@@ -1966,44 +1640,12 @@ const DAG_EDGES = [
     "target": "training-check"
   },
   {
-    "source": "meta-optimize",
-    "target": "arxiv"
+    "source": "paper-illustration-image2",
+    "target": "figure-spec"
   },
   {
-    "source": "meta-optimize",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "openalex",
-    "target": "arxiv"
-  },
-  {
-    "source": "openalex",
-    "target": "novelty-check"
-  },
-  {
-    "source": "openalex",
-    "target": "research-lit"
-  },
-  {
-    "source": "openalex",
-    "target": "semantic-scholar"
-  },
-  {
-    "source": "paper-plan",
-    "target": "paper-compile"
-  },
-  {
-    "source": "paper-plan",
+    "source": "paper-illustration-image2",
     "target": "paper-figure"
-  },
-  {
-    "source": "paper-plan",
-    "target": "paper-write"
-  },
-  {
-    "source": "paper-slides",
-    "target": "slides-polish"
   },
   {
     "source": "paper-talk",
@@ -2022,216 +1664,16 @@ const DAG_EDGES = [
     "target": "slides-polish"
   },
   {
-    "source": "paper-writing",
+    "source": "resubmit-pipeline",
     "target": "auto-paper-improvement-loop"
-  },
-  {
-    "source": "paper-writing",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "paper-writing",
-    "target": "citation-audit"
-  },
-  {
-    "source": "paper-writing",
-    "target": "figure-spec"
-  },
-  {
-    "source": "paper-writing",
-    "target": "idea-discovery"
-  },
-  {
-    "source": "paper-writing",
-    "target": "kill-argument"
-  },
-  {
-    "source": "paper-writing",
-    "target": "mermaid-diagram"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-claim-audit"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-compile"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-figure"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-illustration"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-illustration-image2"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-plan"
-  },
-  {
-    "source": "paper-writing",
-    "target": "paper-write"
-  },
-  {
-    "source": "paper-writing",
-    "target": "proof-checker"
-  },
-  {
-    "source": "paper-writing",
-    "target": "research-pipeline"
-  },
-  {
-    "source": "paper-writing",
-    "target": "run-experiment"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "claims-drafting"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "embodiment-description"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "experiment-bridge"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "figure-description"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "grant-proposal"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "idea-discovery"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "invention-structuring"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "jurisdiction-format"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "paper-writing"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "patent-novelty-check"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "patent-review"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "prior-art-search"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "research-refine"
-  },
-  {
-    "source": "patent-pipeline",
-    "target": "specification-writing"
-  },
-  {
-    "source": "rebuttal",
-    "target": "experiment-bridge"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "auto-paper-improvement-loop"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "experiment-queue"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "idea-discovery"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "monitor-experiment"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "paper-compile"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "paper-figure"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "paper-write"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "paper-writing"
-  },
-  {
-    "source": "research-pipeline",
-    "target": "run-experiment"
-  },
-  {
-    "source": "research-refine",
-    "target": "auto-review-loop"
-  },
-  {
-    "source": "research-refine",
-    "target": "experiment-plan"
-  },
-  {
-    "source": "research-refine",
-    "target": "idea-creator"
-  },
-  {
-    "source": "research-refine",
-    "target": "research-refine-pipeline"
-  },
-  {
-    "source": "research-refine",
-    "target": "run-experiment"
-  },
-  {
-    "source": "research-refine-pipeline",
-    "target": "experiment-plan"
-  },
-  {
-    "source": "research-refine-pipeline",
-    "target": "research-refine"
-  },
-  {
-    "source": "research-refine-pipeline",
-    "target": "run-experiment"
-  },
-  {
-    "source": "research-wiki",
-    "target": "idea-creator"
   },
   {
     "source": "resubmit-pipeline",
-    "target": "auto-paper-improvement-loop"
+    "target": "citation-audit"
+  },
+  {
+    "source": "resubmit-pipeline",
+    "target": "kill-argument"
   },
   {
     "source": "resubmit-pipeline",
@@ -2250,44 +1692,8 @@ const DAG_EDGES = [
     "target": "proof-checker"
   },
   {
-    "source": "result-to-claim",
-    "target": "idea-creator"
-  },
-  {
-    "source": "semantic-scholar",
-    "target": "arxiv"
-  },
-  {
-    "source": "semantic-scholar",
-    "target": "novelty-check"
-  },
-  {
-    "source": "semantic-scholar",
-    "target": "research-lit"
-  },
-  {
-    "source": "serverless-modal",
-    "target": "run-experiment"
-  },
-  {
-    "source": "specification-writing",
-    "target": "embodiment-description"
-  },
-  {
-    "source": "specification-writing",
-    "target": "figure-description"
-  },
-  {
-    "source": "sync",
-    "target": "init-research"
-  },
-  {
-    "source": "vast-gpu",
-    "target": "run-experiment"
-  },
-  {
-    "source": "writing-systems-papers",
-    "target": "paper-write"
+    "source": "skill-dag-check",
+    "target": "write-a-skill"
   }
 ];
 
@@ -2484,6 +1890,7 @@ function onNodeClick(name) {
   detail.style.display = 'block';
 
   const upstream = n.invokes || [];
+  const inferred = n.inferred_mentions || [];
   const downstream = n.invoked_by || [];
   const produces = n.produces || [];
   const consumes = n.consumes || [];
@@ -2513,6 +1920,7 @@ function onNodeClick(name) {
     </div>
     <div class="dep-section"><h3>Invokes (${upstream.length})</h3>
       <ul class="dep-list">${upstream.map(s=>'<li onclick="onNodeClick(\''+s+'\')">'+s+'</li>').join('')}</ul></div>
+    ${inferred.length?'<div class="dep-section"><h3>Inferred mentions (not DAG edges)</h3><ul class="dep-list">'+inferred.map(s=>'<li onclick="onNodeClick(\''+s+'\')">'+s+'</li>').join('')+'</ul></div>':''}
     <div class="dep-section"><h3>Invoked by (${downstream.length})</h3>
       <ul class="dep-list">${downstream.map(s=>'<li onclick="onNodeClick(\''+s+'\')">'+s+'</li>').join('')}</ul></div>
     ${produces.length?'<div class="dep-section"><h3>Produces</h3><ul class="dep-list">'+produces.map(s=>'<li>'+s+'</li>').join('')+'</ul></div>':''}

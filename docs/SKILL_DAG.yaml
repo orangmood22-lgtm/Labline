@@ -2,13 +2,14 @@ version: 1
 generated_by: tools/generate_skill_dag.py
 stats:
   total_skills: 94
-  total_edges: 151
+  total_edges: 26
+  total_inferred_mentions: 131
   caller_distribution:
     executor: 37
     any: 24
     reviewer: 11
     leader: 22
-  has_cycles: true
+  has_cycles: false
 nodes:
 - name: ablation-planner
   caller: executor
@@ -25,7 +26,7 @@ nodes:
     tiered source fallback. Use when user says "explain this paper", "summarize paper",
     pastes an arXiv/AlphaXiv URL, or provides a bare arXiv ID for quick understanding
     - not for broad literature search.
-  invokes:
+  inferred_mentions:
   - arxiv
   - deepxiv
   - novelty-check
@@ -48,7 +49,7 @@ nodes:
   description: Search, download, and summarize academic papers from arXiv. Use when
     user says "search arxiv", "download paper", "fetch arxiv", "arxiv search", "get
     paper pdf", or wants to find and save papers from arXiv to the local paper library.
-  invokes:
+  inferred_mentions:
   - novelty-check
   - research-lit
   examples:
@@ -62,6 +63,8 @@ nodes:
     "auto improve", or wants to iteratively polish a generated paper.
   invokes:
   - kill-argument
+  platform: both
+  status: active
   examples:
   - /auto-paper-improvement-loop papers/main
   - 改论文 for submission
@@ -133,6 +136,8 @@ nodes:
   description: 代码实现角色 - 只写代码、测试、重构，不做部署、SSH、论文写作
   invokes:
   - tdd
+  platform: both
+  status: active
   examples:
   - /coder implement the model architecture
   - 写代码实现 FreqProtoNet
@@ -164,6 +169,8 @@ nodes:
   description: 部署角色 - 只做 SSH 同步、启动训练、监控实验、收集结果，不写代码
   invokes:
   - monitor-experiment
+  platform: both
+  status: active
   examples:
   - /deployer sync to 3090x2 and start training
   - 部署实验到远程服务器
@@ -203,7 +210,7 @@ nodes:
   description: AI-powered web search via Exa with content extraction. Use when user
     says "exa search", "web search with content", "find similar pages", or needs broad
     web results beyond academic databases (arXiv, Semantic Scholar).
-  invokes:
+  inferred_mentions:
   - arxiv
   examples:
   - /exa-search latest AI breakthroughs
@@ -216,7 +223,7 @@ nodes:
     results, and insufficient scope. Use when user says "审计实验", "check experiment
     integrity", "audit results", "实验诚实度", or after experiments complete before writing
     claims.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - experiment-bridge
   - paper-write
@@ -232,7 +239,7 @@ nodes:
     EXPERIMENT_PLAN.md, implements experiment code, deploys to GPU, collects initial
     results. Use when user says "实现实验", "implement experiments", "bridge", "从计划到跑实验",
     "deploy the plan", or has an experiment plan ready to execute.'
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - experiment-queue
   - idea-discovery
@@ -250,7 +257,7 @@ nodes:
     experiment plan, ablation matrix, evaluation protocol, run order, compute budget,
     or paper-ready validation that supports the core problem, novelty, simplicity,
     and any LLM / VLM / Diffusion / RL-based contribution.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - research-refine
   - research-refine-pipeline
@@ -314,6 +321,8 @@ nodes:
 - name: framework-update
   caller: leader
   description: 一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。
+  platform: both
+  status: needs-safety-confirmation
   examples:
   - /framework-update
   - 更新框架
@@ -323,21 +332,25 @@ nodes:
   description: Search research papers via Gemini for broad literature discovery. Use
     when user says "gemini search", "gemini papers", "search with gemini", or wants
     AI-powered literature discovery beyond arXiv/Semantic Scholar indexes.
-  invokes:
+  inferred_mentions:
   - arxiv
   - novelty-check
   - research-lit
   - semantic-scholar
+  platform: both
+  status: needs-adaptation
   examples:
   - /gemini-search multimodal learning
   - search papers with gemini
   - find related work on transformers
 - name: git-guardrails
   caller: any
-  description: Set up Claude Code hooks to block dangerous git commands (push, reset
-    --hard, clean, branch -D, etc.) before they execute. Use when user wants to prevent
-    destructive git operations, add git safety hooks, or block git push/reset in Claude
-    Code.
+  description: Set up Claude Code or Codex guardrails to block dangerous git commands
+    (push, reset --hard, clean, branch -D, etc.) before they execute. Use when user
+    wants to prevent destructive git operations, add git safety hooks, or block git
+    push/reset.
+  platform: both
+  status: needs-codex-adaptation
   examples:
   - /git-guardrails
   - add git safety hooks
@@ -350,7 +363,7 @@ nodes:
     and generic formats. Use when user says "write grant", "grant proposal", "申請書",
     "write KAKENHI", "科研費", "基金申请", "写基金", "NSF proposal", or wants to turn research
     ideas into a funding application.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - experiment-bridge
   - idea-discovery
@@ -396,7 +409,7 @@ nodes:
   description: Generate and rank research ideas given a broad direction. Use when
     user says "找idea", "brainstorm ideas", "generate research ideas", "what can we
     work on", or wants to explore a research area for publishable directions.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - novelty-check
   - research-review
@@ -412,7 +425,7 @@ nodes:
     → idea-creator → novelty-check → research-review to go from a broad research direction
     to validated, pilot-tested ideas. Use when user says "找idea全流程", "idea discovery
     pipeline", "从零开始找方向", or wants the complete idea exploration workflow.'
-  invokes:
+  inferred_mentions:
   - arxiv
   - auto-review-loop
   - experiment-bridge
@@ -436,7 +449,7 @@ nodes:
     when user says "robotics idea discovery", "机器人找idea", "embodied AI idea", "机器人方向探索",
     "sim2real 选题", or wants ideas for manipulation, locomotion, navigation, drones,
     humanoids, or general robot learning.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - idea-creator
   - novelty-check
@@ -451,8 +464,14 @@ nodes:
   caller: leader
   description: '一键创建新科研项目。自动: mkdir → git init → install skills → CLAUDE.md → project.yaml
     → push to git remote。'
-  invokes:
+  inferred_mentions:
   - leader
+  platform: both
+  status: needs-adaptation
+  produces:
+  - project.yaml
+  - CLAUDE.md
+  - AGENTS.md
   examples:
   - /init-research exp0604 --direction few-shot detection
   - 创建新项目 freq-proto
@@ -482,8 +501,13 @@ nodes:
     and surfaces still-unresolved critical issues. Use when user says "kill argument",
     "adversarial review", "hostile review", "rebuttal preparation", "reviewer-2 simulation",
     or before submitting a theory paper that has already passed standard review rounds.'
-  invokes:
+  inferred_mentions:
   - auto-paper-improvement-loop
+  platform: both
+  status: active
+  produces:
+  - KILL_ARGUMENT.md
+  - KILL_ARGUMENT.json
   examples:
   - /kill-argument papers/main
   - adversarial review this paper
@@ -493,6 +517,7 @@ nodes:
   description: 三边架构总编排：自动用 Agent 工具派生 Executor、Codex MCP 调 Reviewer。一个窗口全流程。
   invokes:
   - diagnose
+  - experiment-plan
   - experiment-queue
   - monitor-experiment
   - paper-writing
@@ -500,6 +525,8 @@ nodes:
   - sync
   - tdd
   - training-check
+  platform: both
+  status: active
   examples:
   - /leader 频域特征+原型学习做小样本增量目标检测
   - run full research pipeline for this idea
@@ -520,7 +547,7 @@ nodes:
     by Meta-Harness (Lee et al., 2026). Use when user says "优化技能", "meta optimize",
     "improve skills", "分析使用记录", or wants to optimize ARIS's own harness components
     based on accumulated experience.
-  invokes:
+  inferred_mentions:
   - arxiv
   - auto-review-loop
   examples:
@@ -550,11 +577,13 @@ nodes:
     affiliations, and funding information. Use when user says "openalex search", "search
     openalex", "open citation graph", or wants comprehensive academic metadata beyond
     arXiv/Semantic Scholar.
-  invokes:
+  inferred_mentions:
   - arxiv
   - novelty-check
   - research-lit
   - semantic-scholar
+  platform: both
+  status: active
   examples:
   - /openalex transformer architecture
   - search openalex for citations
@@ -616,8 +645,13 @@ nodes:
   caller: executor
   description: Generate publication-quality academic illustrations through a local
     Codex app-server bridge that uses Codex native image generation. This is a separate
-    experimental alternative to `paper-illustration`, intended for Claude Code users
-    who want a GPT-image-style renderer without modifying the original skill.
+    experimental alternative to `paper-illustration`, intended for ARIS users who
+    want a GPT-image-style renderer without modifying the original skill.
+  invokes:
+  - figure-spec
+  - paper-figure
+  platform: both
+  status: needs-doc-adaptation
   examples:
   - /paper-illustration-image2 model architecture
   - generate figure via Codex image
@@ -627,7 +661,7 @@ nodes:
   description: Generate a structured paper outline from review conclusions and experiment
     results. Use when user says "写大纲", "paper outline", "plan the paper", "论文规划",
     or wants to create a paper plan before writing.
-  invokes:
+  inferred_mentions:
   - paper-compile
   - paper-figure
   - paper-write
@@ -651,7 +685,7 @@ nodes:
     PPTX) from a compiled paper, with speaker notes and full talk script. Use when
     user says "做PPT", "做幻灯片", "make slides", "conference talk", "presentation slides",
     "生成slides", "写演讲稿", or wants beamer slides for a conference talk.
-  invokes:
+  inferred_mentions:
   - slides-polish
   examples:
   - /paper-slides papers/main --length 15min
@@ -670,6 +704,8 @@ nodes:
   - paper-claim-audit
   - paper-slides
   - slides-polish
+  platform: both
+  status: active
   examples:
   - /paper-talk papers/main --minutes 15
   - 做 talk for ICLR
@@ -693,7 +729,7 @@ nodes:
     `submission-ready` only when the external verifier is green. Use when user says
     "写论文全流程", "write paper pipeline", "从报告到PDF", "paper writing", or wants the complete
     paper generation workflow.'
-  invokes:
+  inferred_mentions:
   - auto-paper-improvement-loop
   - auto-review-loop
   - citation-audit
@@ -730,7 +766,7 @@ nodes:
     filing documents. Supports CN (CNIPA), US (USPTO), EP (EPO). Supports invention
     patents and utility models. Use when user says "写专利", "patent pipeline", "专利申请",
     "draft patent", "写权利要求书", or wants to draft a complete patent application.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - claims-drafting
   - embodiment-description
@@ -815,7 +851,7 @@ nodes:
     limits, and manages follow-up rounds. Use when user says "rebuttal", "reply to
     reviewers", "ICML rebuttal", "OpenReview response", or wants to answer external
     reviews safely.'
-  invokes:
+  inferred_mentions:
   - experiment-bridge
   examples:
   - /rebuttal papers/main --reviews reviews/
@@ -837,7 +873,7 @@ nodes:
     a broad research direction all the way to a polished PDF. Use when user says "全流程",
     "full pipeline", "从找idea到投稿", "end-to-end research", or wants the complete autonomous
     research lifecycle.'
-  invokes:
+  inferred_mentions:
   - auto-paper-improvement-loop
   - auto-review-loop
   - experiment-queue
@@ -859,7 +895,7 @@ nodes:
     user says "refine my approach", "帮我细化方案", "decompose this problem", "打磨idea",
     "refine research plan", "细化研究方案", or wants a concrete research method that stays
     simple, focused, and top-venue ready instead of a vague or overbuilt idea.
-  invokes:
+  inferred_mentions:
   - auto-review-loop
   - experiment-plan
   - idea-creator
@@ -875,7 +911,7 @@ nodes:
     Use when the user wants a one-shot pipeline from vague research direction to focused
     final proposal plus detailed experiment roadmap, or asks to "串起来", build a pipeline,
     do it end-to-end, or generate both the method and experiment plan together.
-  invokes:
+  inferred_mentions:
   - experiment-plan
   - research-refine
   - run-experiment
@@ -899,7 +935,7 @@ nodes:
     Inspired by Karpathy's LLM Wiki pattern. Use when user says "知识库", "research wiki",
     "add paper", "wiki query", "查知识库", or wants to build/query a persistent field
     map.
-  invokes:
+  inferred_mentions:
   - idea-creator
   examples:
   - /research-wiki query prototype learning
@@ -918,10 +954,14 @@ nodes:
     a rejected/withdrawn paper to move to a different top venue under tight time budget.'
   invokes:
   - auto-paper-improvement-loop
+  - citation-audit
+  - kill-argument
   - overleaf-sync
   - paper-claim-audit
   - paper-compile
   - proof-checker
+  platform: both
+  status: active
   examples:
   - /resubmit-pipeline papers/main --target-venue CVPR
   - 重投流程 to NeurIPS
@@ -932,7 +972,7 @@ nodes:
     what they don't, and what evidence is still missing. Codex MCP evaluates results
     against intended claims and routes to next action (pivot, supplement, or confirm).
     Use after experiments finish — before writing the paper or running ablations.
-  invokes:
+  inferred_mentions:
   - idea-creator
   examples:
   - /result-to-claim exp01 results
@@ -946,6 +986,8 @@ nodes:
     for?). Runs both reviews in parallel sub-agents and reports them side by side.
     Use when the user wants to review a branch, a PR, work-in-progress changes, or
     asks to "review since X".
+  platform: both
+  status: needs-runtime-adaptation
   examples:
   - /review main
   - review since last commit
@@ -966,7 +1008,7 @@ nodes:
     and TLDR. Use when user says "search semantic scholar", "find IEEE papers", "find
     journal papers", "venue papers", "citation search", or wants published literature
     beyond arXiv preprints.
-  invokes:
+  inferred_mentions:
   - arxiv
   - novelty-check
   - research-lit
@@ -980,7 +1022,7 @@ nodes:
     processing. Zero-config serverless: no SSH, no Docker, auto scale-to-zero. Use
     when user says "modal run", "modal training", "modal inference", "deploy to modal",
     "need a GPU", "run on modal", "serverless GPU", or needs remote GPU compute.'
-  invokes:
+  inferred_mentions:
   - run-experiment
   examples:
   - /serverless-modal train the model
@@ -991,6 +1033,8 @@ nodes:
   description: Analyze skill dependency impact before modification. Shows upstream
     dependencies, downstream dependents, and artifact flow. Use when planning to modify,
     rename, or remove a skill, or when investigating skill relationships.
+  invokes:
+  - write-a-skill
   examples:
   - /skill-dag-check paper-write
   - analyze skill dependencies
@@ -1013,7 +1057,7 @@ nodes:
   description: Write the full patent specification from claims and invention disclosure.
     Use when user says "撰写说明书", "write specification", "写说明书", "patent description",
     or wants to draft the complete patent specification.
-  invokes:
+  inferred_mentions:
   - embodiment-description
   - figure-description
   examples:
@@ -1023,8 +1067,12 @@ nodes:
 - name: sync
   caller: executor
   description: 一键同步科研项目：封装 git add/commit/push/pull + 远程部署。用户不需要懂 git。
-  invokes:
+  inferred_mentions:
   - init-research
+  platform: both
+  status: needs-safety-confirmation
+  consumes:
+  - project.yaml
   examples:
   - /sync push
   - 同步代码到远程
@@ -1054,6 +1102,10 @@ nodes:
     project issue tracker using tracer-bullet vertical slices. Use when user wants
     to convert a plan into issues, create implementation tickets, or break down work
     into issues.
+  platform: both
+  status: needs-issue-backend
+  produces:
+  - docs/issues/*.md
   examples:
   - /to-issues from the PRD
   - break plan into issues
@@ -1063,6 +1115,10 @@ nodes:
   description: Turn the current conversation context into a PRD and publish it to
     the project issue tracker. Use when user wants to create a PRD from the current
     context.
+  platform: both
+  status: needs-issue-backend
+  produces:
+  - docs/prd/*.md
   examples:
   - /to-prd
   - create PRD from this discussion
@@ -1081,7 +1137,7 @@ nodes:
   description: Rent, manage, and destroy GPU instances on vast.ai. Use when user says
     "rent gpu", "vast.ai", "rent a server", "cloud gpu", or needs on-demand GPU without
     owning hardware.
-  invokes:
+  inferred_mentions:
   - run-experiment
   examples:
   - /vast-gpu rent RTX 3090
@@ -1109,7 +1165,7 @@ nodes:
     templates, and writing patterns. Use when user says "写系统论文", "systems paper structure",
     "OSDI paper", "SOSP paper", or wants fine-grained structural guidance for a systems
     conference submission.
-  invokes:
+  inferred_mentions:
   - paper-write
   examples:
   - /writing-systems-papers OSDI

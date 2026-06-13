@@ -7,7 +7,10 @@ Reads all skills/<name>/SKILL.md files, extracts:
   - produces (list of artifact filenames)
   - consumes (list of artifact filenames)
 
-Outputs docs/SKILL_DAG.yaml and validates the graph is acyclic.
+Only frontmatter `invokes` creates formal graph edges. Body mentions such as
+`/paper-write` are heuristic hints and are written to `inferred_mentions`.
+
+Outputs docs/SKILL_DAG.yaml and validates the formal graph is acyclic.
 
 Usage:
     python3 tools/generate_skill_dag.py [--check-only] [--mermaid] [--html]
@@ -28,7 +31,13 @@ SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "docs" / "SKILL_DAG.yaml"
 MERMAID_PATH = Path(__file__).resolve().parent.parent / "docs" / "SKILL_DAG.mmd"
 HTML_PATH = Path(__file__).resolve().parent.parent / "docs" / "skill-dag.html"
-EXCLUDE = {"shared-references", "skills-codex", "skills-codex.bak"}
+EXCLUDE = {
+    "shared-references",
+    "skills-codex",
+    "skills-codex.bak",
+    "skills-codex-claude-review",
+    "skills-codex-gemini-review",
+}
 
 
 def parse_frontmatter(skill_path: Path) -> dict:
@@ -43,14 +52,23 @@ def parse_frontmatter(skill_path: Path) -> dict:
         return {}
 
 
-def scan_invocations(skill_path: Path) -> list:
-    """Scan SKILL.md body for /skill-name invocations (heuristic)."""
+def as_list(value) -> list:
+    """Normalize scalar/list frontmatter fields."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def scan_inferred_mentions(skill_path: Path) -> list:
+    """Scan SKILL.md body for /skill-name or $skill-name mentions (heuristic)."""
     text = skill_path.read_text(encoding="utf-8")
     # Remove frontmatter
     text = re.sub(r"^---\n.*?\n---\n?", "", text, count=1, flags=re.DOTALL)
-    # Find /skill-name patterns (in code blocks or prose)
-    matches = re.findall(r"(?<![`\w])/([a-z][a-z0-9-]+)", text)
-    # Filter to known skill names
+    # Find command-like mentions in code blocks or prose. These are not formal
+    # dependency edges; many are examples, comparisons, or fallback suggestions.
+    matches = re.findall(r"(?<![`\w])[/\$]([a-z][a-z0-9-]+)", text)
     return list(set(matches))
 
 
@@ -75,23 +93,35 @@ def build_graph(skills_dir: Path) -> dict:
             continue
 
         fm = parse_frontmatter(skill_md)
-        invoked = scan_invocations(skill_md)
-        # Filter to only known skills
-        invoked = [s for s in invoked if s in all_skill_names and s != d.name]
+        explicit_invokes = [
+            str(s)
+            for s in as_list(fm.get("invokes"))
+            if str(s) in all_skill_names and str(s) != d.name
+        ]
+        inferred = [
+            s
+            for s in scan_inferred_mentions(skill_md)
+            if s in all_skill_names and s != d.name and s not in explicit_invokes
+        ]
 
         node = {
             "name": d.name,
             "caller": fm.get("caller", "unknown"),
             "description": fm.get("description", ""),
         }
-        if invoked:
-            node["invokes"] = sorted(set(invoked))
+        if explicit_invokes:
+            node["invokes"] = sorted(set(explicit_invokes))
+        if inferred:
+            node["inferred_mentions"] = sorted(set(inferred))
+        for key in ("platform", "status"):
+            if fm.get(key):
+                node[key] = fm[key]
         if fm.get("produces"):
-            node["produces"] = fm["produces"] if isinstance(fm["produces"], list) else [fm["produces"]]
+            node["produces"] = as_list(fm["produces"])
         if fm.get("consumes"):
-            node["consumes"] = fm["consumes"] if isinstance(fm["consumes"], list) else [fm["consumes"]]
+            node["consumes"] = as_list(fm["consumes"])
         if fm.get("examples"):
-            node["examples"] = fm["examples"] if isinstance(fm["examples"], list) else [fm["examples"]]
+            node["examples"] = as_list(fm["examples"])
 
         nodes[d.name] = node
 
@@ -585,6 +615,7 @@ function onNodeClick(name) {{
   detail.style.display = 'block';
 
   const upstream = n.invokes || [];
+  const inferred = n.inferred_mentions || [];
   const downstream = n.invoked_by || [];
   const produces = n.produces || [];
   const consumes = n.consumes || [];
@@ -614,6 +645,7 @@ function onNodeClick(name) {{
     </div>
     <div class="dep-section"><h3>Invokes (${{upstream.length}})</h3>
       <ul class="dep-list">${{upstream.map(s=>'<li onclick="onNodeClick(\\''+s+'\\')">'+s+'</li>').join('')}}</ul></div>
+    ${{inferred.length?'<div class="dep-section"><h3>Inferred mentions (not DAG edges)</h3><ul class="dep-list">'+inferred.map(s=>'<li onclick="onNodeClick(\\''+s+'\\')">'+s+'</li>').join('')+'</ul></div>':''}}
     <div class="dep-section"><h3>Invoked by (${{downstream.length}})</h3>
       <ul class="dep-list">${{downstream.map(s=>'<li onclick="onNodeClick(\\''+s+'\\')">'+s+'</li>').join('')}}</ul></div>
     ${{produces.length?'<div class="dep-section"><h3>Produces</h3><ul class="dep-list">'+produces.map(s=>'<li>'+s+'</li>').join('')+'</ul></div>':''}}
@@ -678,7 +710,9 @@ def main():
     print(f"Caller distribution: {dict(callers)}")
 
     edges = sum(len(n.get("invokes", [])) for n in nodes.values())
+    inferred_mentions = sum(len(n.get("inferred_mentions", [])) for n in nodes.values())
     print(f"Total invocation edges: {edges}")
+    print(f"Total inferred mentions: {inferred_mentions}")
 
     if args.check_only:
         sys.exit(1 if cycles else 0)
@@ -690,6 +724,7 @@ def main():
         "stats": {
             "total_skills": len(nodes),
             "total_edges": edges,
+            "total_inferred_mentions": inferred_mentions,
             "caller_distribution": dict(callers),
             "has_cycles": bool(cycles),
         },
@@ -704,13 +739,13 @@ def main():
     if args.mermaid:
         mermaid = generate_mermaid(nodes)
         with open(MERMAID_PATH, "w", encoding="utf-8") as f:
-            f.write(mermaid)
+            f.write(mermaid + "\n")
         print(f"Written: {MERMAID_PATH}")
 
     if args.html:
         html = generate_html(nodes, dag)
         with open(HTML_PATH, "w", encoding="utf-8") as f:
-            f.write(html)
+            f.write(html + "\n")
         print(f"Written: {HTML_PATH}")
 
 
