@@ -20,15 +20,38 @@ ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
 
+ARG BUILD_HTTP_PROXY=
+ARG BUILD_HTTPS_PROXY=
+ENV http_proxy="${BUILD_HTTP_PROXY}"
+ENV https_proxy="${BUILD_HTTPS_PROXY}"
+ENV HTTP_PROXY="${BUILD_HTTP_PROXY}"
+ENV HTTPS_PROXY="${BUILD_HTTPS_PROXY}"
+ENV all_proxy=
+ENV ALL_PROXY=
+
 # ─── Fix apt sources (CUDA devel images strip Ubuntu repos) ─────────────────
-RUN rm -f /etc/apt/sources.list.d/cuda*.list \
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && rm -f /etc/apt/sources.list.d/cuda*.list /etc/apt/apt.conf.d/*proxy* \
+    && sed -i '/http_proxy/d' /etc/environment \
+    && sed -i '/https_proxy/d' /etc/environment \
     && echo "deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse" > /etc/apt/sources.list \
     && echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list \
     && echo "deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse" >> /etc/apt/sources.list \
     && apt-get update
 
 # ─── Base system packages ───────────────────────────────────────────────────
-RUN apt-get install -y --no-install-recommends \
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && apt-get install -y --no-install-recommends \
     ca-certificates gnupg software-properties-common \
     curl wget git git-lfs openssh-client rsync tmux vim nano htop \
     sudo jq tree unzip \
@@ -36,43 +59,88 @@ RUN apt-get install -y --no-install-recommends \
     libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# ─── Python 3.11 (via deadsnakes PPA) ──────────────────────────────────────
-RUN add-apt-repository -y ppa:deadsnakes/ppa \
+# ─── Python (Ubuntu Jammy distribution package) ─────────────────────────────
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    python3.11 python3.11-venv python3.11-dev python3.11-distutils \
+    python3 python3-venv python3-dev python3-distutils python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Make python3.11 default + install pip
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
-    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
-    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 \
+# Install pip and provide the python command expected by experiment scripts.
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && python3 -m pip install --upgrade pip setuptools wheel
 
 # ─── Node.js (for Claude Code + Codex CLI) ───────────────────────────────────
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # ─── Claude Code ─────────────────────────────────────────────────────────────
-RUN npm install -g @anthropic-ai/claude-code
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && npm install -g @anthropic-ai/claude-code
 
 # ─── Codex CLI ───────────────────────────────────────────────────────────────
-RUN npm install -g @openai/codex
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && npm install -g @openai/codex
 
 # ─── CC-Switch CLI (API provider management) ────────────────────────────────
-RUN curl -fsSL https://github.com/SaladDay/cc-switch-cli/releases/latest/download/install.sh | bash \
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && curl -fsSL https://github.com/SaladDay/cc-switch-cli/releases/latest/download/install.sh | bash \
     || (curl -LO https://github.com/saladday/cc-switch-cli/releases/latest/download/cc-switch-cli-linux-x64-musl.tar.gz \
         && tar -xzf cc-switch-cli-linux-x64-musl.tar.gz \
         && mv cc-switch /usr/local/bin/ \
         && rm -f cc-switch-cli-linux-x64-musl.tar.gz)
 
 # ─── PyTorch + GPU stack ────────────────────────────────────────────────────
-RUN pip install --no-cache-dir \
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && pip install --no-cache-dir \
     torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # ─── Python scientific + ML stack ───────────────────────────────────────────
-RUN pip install --no-cache-dir \
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && pip install --no-cache-dir \
     pyyaml requests matplotlib numpy scipy pandas \
     wandb tensorboard \
     opencv-python-headless pillow scikit-learn tqdm \
@@ -80,10 +148,6 @@ RUN pip install --no-cache-dir \
 
 # ─── Directory structure ─────────────────────────────────────────────────────
 RUN mkdir -p /aris/framework /aris/projects /aris/shared/datasets /aris/shared/pretrained
-
-# ─── Clean stale proxy config from nvidia/cuda base image ────────────────────
-RUN sed -i '/http_proxy/d' /etc/environment \
-    && sed -i '/https_proxy/d' /etc/environment
 
 # ─── User setup (non-root) ───────────────────────────────────────────────────
 ARG USERNAME=researcher
@@ -101,7 +165,13 @@ WORKDIR /home/${USERNAME}
 ARG ARIS_REPO=https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
 ARG ARIS_BRANCH=orangmood-tripartite-night-20260512
 
-RUN git clone --depth 1 -b ${ARIS_BRANCH} ${ARIS_REPO} /aris/framework || true
+RUN export http_proxy="${BUILD_HTTP_PROXY}" \
+    && export https_proxy="${BUILD_HTTPS_PROXY}" \
+    && export HTTP_PROXY="${BUILD_HTTP_PROXY}" \
+    && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
+    && export all_proxy= \
+    && export ALL_PROXY= \
+    && git clone --depth 1 -b ${ARIS_BRANCH} ${ARIS_REPO} /aris/framework || true
 
 # ─── Config directories ─────────────────────────────────────────────────────
 RUN mkdir -p ~/.claude ~/.codex ~/.aris ~/.ssh \
@@ -118,6 +188,13 @@ USER ${USERNAME}
 
 # ─── Verify GPU stack ───────────────────────────────────────────────────────
 RUN python3 -c "import torch; print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}')"
+
+ENV http_proxy=
+ENV https_proxy=
+ENV HTTP_PROXY=
+ENV HTTPS_PROXY=
+ENV all_proxy=
+ENV ALL_PROXY=
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

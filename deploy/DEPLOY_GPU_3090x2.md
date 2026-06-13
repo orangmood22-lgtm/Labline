@@ -63,9 +63,15 @@ ANTHROPIC_BASE_URL=https://your-proxy.com/v1（留空=官方）
 # 可选（Codex Reviewer 用）
 OPENAI_API_KEY=sk-xxx
 
-# 如果 clash 跑在本机 7890 端口
-HTTP_PROXY=http://127.0.0.1:7890
-HTTPS_PROXY=http://127.0.0.1:7890
+# 3090x2 上 clash 当前跑在 7897 端口
+HTTP_PROXY=http://127.0.0.1:7897
+HTTPS_PROXY=http://127.0.0.1:7897
+
+# 3090x2 host paths
+FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-framework
+DEV_FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-dev
+PROJECT_PATH=/workspace/Orangmood/ARIS
+DATASETS_PATH=/workspace/shared/datasets
 ```
 
 其他字段默认值已经对了（USERNAME=orangmood, UID=1000, PROJECT_PATH=/workspace/Orangmood/ARIS）。
@@ -76,8 +82,8 @@ HTTPS_PROXY=http://127.0.0.1:7890
 cd /workspace/Orangmood/ARIS/aris-framework
 
 docker build -f deploy/Dockerfile.gpu -t aris-gpu \
-  --build-arg http_proxy=http://127.0.0.1:7890 \
-  --build-arg https_proxy=http://127.0.0.1:7890 \
+  --build-arg BUILD_HTTP_PROXY=http://127.0.0.1:7897 \
+  --build-arg BUILD_HTTPS_PROXY=http://127.0.0.1:7897 \
   --network host \
   .
 ```
@@ -100,16 +106,23 @@ PyTorch X.X.X, CUDA available: True
 ```bash
 docker run -d \
   --name aris-gpu \
+  --hostname aris-gpu \
+  --add-host aris-gpu:127.0.1.1 \
+  --restart unless-stopped \
   --gpus all \
   --network host \
+  -v /workspace/Orangmood/ARIS/aris-framework:/aris/framework \
+  -v /workspace/Orangmood/ARIS/aris-dev:/aris/aris-dev \
   -v /workspace/Orangmood/ARIS:/aris/projects \
+  -v /workspace/shared/datasets:/aris/shared/datasets:ro \
+  -v /workspace/Orangmood/pretrained:/aris/shared/pretrained \
   -v /home/dell/.ssh:/run/secrets/ssh:ro \
   -e ANTHROPIC_API_KEY="$(grep ANTHROPIC_API_KEY deploy/.env | cut -d= -f2)" \
   -e ANTHROPIC_BASE_URL="$(grep ANTHROPIC_BASE_URL deploy/.env | cut -d= -f2)" \
   -e OPENAI_API_KEY="$(grep OPENAI_API_KEY deploy/.env | cut -d= -f2)" \
   -e HTTP_PROXY=http://127.0.0.1:7897 \
   -e HTTPS_PROXY=http://127.0.0.1:7897 \
-  -it aris-gpu
+  aris-gpu sleep infinity
 ```
 
 ## Step 5: 进容器
@@ -127,12 +140,15 @@ python3 -c "import torch; print(f'GPUs: {torch.cuda.device_count()}, CUDA: {torc
 
 # ARIS 框架
 ls /aris/framework/skills/ | head -5
+ls -ld /aris/aris-dev
+bash /aris/framework/deploy/aris_gpu_doctor.sh --project exp0516 --project exp0603
 
 # Claude Code
 claude --version
 
-# 项目文件
+# 项目文件和数据集
 ls /aris/projects/exp0516/
+ls -ld /aris/shared/datasets/VOCdevkit
 ```
 
 ## Step 7: 容器内安装 Skills 到 exp0516
@@ -209,8 +225,8 @@ docker stop aris-gpu && docker rm aris-gpu
 cd /workspace/Orangmood/ARIS/aris-framework
 git pull
 docker build -f deploy/Dockerfile.gpu -t aris-gpu \
-  --build-arg http_proxy=http://127.0.0.1:7890 \
-  --build-arg https_proxy=http://127.0.0.1:7890 \
+  --build-arg BUILD_HTTP_PROXY=http://127.0.0.1:7897 \
+  --build-arg BUILD_HTTPS_PROXY=http://127.0.0.1:7897 \
   --network host .
 # 然后重复 Step 4-7
 ```
@@ -230,7 +246,7 @@ bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --recon
 
 | 问题                          | 解决                                                                    |
 | ----------------------------- | ----------------------------------------------------------------------- |
-| `docker build` apt 报错       | 确认 `proxyon` 已执行、clash 在跑                                       |
+| `docker build` apt 报错       | 使用 `BUILD_HTTP_PROXY/BUILD_HTTPS_PROXY=http://127.0.0.1:7897`，Dockerfile 会覆盖 CUDA base image 里的旧代理 |
 | GPU 容器内看不到              | 检查 `--gpus all`，宿主机跑 `nvidia-smi` 确认驱动正常                   |
 | Claude Code 报 401/403        | 检查 `ANTHROPIC_API_KEY` 是否正确传入，容器内 `echo $ANTHROPIC_API_KEY` |
 | PyTorch 报 CUDA not available | 驱动版本和 CUDA 镜像版本不兼容，降级 Dockerfile 中的 CUDA 版本          |

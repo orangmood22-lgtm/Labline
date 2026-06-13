@@ -17,6 +17,8 @@ services:
         UID: ${USER_UID:-1000}
         GID: ${USER_GID:-1000}
         ARIS_BRANCH: ${ARIS_BRANCH:-orangmood-tripartite-night-20260512}
+        BUILD_HTTP_PROXY: ${HTTP_PROXY:-}
+        BUILD_HTTPS_PROXY: ${HTTPS_PROXY:-}
     container_name: aris-gpu
     hostname: aris-gpu
     environment:
@@ -29,12 +31,16 @@ services:
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
       - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-}
     volumes:
+      # Framework checkout used by install_aris.sh and agent skills.
+      - ${FRAMEWORK_PATH:-/data/aris/aris-framework}:/aris/framework
+      # Optional dev framework checkout; install_aris.sh --dev discovers /aris/aris-dev.
+      - ${DEV_FRAMEWORK_PATH:-/data/aris/aris-dev}:/aris/aris-dev
       # Project directory (your exp0516 etc.)
-      - ${PROJECT_PATH:-/workspace/Orangmood/ARIS}:/aris/projects
+      - ${PROJECT_PATH:-/data/aris/projects}:/aris/projects
       # Datasets (optional, read-only)
-      - ${DATASETS_PATH:-/dev/null}:/aris/shared/datasets:ro
+      - ${DATASETS_PATH:-/data/datasets}:/aris/shared/datasets:ro
       # Pretrained models cache
-      - ${PRETRAINED_PATH:-pretrained-cache}:/aris/shared/pretrained
+      - ${PRETRAINED_PATH:-/data/pretrained}:/aris/shared/pretrained
       # SSH keys from host
       - ${SSH_PATH:-~/.ssh}:/run/secrets/ssh:ro
       # Persist claude/codex config across rebuilds
