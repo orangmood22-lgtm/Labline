@@ -60,11 +60,74 @@ Promote 前必须满足：
 9. 同步本机 stable checkout，例如 `/aris/framework`、`/aris/projects/aris-framework`。
 10. 确认 stable checkout 中不存在 `to-developer/`。
 
+## 推荐工具
+
+### Release 检查
+
+`tools/release/check_release_ready.py` 用于检查 stable release gate。Promote 后准备打 tag 时先 dry-run：
+
+```bash
+python tools/release/check_release_ready.py --bump patch
+python tools/release/check_release_ready.py --bump minor
+python tools/release/check_release_ready.py v0.3.0
+```
+
+该工具会检查：
+
+- 当前分支是否为 `main`
+- worktree 是否干净
+- 目标 tag 是否不存在且比最新正式 tag 更新
+- `CHANGELOG.md` 是否包含目标版本条目
+- minor release 是否包含生成的 catalog/DAG 文件
+
+注意：stable 不要求 `to-developer/DEVELOPMENT_LOG.md`。开发记录属于 dev-only。
+
+### Release 打 tag
+
+`tools/release/tag_release.sh` 默认只 dry-run，不会创建 tag：
+
+```bash
+tools/release/tag_release.sh --bump patch
+```
+
+创建本地 annotated tag：
+
+```bash
+tools/release/tag_release.sh --bump patch --apply
+```
+
+创建并推送 tag：
+
+```bash
+tools/release/tag_release.sh --bump patch --apply --push-tag
+```
+
+Codex 不应自动打正式 release tag，除非用户明确要求。
+
+### 本机项目更新
+
+Promote 完成并同步 stable checkout 后，项目侧更新由安装/更新工具处理：
+
+```bash
+bash tools/install_aris.sh --reconcile
+bash tools/install_aris_codex.sh --reconcile
+```
+
+如果项目是复制式安装，而不是 symlink 安装，使用 smart update 做 dry-run：
+
+```bash
+bash tools/smart_update.sh --project <project>
+bash tools/smart_update_codex.sh --project <project>
+```
+
+确认结果后再加 `--apply`。不要用 smart update 处理 symlink install；symlink install 由 `install_aris*.sh` 或 framework checkout 的 `git pull` 管理。
+
 ## Codex 执行规则
 
 Codex 在执行 promote 或 stable 合入时必须：
 
 - 先读本文件和 `docs/FRAMEWORK_STRUCTURE.md`。
+- 优先使用 `tools/release/check_release_ready.py`、`tools/release/tag_release.sh`、`tools/install_aris*.sh`、`tools/smart_update*.sh` 这些已有工具，而不是手写临时流程。
 - 先展示将进入 stable 的文件范围。
 - 默认排除 `to-developer/`、`.aris/`、`.venv-*`、`.env`、缓存和运行日志。
 - 不使用 `git reset --hard` 或会丢弃用户改动的命令，除非用户明确要求。
@@ -92,4 +155,3 @@ test ! -e /aris/projects/aris-framework/to-developer
 - 把本地 `.env`、`.aris/feishu-control/`、`.venv-feishu/` 提交。
 - 合入 stable 后没有重新跑测试。
 - 推送 `main` 后没有同步本机 stable checkout。
-

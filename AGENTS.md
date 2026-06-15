@@ -27,9 +27,17 @@
 5. 运行相关测试。
 6. 合入 `main` 后同步本机 stable checkout，并确认没有 `to-developer/`。
 
+优先使用已有工具：
+
+- `tools/release/check_release_ready.py`
+- `tools/release/tag_release.sh`
+- `tools/install_aris.sh`
+- `tools/install_aris_codex.sh`
+- `tools/smart_update.sh`
+- `tools/smart_update_codex.sh`
+
 ## 文档语言
 
 - 开发者规范、流程、计划、ADR、promote/release 说明默认中文。
 - 面向外部工具/API 的字段名、命令、错误信息保持原文。
 - 现有英文文档无需无意义翻译；新增开发者文档优先中文。
-

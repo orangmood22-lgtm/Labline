@@ -12,6 +12,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Feishu integration documentation, ADRs, and a `feishu-session` skill describing setup, safety boundaries, and operation.
 
 ### Changed
+- Promote 文档纳入已有 release、tag、install、smart update 工具，避免 Codex 手写临时发布流程。
 - Feishu status cards now update in place with minimal state and elapsed time instead of sending repeated acknowledgement cards.
 
 ### Fixed
