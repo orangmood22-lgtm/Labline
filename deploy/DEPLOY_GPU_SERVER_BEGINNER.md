@@ -181,6 +181,10 @@ HTTPS_PROXY_URL=
 ```bash
 HTTP_PROXY_URL=http://127.0.0.1:7897
 HTTPS_PROXY_URL=http://127.0.0.1:7897
+export HTTP_PROXY="$HTTP_PROXY_URL"
+export HTTPS_PROXY="$HTTPS_PROXY_URL"
+export http_proxy="$HTTP_PROXY_URL"
+export https_proxy="$HTTPS_PROXY_URL"
 ```
 
 如果你填写了代理，先确认端口可连：
@@ -206,6 +210,21 @@ PY
 ```
 
 如果直连网络能用，不要为了“看起来完整”硬填代理。
+
+如果 `curl` 能通但 `git clone` / `git pull` 仍失败，给 git 单独设置代理：
+
+```bash
+git config --global http.proxy "$HTTP_PROXY_URL"
+git config --global https.proxy "$HTTPS_PROXY_URL"
+git config --global --get-regexp 'http.*proxy'
+```
+
+切回直连时清理：
+
+```bash
+git config --global --unset http.proxy || true
+git config --global --unset https.proxy || true
+```
 
 ### 3.4 磁盘空间足够
 
@@ -318,6 +337,11 @@ OPENAI_API_KEY=
 HTTP_PROXY=
 HTTPS_PROXY=
 NO_PROXY=127.0.0.1,localhost
+http_proxy=
+https_proxy=
+no_proxy=127.0.0.1,localhost
+GIT_HTTP_PROXY=
+GIT_HTTPS_PROXY=
 
 FRAMEWORK_PATH=/data/aris/aris-framework
 DEV_FRAMEWORK_PATH=/data/aris/aris-dev
@@ -332,6 +356,11 @@ SSH_PATH=/home/researcher/.ssh
 ```ini
 HTTP_PROXY=http://127.0.0.1:7897
 HTTPS_PROXY=http://127.0.0.1:7897
+http_proxy=http://127.0.0.1:7897
+https_proxy=http://127.0.0.1:7897
+# 只有 git 仍连不上外网时再填
+GIT_HTTP_PROXY=http://127.0.0.1:7897
+GIT_HTTPS_PROXY=http://127.0.0.1:7897
 ```
 
 如果服务器不需要代理：

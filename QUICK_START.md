@@ -89,7 +89,16 @@ claude
 
 ### 1. 克隆框架
 
+如果服务器需要代理才能访问 GitHub，先同时设置大小写 proxy；如果 `git clone` 仍失败，再设置 git proxy。完整说明见 [deploy/DEPLOY_GUIDE.md](deploy/DEPLOY_GUIDE.md)。
+
 ```bash
+# 如需代理，先取消下面四行注释并改成你的代理端口：
+# export HTTP_PROXY=http://127.0.0.1:7897
+# export HTTPS_PROXY=http://127.0.0.1:7897
+# export http_proxy="$HTTP_PROXY"
+# export https_proxy="$HTTPS_PROXY"
+# 可选：git config --global http.proxy "$HTTP_PROXY"
+# 可选：git config --global https.proxy "$HTTPS_PROXY"
 git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git /opt/aris-framework
 cd /opt/aris-framework/deploy
 ```
@@ -107,6 +116,7 @@ USER1_NAME=zhangsan
 USER1_UID=1001
 ANTHROPIC_API_KEY=sk-ant-xxx
 OPENAI_API_KEY=sk-xxx          # Codex Reviewer 用
+# 如需代理，同时填写 HTTP_PROXY/HTTPS_PROXY 和 http_proxy/https_proxy
 ```
 
 ### 3. 启动

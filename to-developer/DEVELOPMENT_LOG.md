@@ -44,6 +44,8 @@
 - Added `to-developer/plans/VERSION_MANAGEMENT.md`.
 
 ### deploy
+- 更新部署文档和 `.env` 示例，补齐 Feishu bridge/session runner 部署、git proxy、大小写 proxy 环境变量一致性说明。
+- 加固 `deploy/entrypoint.sh`，将大小写 proxy 变量和可选 git proxy 配置持久化到 `docker exec` 会话。
 - Hardened GPU server deployment flow, including 3090x2 deployment assumptions and Docker guidance.
 
 ### mcp-servers

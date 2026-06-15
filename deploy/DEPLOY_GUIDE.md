@@ -11,6 +11,49 @@
 | 网络 | 能访问 GitHub（拉框架）和 PyPI（装依赖） |
 | 磁盘 | /data 分区 500GB+（数据集 + 项目） |
 
+## 网络代理基线
+
+部署时至少有三层网络环境：宿主机 shell、Git、容器运行时。不要只配一处代理；很多工具只读小写 `http_proxy/https_proxy`，也有工具只读大写 `HTTP_PROXY/HTTPS_PROXY`。
+
+如果服务器需要代理才能访问 GitHub/PyPI/飞书，先在宿主机 shell 设置大小写两套变量：
+
+```bash
+export HTTP_PROXY=http://127.0.0.1:7897
+export HTTPS_PROXY=http://127.0.0.1:7897
+export NO_PROXY=127.0.0.1,localhost,::1
+export http_proxy="$HTTP_PROXY"
+export https_proxy="$HTTPS_PROXY"
+export no_proxy="$NO_PROXY"
+
+curl -I https://github.com
+python3 -m pip index versions pip >/dev/null
+```
+
+如果 `git clone` / `git pull` 仍然连不上 GitHub，再显式配置 git 代理：
+
+```bash
+git config --global http.proxy "$HTTP_PROXY"
+git config --global https.proxy "$HTTPS_PROXY"
+git config --global --get-regexp 'http.*proxy'
+```
+
+不需要代理时清理：
+
+```bash
+unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy
+git config --global --unset http.proxy || true
+git config --global --unset https.proxy || true
+```
+
+如果使用 Clash/V2Ray，确认代理监听地址对当前环境可达：
+
+| 场景 | 推荐代理地址 |
+|------|--------------|
+| 宿主机本机命令 | `http://127.0.0.1:7897` |
+| Docker bridge 容器访问宿主机代理 | `http://172.17.0.1:7897` 或宿主机内网 IP |
+| Docker Desktop | `http://host.docker.internal:7897` |
+| 远程服务器上的 Clash | 监听 `0.0.0.0:7897`，并用防火墙限制来源 |
+
 ## 快速开始（5 分钟）
 
 ```bash
@@ -78,6 +121,15 @@ DATASETS_PATH=/data/shared/datasets
 
 # 代理（可选）
 HTTP_PROXY=http://192.168.1.1:7890
+HTTPS_PROXY=http://192.168.1.1:7890
+NO_PROXY=127.0.0.1,localhost,gitea
+http_proxy=http://192.168.1.1:7890
+https_proxy=http://192.168.1.1:7890
+no_proxy=127.0.0.1,localhost,gitea
+
+# git 代理（可选；只有 git 仍连不上外网时再填）
+GIT_HTTP_PROXY=
+GIT_HTTPS_PROXY=
 ```
 
 ### Step 4: 启动服务
@@ -236,11 +288,108 @@ EOF
 # 172.17.0.1 是 Docker 默认网桥 IP，所有容器都能访问
 HTTP_PROXY=http://172.17.0.1:7897
 HTTPS_PROXY=http://172.17.0.1:7897
+NO_PROXY=127.0.0.1,localhost,gitea
+http_proxy=http://172.17.0.1:7897
+https_proxy=http://172.17.0.1:7897
+no_proxy=127.0.0.1,localhost,gitea
 ```
 
 宿主机跑 Clash/V2Ray 监听 `*:7897`（所有接口）即可。
 
-> **注意**: 不要用 `--network host`，用默认 bridge 网络。entrypoint 会自动将代理配置写入 `/etc/environment`，`docker exec` 的 PAM 会话也能正确读取。
+> **注意**: 不要用 `--network host`，用默认 bridge 网络。entrypoint 会自动将大小写代理变量写入 `/etc/environment`，`docker exec` 的 PAM 会话也能正确读取。
+
+容器内验证：
+
+```bash
+docker exec -it aris-zhangsan bash
+env | grep -i proxy
+curl -I https://github.com
+git ls-remote https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git HEAD
+```
+
+如果 `curl` 能通但 `git ls-remote` 失败，再设置 git 专用代理：
+
+```env
+GIT_HTTP_PROXY=http://172.17.0.1:7897
+GIT_HTTPS_PROXY=http://172.17.0.1:7897
+```
+
+然后重建或重启容器：
+
+```bash
+docker compose up -d --force-recreate
+```
+
+容器启动时会执行：
+
+```bash
+git config --global http.proxy "$GIT_HTTP_PROXY"
+git config --global https.proxy "$GIT_HTTPS_PROXY"
+```
+
+如果之后切回直连，记得清理容器里的 git 代理：
+
+```bash
+docker exec -it aris-zhangsan bash -lc '
+git config --global --unset http.proxy || true
+git config --global --unset https.proxy || true
+'
+```
+
+## 飞书远程控制部署
+
+新增的飞书能力由两部分组成：
+
+| 组件 | 路径 | 职责 |
+|------|------|------|
+| Feishu bridge | `mcp-servers/feishu-bridge/server.py` | HTTP 发送/更新卡片、长连接接收飞书消息、写入 session inbox |
+| Feishu session runner | `tools/aris_feishu_session.py` | 消费 inbox，启动/恢复 Codex Session，把最终回复发回飞书 |
+
+`.env` 里增加：
+
+```env
+FEISHU_APP_ID=cli_xxx
+FEISHU_APP_SECRET=xxx
+FEISHU_USER_ID=ou_xxx
+FEISHU_RECEIVE_ID_TYPE=open_id
+FEISHU_ENABLE_WS=1
+BRIDGE_PORT=5000
+ARIS_PROJECT_ROOT=/opt/aris-framework
+ARIS_FEISHU_CONTROL_ROOT=
+```
+
+启动 bridge：
+
+```bash
+cd /opt/aris-framework
+python3 -m venv .venv-feishu
+.venv-feishu/bin/pip install -r mcp-servers/feishu-bridge/requirements.txt
+set -a; source deploy/.env; set +a
+export FEISHU_ENABLE_WS=1
+export ARIS_PROJECT_ROOT=/opt/aris-framework
+.venv-feishu/bin/python mcp-servers/feishu-bridge/server.py
+```
+
+再启动受控 Codex session：
+
+```bash
+.venv-feishu/bin/python tools/aris_feishu_session.py \
+  --session-id leader-phone \
+  --role leader \
+  --project-root /opt/aris-framework \
+  --profile leader \
+  --bridge-url http://127.0.0.1:5000 \
+  --resume-last \
+  --feishu-format card
+```
+
+部署注意：
+
+- `BRIDGE_PORT` 默认是 `5000`；如果报 `Address already in use`，换端口并同步修改 `--bridge-url`。
+- 飞书长连接需要服务器能访问飞书开放平台；如果连接不上，按上面的大小写 proxy 规则同时设置 `HTTP_PROXY/HTTPS_PROXY/http_proxy/https_proxy`。
+- bridge 不执行 shell、tools、skills；真正执行发生在 opt-in 的 Codex session runner。
+- `--yolo` 只应在可信服务器和可信项目中使用。
+- 详细飞书配置见 [docs/FEISHU_INTEGRATION.md](../docs/FEISHU_INTEGRATION.md)。
 
 ## 客户端选择
 
@@ -258,6 +407,10 @@ HTTPS_PROXY=http://172.17.0.1:7897
 | `docker compose up` 失败 | 检查 Docker 版本 ≥ 24.0 |
 | Gitea 502 | 等 30s 再试，首次启动慢 |
 | 容器内 `git push` 失败 | 检查 GITEA_TOKEN，或 `git remote set-url origin http://token@gitea:3000/user/repo.git` |
+| `git clone` / `git pull` 连不上 GitHub | 先设置大小写 proxy env；仍失败再设置 `git config --global http.proxy/https.proxy` |
+| 容器里 `curl` 能联网但 git 不行 | 在 `.env` 填 `GIT_HTTP_PROXY` / `GIT_HTTPS_PROXY` 后 `docker compose up -d --force-recreate` |
+| Python/pip/Feishu SDK 不认代理 | 同时设置 `HTTP_PROXY/HTTPS_PROXY` 和 `http_proxy/https_proxy` |
+| Feishu bridge 启动时报 `Address already in use` | 修改 `BRIDGE_PORT`，并同步修改 runner 的 `--bridge-url` |
 | SSH 到 GPU 超时 | 检查 SSH key mount，`ls ~/.ssh/` |
 | API 403/401 | 检查 key 是否过期，base_url 是否正确 |
 | CUDA not available (GPU 服务器) | 检查 `LD_LIBRARY_PATH`，参考 exp0516 的 conda activate hook |

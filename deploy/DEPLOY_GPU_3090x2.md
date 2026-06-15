@@ -66,6 +66,11 @@ OPENAI_API_KEY=sk-xxx
 # 3090x2 上 clash 当前跑在 7897 端口
 HTTP_PROXY=http://127.0.0.1:7897
 HTTPS_PROXY=http://127.0.0.1:7897
+http_proxy=http://127.0.0.1:7897
+https_proxy=http://127.0.0.1:7897
+# 只有 git pull/clone 仍失败时再填
+GIT_HTTP_PROXY=http://127.0.0.1:7897
+GIT_HTTPS_PROXY=http://127.0.0.1:7897
 
 # 3090x2 host paths
 FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-framework
@@ -247,6 +252,7 @@ bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --recon
 | 问题                          | 解决                                                                    |
 | ----------------------------- | ----------------------------------------------------------------------- |
 | `docker build` apt 报错       | 使用 `BUILD_HTTP_PROXY/BUILD_HTTPS_PROXY=http://127.0.0.1:7897`，Dockerfile 会覆盖 CUDA base image 里的旧代理 |
+| `git pull` / `git clone` 失败 | 同时设置大小写 proxy；仍失败再设置 `git config --global http.proxy/https.proxy` |
 | GPU 容器内看不到              | 检查 `--gpus all`，宿主机跑 `nvidia-smi` 确认驱动正常                   |
 | Claude Code 报 401/403        | 检查 `ANTHROPIC_API_KEY` 是否正确传入，容器内 `echo $ANTHROPIC_API_KEY` |
 | PyTorch 报 CUDA not available | 驱动版本和 CUDA 镜像版本不兼容，降级 Dockerfile 中的 CUDA 版本          |

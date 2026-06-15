@@ -25,15 +25,34 @@ EOF
 fi
 
 # ─── Proxy config ────────────────────────────────────────────────────────────
-if [ -n "$HTTP_PROXY" ]; then
-    export http_proxy="$HTTP_PROXY"
-    export https_proxy="${HTTPS_PROXY:-$HTTP_PROXY}"
-    export no_proxy="${NO_PROXY:-127.0.0.1,localhost}"
-    # Write to /etc/environment for PAM sessions (docker exec)
-    sudo sed -i '/http_proxy/d' /etc/environment 2>/dev/null || true
-    sudo sed -i '/https_proxy/d' /etc/environment 2>/dev/null || true
-    echo "http_proxy=\"$http_proxy\"" | sudo tee -a /etc/environment >/dev/null
-    echo "https_proxy=\"$https_proxy\"" | sudo tee -a /etc/environment >/dev/null
+PROXY_HTTP="${HTTP_PROXY:-${http_proxy:-}}"
+PROXY_HTTPS="${HTTPS_PROXY:-${https_proxy:-$PROXY_HTTP}}"
+PROXY_NO="${NO_PROXY:-${no_proxy:-127.0.0.1,localhost}}"
+
+if [ -n "$PROXY_HTTP" ]; then
+    export HTTP_PROXY="$PROXY_HTTP"
+    export HTTPS_PROXY="$PROXY_HTTPS"
+    export NO_PROXY="$PROXY_NO"
+    export http_proxy="$PROXY_HTTP"
+    export https_proxy="$PROXY_HTTPS"
+    export no_proxy="$PROXY_NO"
+    # Write both upper/lower names for PAM sessions started by docker exec.
+    sudo sed -i '/^HTTP_PROXY=/d;/^HTTPS_PROXY=/d;/^NO_PROXY=/d;/^http_proxy=/d;/^https_proxy=/d;/^no_proxy=/d' /etc/environment 2>/dev/null || true
+    {
+        echo "HTTP_PROXY=\"$HTTP_PROXY\""
+        echo "HTTPS_PROXY=\"$HTTPS_PROXY\""
+        echo "NO_PROXY=\"$NO_PROXY\""
+        echo "http_proxy=\"$http_proxy\""
+        echo "https_proxy=\"$https_proxy\""
+        echo "no_proxy=\"$no_proxy\""
+    } | sudo tee -a /etc/environment >/dev/null
+fi
+
+if [ -n "$GIT_HTTP_PROXY" ]; then
+    git config --global http.proxy "$GIT_HTTP_PROXY" || true
+fi
+if [ -n "$GIT_HTTPS_PROXY" ]; then
+    git config --global https.proxy "$GIT_HTTPS_PROXY" || true
 fi
 
 # ─── SSH key from mount ──────────────────────────────────────────────────────

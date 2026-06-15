@@ -693,9 +693,20 @@ wire_api = "responses"
 ```env
 HTTP_PROXY=http://host.docker.internal:7890
 HTTPS_PROXY=http://host.docker.internal:7890
+NO_PROXY=127.0.0.1,localhost
+http_proxy=http://host.docker.internal:7890
+https_proxy=http://host.docker.internal:7890
+no_proxy=127.0.0.1,localhost
 ```
 
 宿主机跑 Clash/V2Ray 监听 7890，`host.docker.internal` 自动解析到宿主机。
+
+如果 `curl` 能联网但 `git clone` / `git pull` 失败，再配置 git 专用代理：
+
+```bash
+git config --global http.proxy "$HTTP_PROXY"
+git config --global https.proxy "$HTTPS_PROXY"
+```
 
 ### 免费方案
 
