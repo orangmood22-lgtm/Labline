@@ -53,15 +53,15 @@ The user-facing `CHANGELOG.md` release note. It records only changes users need 
 _Avoid_: commit-by-commit logs, internal implementation diary
 
 **Development Log**:
-The maintainer-facing module log at `to-developer/DEVELOPMENT_LOG.md`. It groups changes by framework module so maintainers do not need to reconstruct development history from individual commits.
+The maintainer-facing module log in the dev checkout, normally `aris-dev/to-developer/DEVELOPMENT_LOG.md`. It groups changes by framework module so maintainers do not need to reconstruct development history from individual commits. It is not part of the stable framework checkout.
 _Avoid_: putting maintainer-only module notes in `CHANGELOG.md`
 
 **Developer Material**:
-Maintainer-facing files under `to-developer/`. `DEVELOPMENT_LOG.md`, `plans/*.md`, `deploy-QAs/*.md`, and non-private `discussions/*.md` are versioned; private settings and SSH notes are not versioned.
+Maintainer-facing files under `aris-dev/to-developer/`. They are dev-only planning and audit material and should not appear in stable framework checkouts.
 _Avoid_: committing credentials, host secrets, API keys, or private SSH notes
 
 **Release Gate**:
-The checklist that must pass before tagging a framework release. Patch releases use a lightweight gate focused on the changed area; minor releases use a stricter gate covering changelog, development log, generated catalogs/DAGs, installer behavior, Codex mirror compatibility, and at least one install or dev-to-stable validation.
+The checklist that must pass before tagging a framework release. Patch releases use a lightweight gate focused on the changed area; minor releases use a stricter gate covering changelog, generated catalogs/DAGs, installer behavior, Codex mirror compatibility, and at least one install or dev-to-stable validation.
 _Avoid_: tagging first and checking later
 
 **Release Tag Automation**:
@@ -160,15 +160,15 @@ Maintainer: "Do not release. Internal `to-developer/` changes are not framework 
 
 Developer: "This change touched skills, tools, and docs. Where do I record the developer detail?"
 
-Maintainer: "Record it by module in `to-developer/DEVELOPMENT_LOG.md`, then distill only user-visible entries into `CHANGELOG.md` at release time."
+Maintainer: "Record it by module in the dev-only `aris-dev/to-developer/DEVELOPMENT_LOG.md`, then distill only user-visible entries into `CHANGELOG.md` at release time."
 
 Developer: "Should developer notes be committed?"
 
-Maintainer: "Commit structured developer material, but never commit `to-developer/discussions/settings*.json` or `to-developer/discussions/ssh.txt`."
+Maintainer: "Keep structured developer material in the dev checkout. Do not include `to-developer/` in stable framework releases."
 
 Developer: "This is only a patch release for a deployment doc fix."
 
-Maintainer: "Use the patch release gate: clean worktree, changelog entry, development log entry, and the related test or manual check. Save the full minor gate for capability releases."
+Maintainer: "Use the patch release gate: clean worktree, changelog entry, and the related test or manual check. Save the full minor gate for capability releases."
 
 Developer: "Can the release script create the tag for me?"
 

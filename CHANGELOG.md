@@ -14,6 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Feishu status cards now update in place with minimal state and elapsed time instead of sending repeated acknowledgement cards.
 
 ### Fixed
+- Stable framework no longer tracks dev-only `to-developer/` materials; release checks rely on `CHANGELOG.md` for stable readiness.
 - Feishu bridge now supports card patch updates and disables noisy queue acknowledgements by default.
 
 ---

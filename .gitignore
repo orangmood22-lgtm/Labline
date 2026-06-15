@@ -50,6 +50,5 @@ patent/
 .aris/status/
 .aris/feishu-control/
 
-# Developer-local private notes
-to-developer/discussions/settings*.json
-to-developer/discussions/ssh.txt
+# Developer-only material; keep it in dev checkouts, not stable framework.
+to-developer/
