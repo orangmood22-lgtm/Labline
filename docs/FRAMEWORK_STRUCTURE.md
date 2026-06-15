@@ -33,7 +33,7 @@ ARIS 采用 **framework / project / dev** 三层分离模型，防止不同生�
 5. 运行 stable 回归测试
 6. 从 dev 清理（删除或移入 `dev/legacy/`）
 
-详见 `aris-dev/to-developer/plans/PROMOTE_FLOW.md`。
+详见 [PROMOTE_FLOW.md](PROMOTE_FLOW.md)。
 
 ## Framework Repo 允许内容
 

@@ -67,6 +67,7 @@ aris-framework/
 |------|------|
 | [docs/README.md](docs/README.md) | docs 全量索引 |
 | [docs/FRAMEWORK_STRUCTURE.md](docs/FRAMEWORK_STRUCTURE.md) | 框架/项目边界 |
+| [docs/PROMOTE_FLOW.md](docs/PROMOTE_FLOW.md) | dev 到 stable 的 promote 规范 |
 | [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md) | 日常操作手册 |
 | [docs/TRIPARTITE_ARCHITECTURE_GUIDE.md](docs/TRIPARTITE_ARCHITECTURE_GUIDE.md) | 三边架构 |
 | [docs/codex-migration.md](docs/codex-migration.md) | Codex 迁移说明 |

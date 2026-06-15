@@ -7,6 +7,7 @@
 | 文档 | 用途 |
 |------|------|
 | [FRAMEWORK_STRUCTURE.md](FRAMEWORK_STRUCTURE.md) | 框架目录和科研项目目录如何分离 |
+| [PROMOTE_FLOW.md](PROMOTE_FLOW.md) | dev 到 stable 的 promote 规范 |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | 常规使用、API 配置、workflow 操作 |
 | [TRIPARTITE_ARCHITECTURE_GUIDE.md](TRIPARTITE_ARCHITECTURE_GUIDE.md) | Leader / Executor / Reviewer 三边协作 |
 | [codex-migration.md](codex-migration.md) | Claude Code 到 Codex CLI 的迁移状态 |
