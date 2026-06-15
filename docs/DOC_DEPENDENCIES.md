@@ -10,7 +10,8 @@ README.md（总入口）
   ├── 引用 → docs/OPERATIONS_GUIDE.md
   ├── 引用 → docs/SKILL_CATALOG.md / SKILL_CATALOG_CN.md
   ├── 引用 → deploy/DEPLOY_GUIDE.md
-  └── 引用 → docs/TRIPARTITE_ARCHITECTURE_GUIDE.md
+  ├── 引用 → docs/TRIPARTITE_ARCHITECTURE_GUIDE.md
+  └── 引用 → docs/FEISHU_INTEGRATION.md
 
 QUICK_START.md（新手入口）
   └── 引用 → OPERATIONS_GUIDE, DEPLOY_GUIDE, TRIPARTITE
@@ -39,6 +40,7 @@ deploy/DEPLOY_GUIDE.md（部署指南）
 | 改部署方式（Dockerfile/compose） | 更新 `deploy/DEPLOY_GUIDE.md` + `QUICK_START.md` Docker 段 |
 | 改三边架构规则 | 更新 `docs/TRIPARTITE_ARCHITECTURE_GUIDE.md` + README 架构段 + OPERATIONS_GUIDE 三边章节 |
 | 改 API 配置方式 | 更新 `docs/OPERATIONS_GUIDE.md` API 章节 |
+| 改飞书 bridge / runner / `.env` 配置 | 更新 `docs/FEISHU_INTEGRATION.md` + `mcp-servers/README.md` + README 文档索引 |
 | 改 project.yaml 模板 | 更新 `QUICK_START.md` 配置示例 + `OPERATIONS_GUIDE.md` 概念段 |
 | 框架更新（git pull） | `/framework-update` 会自动重新生成 SKILL_CATALOG |
 
@@ -51,4 +53,5 @@ deploy/DEPLOY_GUIDE.md（部署指南）
 | 部署步骤 | `deploy/DEPLOY_GUIDE.md` | README/QUICK_START 简述 + 链接 |
 | 三边架构详情 | `docs/TRIPARTITE_ARCHITECTURE_GUIDE.md` | README 简表 + 链接 |
 | API 配置详情 | `docs/OPERATIONS_GUIDE.md` #api-配置 | README 链接 |
+| 飞书集成 | `docs/FEISHU_INTEGRATION.md` | README 和 `mcp-servers/README.md` 链接 |
 | project.yaml 规格 | `templates/project.yaml.tmpl` + OPERATIONS_GUIDE | QUICK_START 示例片段 |

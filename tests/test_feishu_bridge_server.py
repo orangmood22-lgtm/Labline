@@ -16,6 +16,8 @@ import os
 import sys
 import threading
 import unittest
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from tests._feishu_bridge_helpers import (
@@ -178,33 +180,29 @@ class TestHttpHandlerRouting(unittest.TestCase):
     and verify that it returns the expected JSON for each route.
     """
 
-    def _make_handler(self, method, path, body=None):
-        """
-        Create a BridgeHandler-like object that routes without real I/O.
-
-        We import the handler class directly but stub out any Feishu client
-        calls and the binary write calls.
-        """
-        # We must mock lark_oapi before the server module is imported
+    def _import_server_module(self, extra_env=None):
         lark_mock = MagicMock()
         lark_mock.Client.builder.return_value.app_id.return_value\
             .app_secret.return_value.build.return_value = MagicMock()
+        lark_mock.EventDispatcherHandler.builder.return_value\
+            .register_p2_im_message_receive_v1.return_value\
+            .build.return_value = MagicMock()
 
         modules_to_patch = {
             "lark_oapi": lark_mock,
             "lark_oapi.api.im.v1": MagicMock(),
+            "lark_oapi.ws": MagicMock(),
         }
 
         with patch.dict("sys.modules", modules_to_patch):
-            # Patch env vars so the module-level checks don't sys.exit
             env_patch = {
                 "FEISHU_APP_ID": "test-app-id",
                 "FEISHU_APP_SECRET": "test-secret",
                 "FEISHU_USER_ID": "test-user-id",
             }
+            if extra_env:
+                env_patch.update(extra_env)
             with patch.dict(os.environ, env_patch):
-                # Force re-import
-                import importlib
                 import importlib.util
                 server_path = os.path.join(
                     os.path.dirname(__file__), "..", "mcp-servers",
@@ -213,6 +211,16 @@ class TestHttpHandlerRouting(unittest.TestCase):
                 spec = importlib.util.spec_from_file_location("feishu_server", server_path)
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
+                return mod
+
+    def _make_handler(self, method, path, body=None, extra_env=None):
+        """
+        Create a BridgeHandler-like object that routes without real I/O.
+
+        We import the handler class directly but stub out any Feishu client
+        calls and the binary write calls.
+        """
+        mod = self._import_server_module(extra_env)
 
         handler_cls = mod.BridgeHandler
         responses = []
@@ -239,12 +247,67 @@ class TestHttpHandlerRouting(unittest.TestCase):
 
         return responses
 
+    def test_extract_text_message_content(self):
+        mod = self._import_server_module()
+        self.assertEqual(mod.extract_message_text('{"text":"hello"}', "text"), "hello")
+        self.assertEqual(mod.extract_message_text("raw", "text"), "raw")
+        self.assertEqual(mod.extract_message_text("{}", "image"), "[image message]")
+
+    def test_inbound_ws_message_routes_to_control_and_sends_ack(self):
+        mod = self._import_server_module()
+
+        class Obj:
+            pass
+
+        data = Obj()
+        data.event = Obj()
+        data.event.sender = Obj()
+        data.event.sender.sender_id = Obj()
+        data.event.sender.sender_id.open_id = "ou_sender"
+        data.event.message = Obj()
+        data.event.message.content = '{"text":"$status"}'
+        data.event.message.message_type = "text"
+        data.event.message.message_id = "om_1"
+
+        with patch.object(mod, "run_control", return_value=(0, {"status": "queued", "session_id": "leader-1"})) as run_control:
+            with patch.object(mod, "send_text", return_value={"ok": True}) as send_text:
+                result = mod.handle_inbound_message_event(data)
+
+        run_control.assert_called_once_with(["handle-message", "--text", "$status"])
+        send_text.assert_not_called()
+        self.assertEqual(result["status"], "queued")
+        self.assertEqual(result["message_id"], "om_1")
+
+    def test_inbound_ws_message_can_send_ack_when_enabled(self):
+        mod = self._import_server_module({"FEISHU_SEND_QUEUE_ACK": "1"})
+
+        class Obj:
+            pass
+
+        data = Obj()
+        data.event = Obj()
+        data.event.sender = Obj()
+        data.event.sender.sender_id = Obj()
+        data.event.sender.sender_id.open_id = "ou_sender"
+        data.event.message = Obj()
+        data.event.message.content = '{"text":"$status"}'
+        data.event.message.message_type = "text"
+        data.event.message.message_id = "om_1"
+
+        with patch.object(mod, "run_control", return_value=(0, {"status": "queued", "session_id": "leader-1"})):
+            with patch.object(mod, "send_text", return_value={"ok": True}) as send_text:
+                mod.handle_inbound_message_event(data)
+
+        send_text.assert_called_once()
+        self.assertEqual(send_text.call_args.args[0], "ou_sender")
+
     def test_health_endpoint_returns_ok(self):
         responses = self._make_handler("GET", "/health")
         self.assertEqual(len(responses), 1)
         status, data = responses[0]
         self.assertEqual(status, 200)
         self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["receive_id_type"], "open_id")
 
     def test_unknown_get_returns_404(self):
         responses = self._make_handler("GET", "/unknown")
@@ -283,6 +346,98 @@ class TestHttpHandlerRouting(unittest.TestCase):
         status, data = responses[0]
         self.assertEqual(status, 200)
         self.assertTrue(data.get("ok"))
+
+    def test_update_card_requires_message_id(self):
+        responses = self._make_handler("POST", "/update", body=json.dumps({"body": "processing"}))
+        self.assertEqual(len(responses), 1)
+        status, data = responses[0]
+        self.assertEqual(status, 400)
+        self.assertEqual(data["error"], "message_id required")
+
+    def test_update_card_route_returns_ok(self):
+        responses = self._make_handler(
+            "POST",
+            "/update",
+            body=json.dumps({"message_id": "om_1", "title": "ARIS 状态", "body": "处理中 30s"}),
+        )
+        self.assertEqual(len(responses), 1)
+        status, data = responses[0]
+        self.assertEqual(status, 200)
+        self.assertTrue(data.get("ok"))
+        self.assertEqual(data["message_id"], "om_1")
+
+    def test_control_register_and_message_routes_to_inbox(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"ARIS_FEISHU_CONTROL_ROOT": tmp}
+            register_body = json.dumps(
+                {
+                    "session_id": "leader-1",
+                    "role": "leader",
+                    "project_root": "/repo/a",
+                    "now": "2026-06-14T12:00:00Z",
+                }
+            )
+            responses = self._make_handler("POST", "/control/register", body=register_body, extra_env=env)
+            self.assertEqual(responses[0][0], 200)
+            self.assertEqual(responses[0][1]["status"], "registered")
+
+            message_body = json.dumps(
+                {
+                    "text": "$monitor-experiment 看一下",
+                    "now": "2026-06-14T12:01:00Z",
+                    "lease_ttl_seconds": 60,
+                }
+            )
+            responses = self._make_handler("POST", "/control/message", body=message_body, extra_env=env)
+            self.assertEqual(responses[0][0], 200)
+            self.assertEqual(responses[0][1]["status"], "queued")
+
+            inbox = Path(tmp) / "inbox" / "leader-1.jsonl"
+            messages = [json.loads(line) for line in inbox.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(messages[-1]["text"], "$monitor-experiment 看一下")
+
+    def test_control_message_rejects_bridge_shell_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"ARIS_FEISHU_CONTROL_ROOT": tmp}
+            self._make_handler(
+                "POST",
+                "/control/register",
+                body=json.dumps({"session_id": "leader-1", "role": "leader", "project_root": "/repo/a"}),
+                extra_env=env,
+            )
+
+            responses = self._make_handler(
+                "POST",
+                "/control/message",
+                body=json.dumps({"text": "/run ls"}),
+                extra_env=env,
+            )
+
+            self.assertEqual(responses[0][0], 400)
+            self.assertEqual(responses[0][1]["status"], "unsupported_command")
+
+    def test_control_respond_records_session_outbox_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"ARIS_FEISHU_CONTROL_ROOT": tmp}
+            self._make_handler(
+                "POST",
+                "/control/register",
+                body=json.dumps({"session_id": "leader-1", "role": "leader", "project_root": "/repo/a"}),
+                extra_env=env,
+            )
+
+            responses = self._make_handler(
+                "POST",
+                "/control/respond",
+                body=json.dumps({"session_id": "leader-1", "text": "收到，继续跑"}),
+                extra_env=env,
+            )
+
+            self.assertEqual(responses[0][0], 200)
+            self.assertEqual(responses[0][1]["status"], "queued")
+            outbox = Path(tmp) / "outbox" / "leader-1.jsonl"
+            messages = [json.loads(line) for line in outbox.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(messages[-1]["text"], "收到，继续跑")
 
 
 if __name__ == "__main__":

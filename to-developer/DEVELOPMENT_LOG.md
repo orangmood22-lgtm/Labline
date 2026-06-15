@@ -5,6 +5,7 @@ Maintainer-facing module log for ARIS framework development. This file is more d
 ## [Unreleased]
 
 ### skills
+- Added `skills/feishu-session/` for operating the Feishu-controlled Codex session bridge and runner.
 - Added Agent Status Stream protocol and wired Leader/Coder/Deployer/Writer role instructions to project-local status snapshots.
 - Updated reviewer-independence guidance so Reviewer status may carry transport/input-scope metadata without carrying review reasoning or executor summaries.
 - Normalized skill DAG governance so formal edges come only from frontmatter `invokes`.
@@ -13,6 +14,8 @@ Maintainer-facing module log for ARIS framework development. This file is more d
 - Enhanced `skills-codex-claude-review` overlays with reviewer bias guard, edit whitelist, reviewer memory, debate protocol, and broader venue support.
 
 ### tools
+- Added `tools/feishu_control.py` for session registration, inbox routing, control leases, approvals, `/interrupt`, and `/btw`.
+- Added `tools/aris_feishu_session.py` for managed `codex exec` sessions and live tmux injection with Feishu status-card updates.
 - Added `tools/agent_status.py` for schema-v1 per-agent status snapshots with `start`, `update`, `finish`, `list`, `summary`, and `validate`.
 - Made release tag tooling use `${PYTHON:-python3}` instead of assuming `python3.8`.
 - Added guarded release tooling under `tools/release/`.
@@ -27,6 +30,7 @@ Maintainer-facing module log for ARIS framework development. This file is more d
 - Updated idea candidate template paths to the current project file layout.
 
 ### docs
+- Added Feishu integration docs and ADRs for opt-in remote control, live TUI takeover, and Feishu-priority control leases.
 - Added ADR-0002 and `to-developer/plans/AGENT_STATUS_STREAM.md` for the status-stream architecture and rollout plan.
 - Added local GPU validation report under `to-developer/logs/`.
 - Added `docs/LANGGRAPH_EVALUATION.md`.
@@ -39,10 +43,12 @@ Maintainer-facing module log for ARIS framework development. This file is more d
 - Hardened GPU server deployment flow, including 3090x2 deployment assumptions and Docker guidance.
 
 ### mcp-servers
+- Extended `mcp-servers/feishu-bridge/` with `/update`, `/control/*`, Feishu long-connection inbound routing, and configurable receive ID types.
 - Documented MCP bridge inventory and provider requirements.
 - Made Codex review bridge portable across local paths.
 
 ### tests
+- Added Feishu bridge/control/session tests covering card update semantics, queue ack behavior, live TUI status updates, `/interrupt`, and `/btw`.
 - Added Agent Status Stream CLI behavior tests and local GPU smoke validation.
 - Updated release tooling tests to use the current Python executable in direct-run mode.
 - Added skill DAG contract tests.

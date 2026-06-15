@@ -12,6 +12,7 @@
 | [codex-migration.md](codex-migration.md) | Claude Code 到 Codex CLI 的迁移状态 |
 | [DOC_DEPENDENCIES.md](DOC_DEPENDENCIES.md) | 改文档时需要同步更新哪些文件 |
 | [LANGGRAPH_EVALUATION.md](LANGGRAPH_EVALUATION.md) | LangGraph 对 ARIS 的价值、边界和引入时机 |
+| [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | 飞书通知、长连接收消息、受控 Codex runner 接入 |
 
 ## Skill Catalog
 
@@ -48,6 +49,7 @@
 | [LLM_API_MIX_MATCH_GUIDE.md](LLM_API_MIX_MATCH_GUIDE.md) | 多 provider 混用 |
 | [MODELSCOPE_GUIDE.md](MODELSCOPE_GUIDE.md) | ModelScope 方案 |
 | [ALI_CODING_PLAN_GUIDE.md](ALI_CODING_PLAN_GUIDE.md) | 阿里 Coding Plan 方案 |
+| [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | Feishu/Lark 双向集成 |
 
 ## Client Adapters
 
@@ -65,6 +67,9 @@
 | 文档 | 用途 |
 |------|------|
 | [adr/0001-model-tiering-strategy.md](adr/0001-model-tiering-strategy.md) | 模型分层策略 ADR |
+| [adr/0002-agent-status-stream.md](adr/0002-agent-status-stream.md) | Agent Status Stream ADR |
+| [adr/0003-feishu-control-uses-opt-in-codex-sessions.md](adr/0003-feishu-control-uses-opt-in-codex-sessions.md) | 飞书控制只接入 opt-in Codex Session |
+| [adr/0004-feishu-control-lease-prioritizes-remote-input.md](adr/0004-feishu-control-lease-prioritizes-remote-input.md) | 飞书 Control Lease 优先级 |
 
 ## Assets
 

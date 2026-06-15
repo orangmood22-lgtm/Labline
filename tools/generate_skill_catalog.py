@@ -110,6 +110,7 @@ CATEGORY_MAP = {
     "overleaf-sync": "工具/同步",
     "research-wiki": "工具/同步",
     "feishu-notify": "工具/同步",
+    "feishu-session": "工具/同步",
     "qzcli": "工具/同步",
     "skill-dag-check": "工具/同步",
 
@@ -218,6 +219,7 @@ EXAMPLES = {
     "coder": "/coder",
     "deployer": "/deployer",
     "skill-dag-check": "/skill-dag-check",
+    "feishu-session": "/feishu-session report leader-phone",
     "writer": "/writer",
 }
 

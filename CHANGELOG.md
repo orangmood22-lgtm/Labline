@@ -7,10 +7,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- Feishu control bridge and managed Codex runner for opt-in remote session input, live tmux takeover, status-card updates, `/interrupt`, and side-channel `/btw` questions.
+- Feishu integration documentation, ADRs, and a `feishu-session` skill describing setup, safety boundaries, and operation.
 
 ### Changed
+- Feishu status cards now update in place with minimal state and elapsed time instead of sending repeated acknowledgement cards.
 
 ### Fixed
+- Feishu bridge now supports card patch updates and disables noisy queue acknowledgements by default.
 
 ---
 

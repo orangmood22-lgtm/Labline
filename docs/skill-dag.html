@@ -79,12 +79,12 @@ body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; backgrou
 <div id="nav">
   <h1>ARIS <span>Skill DAG</span></h1>
   <div id="stats">
-    <span><b>94</b> skills</span>
+    <span><b>95</b> skills</span>
     <span><b>26</b> edges</span>
     <span><b>22</b> leader</span>
     <span><b>11</b> reviewer</span>
     <span><b>37</b> executor</span>
-    <span><b>24</b> any</span>
+    <span><b>25</b> any</span>
   </div>
 </div>
 <div id="toolbar">
@@ -471,6 +471,26 @@ const DAG_NODES = [
       "/feishu-notify training completed",
       "发飞书 experiment finished",
       "notify team about results"
+    ],
+    "invoked_by": [],
+    "layer": "tools"
+  },
+  {
+    "name": "feishu-session",
+    "caller": "any",
+    "description": "Manage Feishu-controlled Codex sessions, phone runners, and auditable phone-session merge reports. Use when user mentions Feishu control, phone control, mobile takeover, session merge, or wants to start/stop/report a Feishu Codex runner.",
+    "platform": "both",
+    "status": "needs-runtime-adaptation",
+    "produces": [
+      ".aris/feishu-control/reports/<session_id>.md"
+    ],
+    "consumes": [
+      ".aris/feishu-control/"
+    ],
+    "examples": [
+      "/feishu-session start leader-phone",
+      "/feishu-session report leader-phone",
+      "把手机 session 合并回来"
     ],
     "invoked_by": [],
     "layer": "tools"

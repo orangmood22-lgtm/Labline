@@ -108,6 +108,34 @@ _Avoid_: equating Reviewer with Codex MCP only, executor self-review
 Local, non-versioned state written inside a research project while ARIS workflows run, such as agent status snapshots and transient coordination metadata. The ARIS framework repository provides tools and protocols for this state but must not contain real project runtime state.
 _Avoid_: framework-owned runtime status, committed agent snapshots
 
+**Codex Session**:
+A live local Codex CLI process that can read project files, request approvals, and update Project Runtime State. A previous closed thread is historical context; it can be recovered from artifacts or traces into a new Codex Session, but it is not itself a controllable live session.
+_Avoid_: using thread to mean both a live process and past conversation history
+
+**Remote Action Approval**:
+A Feishu-mediated approval for one explicitly described action requested by a live Codex Session. It is not a session-wide permission grant; each approval is scoped to a single pending action and expires if unused.
+_Avoid_: remote shell, global session authorization, approve-all mode
+
+**Remote Session Inbox**:
+A Feishu-mediated input channel that delivers user messages to a live Codex Session. The bridge records messages and returns session responses, but tool and skill execution still happens inside the Codex Session under the normal local permission model.
+_Avoid_: bridge-executed tools, remote agent runner, Feishu shell
+
+**Feishu-Controlled Session**:
+An opt-in Codex Session that is registered for Remote Session Inbox messages, Remote Action Approval, status reporting, and response forwarding through Feishu. Sessions that never opt in are invisible to Feishu control.
+_Avoid_: auto-attached session, hijacked terminal, uncontrolled thread takeover
+
+**Active Remote Session**:
+The Feishu-Controlled Session that receives unqualified Feishu messages by default. Users may list sessions, switch the active session, or address a specific session explicitly without implying that historical closed threads are still live.
+_Avoid_: broadcast-to-all sessions, implicit old-thread control
+
+**Control Lease**:
+The temporary ownership marker for a Feishu-Controlled Session's user input stream. A lease may belong to local input or Feishu input; Feishu can take priority while the user is away, but the lease expires or can be released so local control can resume.
+_Avoid_: simultaneous unsynchronised input, permanent remote lockout
+
+**Phone Session Report**:
+A mergeable record of work performed through a Feishu-Controlled Session while the user is away. It captures auditable facts such as messages, responses, commands, file changes, decisions, and open questions; it is not a dump of hidden model context.
+_Avoid_: transcript merge, hidden context merge, memory graft
+
 ## Example Dialogue
 
 Developer: "This is a new skill workflow, so I will open a feature branch from `dev`."

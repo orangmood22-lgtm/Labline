@@ -1,12 +1,12 @@
 version: 1
 generated_by: tools/generate_skill_dag.py
 stats:
-  total_skills: 94
+  total_skills: 95
   total_edges: 26
   total_inferred_mentions: 131
   caller_distribution:
     executor: 37
-    any: 24
+    any: 25
     reviewer: 11
     leader: 22
   has_cycles: false
@@ -286,6 +286,21 @@ nodes:
   - /feishu-notify training completed
   - 发飞书 experiment finished
   - notify team about results
+- name: feishu-session
+  caller: any
+  description: Manage Feishu-controlled Codex sessions, phone runners, and auditable
+    phone-session merge reports. Use when user mentions Feishu control, phone control,
+    mobile takeover, session merge, or wants to start/stop/report a Feishu Codex runner.
+  platform: both
+  status: needs-runtime-adaptation
+  produces:
+  - .aris/feishu-control/reports/<session_id>.md
+  consumes:
+  - .aris/feishu-control/
+  examples:
+  - /feishu-session start leader-phone
+  - /feishu-session report leader-phone
+  - 把手机 session 合并回来
 - name: figure-description
   caller: executor
   description: Process user-provided patent figures and generate formal drawing descriptions.

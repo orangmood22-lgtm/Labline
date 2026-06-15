@@ -1,6 +1,6 @@
 # ARIS Skill Catalog
 
-> 自动生成于 2026-06-13 15:39。共 94 个 skill，12 个分类。
+> 自动生成于 2026-06-14 12:57。共 95 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/generate_skill_catalog.py`
 
@@ -15,7 +15,7 @@
 - [图表/可视化](#图表可视化)（8）
 - [审查/质量](#审查质量)（6）
 - [专利/公文](#专利公文)（8）
-- [工具/同步](#工具同步)（7）
+- [工具/同步](#工具同步)（8）
 - [计算资源](#计算资源)（3）
 - [开发工具](#开发工具)（15）
 
@@ -773,6 +773,16 @@
 /feishu-notify [message-text]
 ```
 
+### `/feishu-session`
+
+**Manage Feishu-controlled Codex sessions, phone runners, and auditable phone-session merge reports. Use when user mentions Feishu control, phone con...**
+
+参数：`[start|mark-seen|report|merge]`
+
+```
+/feishu-session report leader-phone
+```
+
 ### `/framework-update`
 
 **一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。**
@@ -911,7 +921,7 @@
 
 ### `/git-guardrails`
 
-**Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, branch -D, etc.) before they execute. Use when user wants to p...**
+**Set up Claude Code or Codex guardrails to block dangerous git commands (push, reset --hard, clean, branch -D, etc.) before they execute. Use when u...**
 
 ```
 /git-guardrails

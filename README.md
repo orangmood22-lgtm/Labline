@@ -72,6 +72,7 @@ aris-framework/
 | [docs/codex-migration.md](docs/codex-migration.md) | Codex 迁移说明 |
 | [docs/DOC_DEPENDENCIES.md](docs/DOC_DEPENDENCIES.md) | 文档依赖关系 |
 | [docs/LANGGRAPH_EVALUATION.md](docs/LANGGRAPH_EVALUATION.md) | LangGraph 是否适合引入 ARIS |
+| [docs/FEISHU_INTEGRATION.md](docs/FEISHU_INTEGRATION.md) | 飞书通知、双向消息、受控 Codex runner |
 | [deploy/DEPLOY_GUIDE.md](deploy/DEPLOY_GUIDE.md) | Docker / 服务器部署 |
 | [AGENT_GUIDE.md](AGENT_GUIDE.md) | AI Agent 阅读指南 |
 
@@ -86,6 +87,7 @@ aris-framework/
 | `mcp-servers/llm-chat/` | 通用 OpenAI-compatible chat MCP |
 | `mcp-servers/minimax-chat/` | MiniMax chat MCP |
 | `mcp-servers/feishu-bridge/` | 飞书 HTTP 通知/回复桥 |
+| [docs/FEISHU_INTEGRATION.md](docs/FEISHU_INTEGRATION.md) | 飞书双向接入文档 |
 | `mcp-servers/codex-image2/` | Codex app-server 图像生成桥 |
 
 ### 模板
@@ -111,6 +113,7 @@ aris-framework/
 | `tools/smart_update.sh`, `tools/smart_update_codex.sh`, `tools/smart_update.ps1` | 框架更新/重建 symlink |
 | `tools/sync.sh` | git + 远程部署同步 |
 | `tools/watchdog.py` | 实验 watchdog |
+| `tools/aris_feishu_session.py` | 飞书 inbox 驱动的受控 Codex Session runner |
 | `tools/experiment_queue/` | SSH 多 GPU 实验队列 |
 | `tools/arxiv_fetch.py`, `tools/semantic_scholar_fetch.py`, `tools/openalex_fetch.py`, `tools/deepxiv_fetch.py`, `tools/exa_search.py` | 论文/网页检索 |
 | `tools/research_wiki.py` | 研究知识库 |

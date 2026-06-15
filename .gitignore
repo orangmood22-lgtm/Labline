@@ -16,6 +16,7 @@ __pycache__/
 
 # Environment
 .env
+.venv-feishu/
 
 # Claude Code local config — contains API keys and personal settings
 .claude/
@@ -47,6 +48,7 @@ patent/
 
 # ARIS project-local runtime state
 .aris/status/
+.aris/feishu-control/
 
 # Developer-local private notes
 to-developer/discussions/settings*.json
