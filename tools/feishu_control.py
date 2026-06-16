@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import time
 import secrets
 import string
 import sys
@@ -64,12 +66,20 @@ def read_state(root: Path) -> dict:
     path = state_file(root)
     if not path.exists():
         return empty_state()
-    return json.loads(path.read_text(encoding="utf-8"))
+    for attempt in range(3):
+        text = path.read_text(encoding="utf-8")
+        if text.strip():
+            return json.loads(text)
+        if attempt < 2:
+            time.sleep(0.05)
+    return empty_state()
 
 
 def write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
 
 
 def write_state(root: Path, data: dict) -> None:
@@ -118,17 +128,24 @@ def route_target(state: dict, text: str) -> tuple[str | None, str]:
     return state.get("active_session_id"), text
 
 
-def queue_message(root: Path, state: dict, session_id: str, text: str, source: str, now: datetime) -> None:
+def remember_sender(state: dict, session_id: str, sender_open_id: str | None) -> None:
+    if not sender_open_id:
+        return
+    session = ensure_session(state, session_id)
+    session["last_sender_open_id"] = sender_open_id
+
+
+def queue_message(root: Path, state: dict, session_id: str, text: str, source: str, now: datetime, sender_open_id: str | None = None) -> None:
     ensure_session(state, session_id)
-    append_jsonl(
-        inbox_file(root, session_id),
-        {
-            "received_at": isoformat(now),
-            "session_id": session_id,
-            "source": source,
-            "text": text,
-        },
-    )
+    payload = {
+        "received_at": isoformat(now),
+        "session_id": session_id,
+        "source": source,
+        "text": text,
+    }
+    if sender_open_id:
+        payload["sender_open_id"] = sender_open_id
+    append_jsonl(inbox_file(root, session_id), payload)
 
 
 def queue_response(root: Path, state: dict, session_id: str, text: str, now: datetime) -> None:
@@ -279,6 +296,9 @@ def cmd_handle_message(args: argparse.Namespace) -> int:
         return emit({"status": "unsupported_command"}, 4)
 
     if text.startswith("/"):
+        session_id = state.get("active_session_id")
+        if session_id:
+            remember_sender(state, session_id, args.sender_open_id)
         try:
             payload, code = handle_command(root, state, text, now)
         except ApprovalError as exc:
@@ -290,8 +310,9 @@ def cmd_handle_message(args: argparse.Namespace) -> int:
     if not session_id:
         return emit({"status": "no_active_session"}, 3)
     ensure_session(state, session_id)
+    remember_sender(state, session_id, args.sender_open_id)
     set_lease(state, session_id, "feishu", now, args.lease_ttl_seconds)
-    queue_message(root, state, session_id, routed_text, "feishu", now)
+    queue_message(root, state, session_id, routed_text, "feishu", now, args.sender_open_id)
     write_state(root, state)
     return emit({"status": "queued", "session_id": session_id, "lease_owner": "feishu"})
 
@@ -364,6 +385,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     handle = subparsers.add_parser("handle-message")
     handle.add_argument("--text", required=True)
+    handle.add_argument("--sender-open-id", default="")
     handle.add_argument("--now")
     handle.add_argument("--lease-ttl-seconds", type=int, default=DEFAULT_LEASE_TTL_SECONDS)
     handle.set_defaults(func=cmd_handle_message)

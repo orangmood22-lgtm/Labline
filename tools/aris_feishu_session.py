@@ -47,6 +47,34 @@ def read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def session_sender(root: Path, session_id: str) -> str:
+    sessions_path = root / "sessions.json"
+    if not sessions_path.exists():
+        return ""
+    try:
+        data = json.loads(sessions_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ""
+    session = data.get("sessions", {}).get(session_id, {})
+    sender = session.get("last_sender_open_id", "")
+    return sender if isinstance(sender, str) else ""
+
+
+def message_sender(args: argparse.Namespace, message: dict | None = None) -> str:
+    if message:
+        sender = message.get("sender_open_id", "")
+        if isinstance(sender, str) and sender:
+            return sender
+    sender = getattr(args, "_feishu_current_sender_open_id", "")
+    return sender if isinstance(sender, str) else ""
+
+
+def with_recipient(payload: dict, recipient: str) -> dict:
+    if recipient:
+        return {**payload, "user_id": recipient}
+    return payload
+
+
 def read_runner(root: Path, session_id: str) -> dict:
     path = runner_file(root, session_id)
     if not path.exists():
@@ -303,20 +331,24 @@ def scan_live_control_messages(args: argparse.Namespace, root: Path | None, runn
     for index, message in enumerate(messages[scan_start:], start=scan_start):
         text = message.get("text", "").strip()
         runner["live_control_scan_count"] = index + 1
+        previous_sender = getattr(args, "_feishu_current_sender_open_id", "")
+        setattr(args, "_feishu_current_sender_open_id", message_sender(args, message) or previous_sender)
         if text == "/interrupt" or text.startswith("/interrupt "):
             send_status(args, interrupting_status_text(args), color="red")
             send_tmux_key(args, args.tmux_interrupt_key)
             runner["processed_count"] = max(int(runner.get("processed_count", 0)), index + 1)
             write_runner(root, args.session_id, runner)
             send_status(args, interrupted_status_text(args), color="red")
+            setattr(args, "_feishu_current_sender_open_id", previous_sender)
             return "interrupt"
         if text == "/btw" or text.startswith("/btw "):
             send_status(args, btw_received_status_text(args), color="blue", channel="btw")
             answer = run_btw_for_message(args, root, message, index)
-            send_response(args, answer)
+            send_response(args, answer, message)
             send_status(args, btw_completed_status_text(args), color="green", channel="btw")
             runner["processed_count"] = max(int(runner.get("processed_count", 0)), index + 1)
             write_runner(root, args.session_id, runner)
+        setattr(args, "_feishu_current_sender_open_id", previous_sender)
     if scan_start < len(messages):
         write_runner(root, args.session_id, runner)
     return None
@@ -407,7 +439,7 @@ def post_json(url: str, payload: dict, timeout: int = 10) -> dict:
         return {"error": str(exc)}
 
 
-def send_response(args: argparse.Namespace, text: str) -> None:
+def send_response(args: argparse.Namespace, text: str, message: dict | None = None) -> None:
     if args.bridge_url:
         post_json(
             f"{args.bridge_url.rstrip('/')}/control/respond",
@@ -419,6 +451,7 @@ def send_response(args: argparse.Namespace, text: str) -> None:
                 payload = {"title": "ARIS", "body": text, "color": "blue"}
             else:
                 payload = {"type": "text", "content": text}
+            payload = with_recipient(payload, message_sender(args, message))
             post_json(
                 f"{args.bridge_url.rstrip('/')}/send",
                 payload,
@@ -435,6 +468,7 @@ def send_status(args: argparse.Namespace, text: str, color: str = "yellow", chan
         payload = {"title": "ARIS 状态", "body": text, "color": color}
     else:
         payload = {"type": "text", "content": text}
+    payload = with_recipient(payload, message_sender(args))
     if getattr(args, "feishu_status_mode", "update") == "update" and args.feishu_format == "card":
         status_attr = f"_feishu_status_message_id_{channel}"
         message_id = getattr(args, status_attr, "")
@@ -639,6 +673,7 @@ def process_once(args: argparse.Namespace) -> int:
     processed = 0
 
     for index, message in enumerate(messages[start:], start=start):
+        setattr(args, "_feishu_current_sender_open_id", message_sender(args, message) or session_sender(root, args.session_id))
         if is_btw_message(message):
             setattr(args, "_feishu_status_message_id_btw", "")
             send_status(args, btw_received_status_text(args), color="blue", channel="btw")
@@ -649,10 +684,11 @@ def process_once(args: argparse.Namespace) -> int:
             response = run_live_tui_for_message(args, root, runner, message, index)
         else:
             response = run_codex_for_message(args, root, message, index)
-        send_response(args, response)
+        send_response(args, response, message)
         processed += 1
         runner["processed_count"] = max(int(runner.get("processed_count", 0)), index + 1)
         write_runner(root, args.session_id, runner)
+        setattr(args, "_feishu_current_sender_open_id", "")
 
     plural = "message" if processed == 1 else "messages"
     print(f"processed {processed} {plural}")

@@ -601,7 +601,7 @@ def test_live_wait_answers_btw_as_side_channel_without_injecting_main_thread():
         inbox.parent.mkdir(parents=True)
         inbox.write_text(
             json.dumps({"text": "main", "session_id": "leader-1"}) + "\n"
-            + json.dumps({"text": "/btw 记得检查日志", "session_id": "leader-1"}) + "\n",
+            + json.dumps({"text": "/btw 记得检查日志", "session_id": "leader-1", "sender_open_id": "ou_btw"}) + "\n",
             encoding="utf-8",
         )
         transcript = root / "rollout.jsonl"
@@ -623,6 +623,8 @@ def test_live_wait_answers_btw_as_side_channel_without_injecting_main_thread():
     run_btw.assert_called_once()
     send_response.assert_called_once()
     assert send_response.call_args.args[1] == "side answer"
+    assert send_response.call_args.args[2]["sender_open_id"] == "ou_btw"
+    assert getattr(args, "_feishu_current_sender_open_id") == ""
     assert send_status.call_args_list[0].args[1] == "`leader-1` · 已收到 BTW · 0s"
     assert send_status.call_args_list[-1].args[1] == "`leader-1` · BTW 已完成"
     assert inject.call_count == 0
@@ -766,6 +768,7 @@ def test_send_response_defaults_to_feishu_card_payload():
         http_timeout_seconds = 10
         state_root = None
         project_root = "/repo/a"
+        _feishu_current_sender_open_id = ""
 
     with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
         aris_feishu_session.send_response(Args(), "**done**")
@@ -776,6 +779,27 @@ def test_send_response_defaults_to_feishu_card_payload():
     assert send_payload["body"] == "**done**"
     assert send_payload["color"] == "blue"
     assert "type" not in send_payload
+
+
+def test_send_response_targets_current_feishu_sender_when_available():
+    sys.path.insert(0, str(REPO_ROOT / "tools"))
+    import aris_feishu_session
+
+    class Args:
+        bridge_url = "http://bridge"
+        session_id = "leader-1"
+        send_feishu = True
+        feishu_format = "card"
+        http_timeout_seconds = 10
+        state_root = None
+        project_root = "/repo/a"
+        _feishu_current_sender_open_id = "ou_current"
+
+    with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
+        aris_feishu_session.send_response(Args(), "**done**")
+
+    send_payload = post_json.call_args_list[1].args[1]
+    assert send_payload["user_id"] == "ou_current"
 
 
 def test_send_response_can_use_plain_text_payload():
@@ -790,6 +814,7 @@ def test_send_response_can_use_plain_text_payload():
         http_timeout_seconds = 10
         state_root = None
         project_root = "/repo/a"
+        _feishu_current_sender_open_id = ""
 
     with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
         aris_feishu_session.send_response(Args(), "**done**")

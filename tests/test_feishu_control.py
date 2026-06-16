@@ -62,6 +62,29 @@ def test_feishu_text_routes_to_active_or_addressed_session_inbox():
         assert executor_messages[-1]["source"] == "feishu"
 
 
+def test_feishu_message_records_sender_for_session_and_inbox():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        run_control(["--state-root", str(root), "register", "--session-id", "leader-1", "--role", "leader", "--project-root", "/repo/a"])
+
+        run_control([
+            "--state-root",
+            str(root),
+            "handle-message",
+            "--text",
+            "hi",
+            "--sender-open-id",
+            "ou_sender",
+            "--now",
+            "2026-06-14T12:00:00Z",
+        ])
+
+        state = json.loads((root / "sessions.json").read_text(encoding="utf-8"))
+        messages = read_jsonl(root / "inbox" / "leader-1.jsonl")
+        assert state["sessions"]["leader-1"]["last_sender_open_id"] == "ou_sender"
+        assert messages[-1]["sender_open_id"] == "ou_sender"
+
+
 def test_control_lease_blocks_local_input_until_release_or_expiry():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)

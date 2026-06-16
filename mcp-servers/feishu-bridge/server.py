@@ -226,11 +226,14 @@ def handle_inbound_message_event(data) -> dict:
     if not text.strip():
         return {"status": "ignored_empty_message", "message_id": message_id}
 
-    code, payload = run_control(["handle-message", "--text", text])
+    sender_open_id = event_sender_open_id(data)
+    control_args = ["handle-message", "--text", text]
+    if sender_open_id:
+        control_args.extend(["--sender-open-id", sender_open_id])
+    code, payload = run_control(control_args)
     payload["message_id"] = message_id
     payload["control_exit_code"] = code
 
-    sender_open_id = event_sender_open_id(data)
     if code == 0 and SEND_QUEUE_ACK:
         try:
             send_text(sender_open_id, f"ARIS received: {payload.get('status', 'ok')}")

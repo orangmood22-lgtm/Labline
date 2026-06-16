@@ -273,7 +273,7 @@ class TestHttpHandlerRouting(unittest.TestCase):
             with patch.object(mod, "send_text", return_value={"ok": True}) as send_text:
                 result = mod.handle_inbound_message_event(data)
 
-        run_control.assert_called_once_with(["handle-message", "--text", "$status"])
+        run_control.assert_called_once_with(["handle-message", "--text", "$status", "--sender-open-id", "ou_sender"])
         send_text.assert_not_called()
         self.assertEqual(result["status"], "queued")
         self.assertEqual(result["message_id"], "om_1")
