@@ -119,27 +119,26 @@ mcp__codex__codex:
 ```
 不可用则警告降级。
 
-5. **权限就绪检查：** 读项目 `.claude/settings.local.json` 的 `permissions.allow` 列表，验证以下实验所需权限是否存在：
+5. **运行能力就绪检查（Codex-first）：** 不读取或要求 `.claude/settings.local.json`。Codex 的权限由当前会话 sandbox/approval 策略控制；Leader 只做非破坏性的可用性探测和配置检查。
 
-| 必须 | 建议 |
-|-------|--------|
-| `Bash(ssh *)` | `Bash(nvidia-smi *)` |
-| `Bash(scp *)` | `Bash(tmux *)` |
-| `Bash(rsync *)` | `Bash(curl *)` |
-| `Bash(ls *)`, `cat`, `echo` | `Bash(find *)`, `grep`, `wc` |
-| `Monitor(*)` | |
-| `Write(project/**)` | |
-| `Edit(project/**)` | |
+| 必须确认 | 检查方式 |
+|----------|----------|
+| 项目文件可读 | `AGENTS.md` / `CLAUDE.md` / `project.yaml` 是否存在 |
+| 本地工具可用 | `git`、`python`、`tmux`、`ssh`、`rsync`、`scp` 按任务需要检查 `command -v` |
+| GPU 可见性 | 本地任务检查 `nvidia-smi`；远程任务让 Deployer 检查目标机 |
+| 远程配置 | `project.yaml` / `CLAUDE.md` 中是否有目标服务器、数据路径、输出路径 |
+| ARIS 状态目录 | 项目 `.aris/` 与框架级 `~/.aris/` 可写 |
 
-缺失项 → **不自己修。** 输出缺失清单让用户补，等确认后继续。
+缺失项 → **不自己修。** 输出“缺什么、为什么需要、用户可执行的最小命令”，等确认后继续。不要让 Codex 用户修改 Claude Code 权限文件。
 
 ```
-⚠️ 权限不足，请将以下规则添加到 .claude/settings.local.json 的 permissions.allow 中：
-- Bash(ssh *)
-- Monitor(*)
-- ...
+⚠️ 运行环境缺少必要能力：
+- tmux 未安装：长实验无法稳定托管。建议：sudo apt-get install tmux
+- project.yaml 未配置 remote server：Deployer 不知道部署目标。
 完成后告诉我，我继续。
 ```
+
+Claude Code 兼容模式：只有当用户明确在 Claude Code 中运行 ARIS，才额外检查 `.claude/settings.local.json` 的 `permissions.allow`。这属于兼容层提示，不是 Codex 默认阻塞条件。
 
 ---
 
