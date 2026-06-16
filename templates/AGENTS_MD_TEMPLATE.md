@@ -14,8 +14,8 @@
 - 禁止 `tail -f` 或循环 `tail` 轮询实验 → 用 `$monitor-experiment` 或 background tasks
 - Executor 遇阻塞遵循 `executor-blocked-protocol.md`：自救 2 次，失败写 `BLOCKED_REPORT.md`
 - Agent 启动、进入长任务、阻塞、完成时遵循 `agent-status-stream.md` 更新自己的状态文件；`.aris/status/` 不提交
-- Leader 不写代码/不跑命令，Executor 不自审，Reviewer 只看原始文件
-- Skill 分层：编排层(leader) / 执行层(executor) / 工具层(any) / 检索层(any)，不要越层调用
+- Leader 不写代码/不跑命令，Coder 不 SSH，Deployer 不改代码，Writer 不跑实验，Reviewer 只看原始文件
+- Skill 分层：编排层(leader) / 执行层(coder|deployer|writer) / 审查层(reviewer) / 工具层(any) / 检索层(any)，不要越层调用
 
 ## Pipeline Status
 
@@ -34,11 +34,13 @@ last_updated: ""     # YYYY-MM-DD HH:mm — auto-updated by skills on every outp
 
 ## Three-Party Architecture
 
-| Role         | Profile               | Responsibility                          |
-| ------------ | --------------------- | --------------------------------------- |
-| **Leader**   | `codex exec -p leader`   | 研究规划、gate 决策、止损判断、分发任务 |
-| **Executor** | `codex exec -p executor` | 代码实现、实验部署、论文撰写            |
-| **Reviewer** | `codex exec -p reviewer` | 独立代码审查、实验审计、claim 判定      |
+| Role         | Profile                 | Responsibility                          |
+| ------------ | ----------------------- | --------------------------------------- |
+| **Leader**   | Codex 主会话            | 研究规划、gate 决策、止损判断、分发任务 |
+| **Coder**    | `codex exec -p coder`   | 代码实现、测试、修 bug、重构           |
+| **Deployer** | `codex exec -p deployer`| 同步、训练、监控、收集结果             |
+| **Writer**   | `codex exec -p writer`  | 论文、文档、rebuttal                  |
+| **Reviewer** | 独立 reviewer agent     | 独立代码审查、实验审计、claim 判定      |
 
 ## Project Constraints
 

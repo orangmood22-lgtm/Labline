@@ -79,7 +79,7 @@
 ## 第一轮：先看“全局理解”
 
 ### 1）先看：
-- `discussions/ARIS_HARDENING_PROGRESS_REPORT_20260513.md`
+- `discussions/20260613-ARIS_HARDENING_PROGRESS_REPORT_20260513.md`
 
 为什么先看它？
 
@@ -97,9 +97,9 @@
 ---
 
 ### 2）再看：
-- `discussions/ARIS_ARCHITECTURE_ANALYSIS.md`
-- `discussions/PAIN_POINT_DIAGNOSIS.md`
-- `discussions/ARCHITECTURE_EXPLORATION_REPORT.md`
+- `discussions/20260613-ARIS_ARCHITECTURE_ANALYSIS.md`
+- `discussions/20260613-PAIN_POINT_DIAGNOSIS.md`
+- `discussions/20260613-ARCHITECTURE_EXPLORATION_REPORT.md`
 
 这三份更像：
 
@@ -727,7 +727,7 @@ audit 就是专门处理这两者差别的。
 
 ## 第 1 步（15 分钟）
 看：
-- `discussions/ARIS_HARDENING_PROGRESS_REPORT_20260513.md`
+- `discussions/20260613-ARIS_HARDENING_PROGRESS_REPORT_20260513.md`
 
 目标：
 - 建立全局问题意识
@@ -845,7 +845,7 @@ audit 就是专门处理这两者差别的。
 
 ## 想看“整个项目做了什么改造”
 看：
-- `discussions/ARIS_HARDENING_PROGRESS_REPORT_20260513.md`
+- `discussions/20260613-ARIS_HARDENING_PROGRESS_REPORT_20260513.md`
 - `MANIFEST.md`
 
 ---

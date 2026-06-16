@@ -6,15 +6,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+---
+
+## [v0.3.0] - 2026-06-16
+
 ### Added
+- ARIS beginner CLI under `tools/aris` with `project` and `framework` namespaces.
+- `aris project init PATH --direction "..."` for current-directory initialization, path-based project creation, and attaching ARIS to existing projects without overwriting user files.
+- `aris project doctor`, `aris project update`, `aris project detach`, and project/framework version inspection commands.
+- User workspace Project Registry for syncing registered projects after framework updates.
+- Non-destructive `aris framework check-update` with cached daily notification support for shell/tmux sessions.
+- Per-user Docker workspace topology: each researcher gets an isolated framework copy, projects directory, and ARIS state directory while sharing datasets, pretrained models, and download cache.
+- `cc-switch-cli` is preinstalled in container images for provider management.
+- Detailed user/admin operation guide split in `docs/OPERATIONS_GUIDE.md`.
 - Feishu control bridge and managed Codex runner for opt-in remote session input, live tmux takeover, status-card updates, `/interrupt`, and side-channel `/btw` questions.
 - Feishu integration documentation, ADRs, and a `feishu-session` skill describing setup, safety boundaries, and operation.
+- 文档依赖 DAG：`docs/DOC_DAG.yaml`、`docs/DOC_DAG.mmd` 和 `tools/generate_doc_dag.py`，用于新增/修改文档时做影响分析。
+- 中文 `tools/` 全量索引文档 `docs/TOOLS_INDEX.md`，汇总安装、发布、Feishu、实验、检索、审计、生成器和维护脚本。
+- Stable-readable Chinese promote specification in `docs/PROMOTE_FLOW.md` and root `AGENTS.md` guidance for Codex/developers.
 
 ### Changed
+- ARIS documentation is now Codex-first while preserving Claude Code compatibility.
+- `README.md`, `QUICK_START.md`, deployment docs, and project templates now use `aris project ...` / `aris framework ...` commands.
+- Tripartite architecture docs now describe one Codex leader session, local delegated agents, Executor sub-roles Coder/Deployer/Writer, and local independent Reviewer.
+- Framework updates are explicit user actions; container startup and shell/tmux entry only check and notify.
+- Promote 文档纳入已有 release、tag、install、smart update 工具，避免 Codex 手写临时发布流程。
 - Feishu status cards now update in place with minimal state and elapsed time instead of sending repeated acknowledgement cards.
 
 ### Fixed
+- Deployment guides no longer assume hard-coded `/data`, `/opt/aris-framework`, or shared framework named-volume layouts.
+- Container entrypoint no longer performs silent `git pull` on framework startup.
+- Stable-facing docs no longer directly depend on dev-only `to-developer/` paths.
 - Feishu bridge now supports card patch updates and disables noisy queue acknowledgements by default.
+- Stable framework no longer tracks dev-only `to-developer/` materials; release checks rely on `CHANGELOG.md` for stable readiness.
+
+### Removed
+- Legacy short CLI commands `aris init`, `aris update`, `aris doctor`, and `aris detach` are intentionally unsupported.
 
 ---
 

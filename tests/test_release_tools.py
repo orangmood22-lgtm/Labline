@@ -43,7 +43,7 @@ def init_release_repo(path: Path) -> None:
         "- Installer path handling.\n",
         encoding="utf-8",
     )
-    dev_log = path / "to-developer" / "DEVELOPMENT_LOG.md"
+    dev_log = path / "to-developer" / "20260613-DEVELOPMENT_LOG.md"
     dev_log.parent.mkdir(parents=True)
     dev_log.write_text(
         "# ARIS Development Log\n\n"
@@ -52,7 +52,7 @@ def init_release_repo(path: Path) -> None:
         "- Installer path handling.\n",
         encoding="utf-8",
     )
-    run(["git", "add", "CHANGELOG.md", "to-developer/DEVELOPMENT_LOG.md"], path)
+    run(["git", "add", "CHANGELOG.md", "to-developer/20260613-DEVELOPMENT_LOG.md"], path)
     run(["git", "commit", "-m", "initial"], path)
     run(["git", "tag", "-a", "v0.1.0", "-m", "ARIS v0.1.0"], path)
 

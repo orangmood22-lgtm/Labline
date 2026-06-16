@@ -1,6 +1,6 @@
 # 可行性方案补充：回溯验证 × 模板设计 × 改造清单
 
-> 作为 `HUMAN_IN_THE_LOOP_FEASIBILITY_REPORT.md` 的补充文档。
+> 作为 `20260613-HUMAN_IN_THE_LOOP_FEASIBILITY_REPORT.md` 的补充文档。
 > 日期：2026-05-12
 > 内容：FPA-IOD 回溯验证、具体模板文件、SKILL.md 改造清单
 
@@ -10,7 +10,7 @@
 
 ### 1.1 验证方法
 
-将 PAIN_POINT_DIAGNOSIS.md 中记录的 9 个 bug，逐一对照新方案中的每个机制，判断：
+将 20260613-PAIN_POINT_DIAGNOSIS.md 中记录的 9 个 bug，逐一对照新方案中的每个机制，判断：
 - 能否拦截？
 - 在哪个阶段拦截？
 - 通过什么机制拦截？
@@ -754,4 +754,4 @@ Outputs:
 
 ---
 
-*补充文档生成时间：2026-05-12。与主文档 `HUMAN_IN_THE_LOOP_FEASIBILITY_REPORT.md` 配合阅读。*
+*补充文档生成时间：2026-05-12。与主文档 `20260613-HUMAN_IN_THE_LOOP_FEASIBILITY_REPORT.md` 配合阅读。*

@@ -1565,8 +1565,8 @@ watchdog 你可以理解为：
 
 ### 过程记录
 - `MANIFEST.md`
-- `discussions/0512过程.txt`
-- `discussions/NIGHT_PROGRESS_20260512.md`
+- `discussions/20260613-0512过程.txt`
+- `discussions/20260613-NIGHT_PROGRESS_20260512.md`
 
 ---
 

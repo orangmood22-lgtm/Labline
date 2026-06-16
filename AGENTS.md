@@ -5,11 +5,11 @@
 ## 必读文档
 
 - `CONTEXT.md`：框架版本、分支、release 术语。
-- `to-developer/FRAMEWORK_MODULES.md`：开发者侧框架模块边界。
+- `to-developer/20260615-FRAMEWORK_MODULES.md`：开发者侧框架模块边界。
 - `to-developer/DOC_DAG.yaml`：开发者文档依赖 DAG 源数据。
 - `to-developer/DOC_DAG.mmd`：开发者文档依赖图。
-- `to-developer/plans/PROMOTE_FLOW.md`：dev 侧 promote 流程草案。
-- `to-developer/plans/VERSION_MANAGEMENT.md`：版本管理方案。
+- `to-developer/plans/20260613-PROMOTE_FLOW.md`：dev 侧 promote 流程草案。
+- `to-developer/plans/20260613-VERSION_MANAGEMENT.md`：版本管理方案。
 - `docs/FRAMEWORK_STRUCTURE.md`：framework/project/dev 边界。
 
 ## 开发者文档规则

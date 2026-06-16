@@ -1,6 +1,6 @@
 # 实验计划
 
-> **Workflow 1.5 (`/experiment-bridge`) 的模板。** 填写后保存为 `refine-logs/EXPERIMENT_PLAN.md`，然后运行 `/experiment-bridge`。
+> **Workflow 1.5 (`$experiment-bridge`) 的模板。** 填写后保存为 `refine-logs/EXPERIMENT_PLAN.md`，然后运行 `$experiment-bridge`。
 
 **问题**: [你的方法解决什么问题？]
 **方法论点**: [一句话描述你的方法]

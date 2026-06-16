@@ -1,6 +1,6 @@
 # ARIS 框架模块说明
 
-本文档定义开发者侧的框架模块边界。`to-developer/DEVELOPMENT_LOG.md` 按这里的模块名记录开发变更；发布前再把用户可见部分蒸馏到 `CHANGELOG.md`。
+本文档定义开发者侧的框架模块边界。`to-developer/20260613-DEVELOPMENT_LOG.md` 按这里的模块名记录开发变更；发布前再把用户可见部分蒸馏到 `CHANGELOG.md`。
 
 ## 模块索引
 
@@ -22,7 +22,7 @@
 
 ## 记录规则
 
-- 改动发生在哪个模块，就在 `to-developer/DEVELOPMENT_LOG.md` 的同名小节记录。
+- 改动发生在哪个模块，就在 `to-developer/20260613-DEVELOPMENT_LOG.md` 的同名小节记录。
 - 一个改动跨多个模块时，分别记录影响，不要只写在实现所在目录。
 - 用户可见能力、安装方式、命令行为、配置方式变化，需要再同步到 stable 文档或 `CHANGELOG.md` 候选项。
 - 仅开发者内部计划、讨论、审计、handoff 进入 `to-developer/`，不进入 stable `main`。
@@ -49,9 +49,9 @@
 
 ```text
 具体代码/文档改动
-  -> to-developer/DEVELOPMENT_LOG.md 按模块记录
+  -> to-developer/20260613-DEVELOPMENT_LOG.md 按模块记录
   -> 用户可见部分进入 CHANGELOG.md
   -> stable 文档 DAG / promote gate 校验
 ```
 
-`to-developer/FRAMEWORK_MODULES.md` 只定义开发者侧模块边界。对用户暴露的框架/项目/dev 三层结构仍以 `docs/FRAMEWORK_STRUCTURE.md` 为准。
+`to-developer/20260615-FRAMEWORK_MODULES.md` 只定义开发者侧模块边界。对用户暴露的框架/项目/dev 三层结构仍以 `docs/FRAMEWORK_STRUCTURE.md` 为准。

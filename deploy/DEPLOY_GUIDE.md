@@ -6,10 +6,10 @@
 
 | 项目 | 最低配置 |
 |------|---------|
-| 服务器 | Ubuntu 20.04+, 任意 GPU（2x 3090 够用） |
+| 服务器 | Ubuntu 20.04+ |
 | Docker | 24.0+ (`docker compose` 子命令可用) |
 | 网络 | 能访问 GitHub（拉框架）和 PyPI（装依赖） |
-| 磁盘 | /data 分区 500GB+（数据集 + 项目） |
+| 磁盘 | 足够空间放数据集 + 项目 |
 
 ## 网络代理基线
 
@@ -18,8 +18,8 @@
 如果服务器需要代理才能访问 GitHub/PyPI/飞书，先在宿主机 shell 设置大小写两套变量：
 
 ```bash
-export HTTP_PROXY=http://127.0.0.1:7897
-export HTTPS_PROXY=http://127.0.0.1:7897
+export HTTP_PROXY=http://127.0.0.1:[你的代理端口]
+export HTTPS_PROXY=http://127.0.0.1:[你的代理端口]
 export NO_PROXY=127.0.0.1,localhost,::1
 export http_proxy="$HTTP_PROXY"
 export https_proxy="$HTTPS_PROXY"
@@ -56,14 +56,49 @@ git config --global --unset https.proxy || true
 
 ## 快速开始（5 分钟）
 
+默认部署模型是**一人一个长期容器**：
+
+| 资源 | 隔离/共享方式 |
+|------|---------------|
+| 用户运行环境 | 每人一个容器，例如 `aris-zhangsan`、`aris-lisi` |
+| framework | 每人一份宿主机目录，挂到 `/aris/framework` |
+| 项目目录 | 每人一份宿主机目录，挂到 `/aris/projects` |
+| 数据集 | 共享宿主机目录，挂到 `/aris/shared/datasets` |
+| 预训练模型/下载缓存 | 共享宿主机目录，挂到 `/aris/shared/pretrained` 和 `/aris/shared/downloads` |
+| SSH key、git 身份、个人 API 覆盖 | 每个容器单独配置 |
+
+也就是说，组里不是所有人挤进同一个容器；管理员每加一个用户，就在 `.env` 和 `docker-compose.yaml` 中增加一组 researcher 配置。每个用户有自己的 framework copy，可以独立更新和回退；数据集、预训练模型、下载缓存是组内共享资源。
+
+拓扑如下：
+
+```text
+Host Server
+└── [你的ARIS总目录]/
+    ├── users/
+    │   ├── zhangsan/
+    │   │   ├── framework/         # 挂到 aris-zhangsan:/aris/framework
+    │   │   ├── projects/          # 挂到 aris-zhangsan:/aris/projects
+    │   │   └── .aris/             # 挂到 aris-zhangsan:/aris/.aris
+    │   └── lisi/
+    │       ├── framework/         # 挂到 aris-lisi:/aris/framework
+    │       ├── projects/          # 挂到 aris-lisi:/aris/projects
+    │       └── .aris/             # 挂到 aris-lisi:/aris/.aris
+    └── shared/
+        ├── datasets/              # 挂到 /aris/shared/datasets，只读
+        ├── pretrained/            # 挂到 /aris/shared/pretrained
+        └── downloads/             # 挂到 /aris/shared/downloads
+```
+
+管理员只管宿主机和 compose；普通用户只进入自己的容器。
+
 ```bash
-# 1. 克隆框架
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git /opt/aris-framework
-cd /opt/aris-framework/deploy
+# 1. 管理员准备一份部署用 framework
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git [你的ARIS总目录]/admin/framework
+cd [你的ARIS总目录]/admin/framework/deploy
 
 # 2. 配置环境变量
 cp .env.example .env
-vim .env   # 填写用户名、API key、数据集路径
+vim .env   # 填写 ARIS_ROOT、用户名、API key、共享数据路径
 
 # 3. 启动
 docker compose up -d
@@ -85,39 +120,63 @@ sudo usermod -aG docker $USER
 
 ### Step 2: 准备目录结构
 
+管理员先指定一个 `ARIS_ROOT`，所有用户 workspace 和共享资产都放在这个根目录下，方便备份、迁移和权限管理。
+
 ```bash
-# 宿主机上
-sudo mkdir -p /data/shared/{datasets,pretrained,downloads}
-sudo mkdir -p /data/aris-users   # 各用户项目存储
-sudo chmod 777 /data/shared /data/aris-users
+export ARIS_ROOT="[你的ARIS总目录]"
+
+mkdir -p "$ARIS_ROOT"/admin
+mkdir -p "$ARIS_ROOT"/users/{zhangsan,lisi}/{framework,projects,.aris}
+mkdir -p "$ARIS_ROOT"/shared/{datasets,pretrained,downloads}
+# 如果用户还没有 SSH 目录，就为每个用户建好
+mkdir -p /home/zhangsan/.ssh /home/lisi/.ssh
 ```
+
+给每个用户准备初始 framework copy：
+
+```bash
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_ROOT/admin/framework"
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_ROOT/users/zhangsan/framework"
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_ROOT/users/lisi/framework"
+```
+
+如果这些目录归 root 或其他用户所有，按你的服务器权限模型调整 owner/group；不要直接照抄 `chmod 777`。
 
 ### Step 3: 配置 .env
 
 ```bash
-cd /opt/aris-framework/deploy
+cd [你的ARIS总目录]/admin/framework/deploy
 cp .env.example .env
 ```
 
 必填项:
 
 ```env
-# 用户（按人数复制 researcher block）
+# 用户（每人一个容器；按人数复制 researcher block）
 USER1_NAME=zhangsan
 USER1_UID=1001
 USER1_SSH=/home/zhangsan/.ssh    # 宿主机上该用户的 SSH 目录
+USER1_FRAMEWORK_PATH=[你的ARIS总目录]/users/zhangsan/framework
+USER1_PROJECTS_PATH=[你的ARIS总目录]/users/zhangsan/projects
+USER1_STATE_PATH=[你的ARIS总目录]/users/zhangsan/.aris
 
 USER2_NAME=lisi
 USER2_UID=1002
 USER2_SSH=/home/lisi/.ssh
+USER2_FRAMEWORK_PATH=[你的ARIS总目录]/users/lisi/framework
+USER2_PROJECTS_PATH=[你的ARIS总目录]/users/lisi/projects
+USER2_STATE_PATH=[你的ARIS总目录]/users/lisi/.aris
 
 # API（组统一，用户可在容器内覆盖）
 ANTHROPIC_API_KEY=sk-ant-xxx     # 或中转站 key
 ANTHROPIC_BASE_URL=              # 留空=官方, 填中转站 URL
 OPENAI_API_KEY=sk-xxx            # Codex 用
 
-# 数据集目录
-DATASETS_PATH=/data/shared/datasets
+# 共享资源（宿主机路径）
+ARIS_ROOT=[你的ARIS总目录]
+DATASETS_PATH=[你的ARIS总目录]/shared/datasets
+PRETRAINED_PATH=[你的ARIS总目录]/shared/pretrained
+DOWNLOADS_PATH=[你的ARIS总目录]/shared/downloads
 
 # 代理（可选）
 HTTP_PROXY=http://192.168.1.1:7890
@@ -130,6 +189,11 @@ no_proxy=127.0.0.1,localhost,gitea
 # git 代理（可选；只有 git 仍连不上外网时再填）
 GIT_HTTP_PROXY=
 GIT_HTTPS_PROXY=
+
+# framework 更新检查（默认只检查，不自动更新）
+ARIS_AUTO_CHECK_UPDATE=1
+ARIS_UPDATE_CHECK_INTERVAL=1d
+ARIS_UPDATE_CHECK_TIMEOUT=10s
 ```
 
 ### Step 4: 启动服务
@@ -144,6 +208,14 @@ docker compose ps
 # aris-gitea       running  0.0.0.0:3000->3000/tcp, 0.0.0.0:2222->22/tcp
 # aris-zhangsan    running
 # aris-lisi        running
+```
+
+首次启动前，每个用户的 `framework/` 目录必须已经是可用的 ARIS checkout。管理员可以从 admin framework 克隆或同步一份初始版本给每个用户；之后用户在自己的容器内用 `aris framework check-update` / `aris framework update` / `aris framework rollback` 管理自己的 framework 版本。
+
+容器启动、进入交互 shell、打开 tmux pane 时默认都会触发检查入口，但 `ARIS_UPDATE_CHECK_INTERVAL=1d` 会让同一用户每天最多联网检查一次；`--notify` 的状态记录会让同一用户每天最多看到一次提醒。检查不会自动 `git pull`。如果实验期不想自动检查，在 `.env` 里设：
+
+```env
+ARIS_AUTO_CHECK_UPDATE=0
 ```
 
 ### Step 5: 初始化 Gitea
@@ -169,28 +241,33 @@ echo "export GITEA_TOKEN=your_token_here" >> ~/.bashrc
 ### Step 6: 用户日常使用
 
 ```bash
-# 进入容器
+# 进入自己的容器，不要进入别人的容器
 docker exec -it aris-zhangsan bash
 
-# 创建新项目
-/init-research "频域增量检测" --direction "基于频域特征的增量目标检测"
+# 在自己的 /aris/projects 下创建项目
+cd /aris/projects
+aris project init ./freq-detection --direction "基于频域特征的增量目标检测"
 
 # 同步代码
-/sync push                    # 保存到 Gitea
-/sync deploy --server 4090x4  # 部署到 GPU 服务器
+$sync push                    # 保存到 Gitea
+$sync deploy --server 4090x4  # 部署到 GPU 服务器
 
 # 更新框架
-/framework-update
+aris framework check-update
+aris framework update
 
 # 启动研究 pipeline
-/leader "频域增量检测"
+$leader "频域增量检测"
 ```
 
 ## 添加新用户
 
 1. 编辑 `.env`，复制一个 researcher block
 2. 在 `docker-compose.yaml` 中复制一个 researcher service block
-3. `docker compose up -d` 重启
+3. 修改 service 名、`USER*_NAME`、`USER*_UID/GID`、`USER*_SSH`、`USER*_FRAMEWORK_PATH`、`USER*_PROJECTS_PATH`
+4. `docker compose up -d` 启动新容器
+
+新增用户不会进入已有用户容器，也不会复用已有用户的 framework 或 projects 目录。
 
 或者用快捷脚本:
 
@@ -354,19 +431,19 @@ FEISHU_USER_ID=ou_xxx
 FEISHU_RECEIVE_ID_TYPE=open_id
 FEISHU_ENABLE_WS=1
 BRIDGE_PORT=5000
-ARIS_PROJECT_ROOT=/opt/aris-framework
+ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
 ARIS_FEISHU_CONTROL_ROOT=
 ```
 
 启动 bridge：
 
 ```bash
-cd /opt/aris-framework
+cd [你的ARIS总目录]/admin/framework
 python3 -m venv .venv-feishu
 .venv-feishu/bin/pip install -r mcp-servers/feishu-bridge/requirements.txt
 set -a; source deploy/.env; set +a
 export FEISHU_ENABLE_WS=1
-export ARIS_PROJECT_ROOT=/opt/aris-framework
+export ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
 .venv-feishu/bin/python mcp-servers/feishu-bridge/server.py
 ```
 
@@ -376,7 +453,7 @@ export ARIS_PROJECT_ROOT=/opt/aris-framework
 .venv-feishu/bin/python tools/aris_feishu_session.py \
   --session-id leader-phone \
   --role leader \
-  --project-root /opt/aris-framework \
+  --project-root [你的ARIS总目录]/admin/framework \
   --profile leader \
   --bridge-url http://127.0.0.1:5000 \
   --resume-last \
@@ -395,9 +472,9 @@ export ARIS_PROJECT_ROOT=/opt/aris-framework
 
 | 客户端 | 怎么用 | 备注 |
 |--------|--------|------|
-| Claude Code (Terminal) | 容器内直接敲 `claude` | 推荐，完整功能 |
+| Codex CLI | 容器内 `codex` | 默认入口，OpenAI key 必须配 |
+| Claude Code (Terminal) | 容器内直接敲 `claude` | 兼容入口 |
 | Claude Code (VSCode) | VSCode Remote SSH 到容器 | 需额外配 |
-| Codex CLI | 容器内 `codex` | OpenAI key 必须配 |
 | Claude Desktop | 不走容器，本地 APP 连 API | 无法用 skills/tools |
 
 ## 故障排查

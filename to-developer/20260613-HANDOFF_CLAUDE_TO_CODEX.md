@@ -46,8 +46,8 @@
 |------|------|------|
 | 三层架构契约 | `aris-orangmood-edition/docs/FRAMEWORK_STRUCTURE.md` | Framework/Project/Dev 边界定义，含 override 策略和版本记录说明 |
 | 变更日志 | `aris-orangmood-edition/CHANGELOG.md` | 高亮变更记录（完整历史用 `git log`） |
-| Promote 流程 | `aris-dev/to-developer/plans/PROMOTE_FLOW.md` | Dev → Stable 的准入检查和手动步骤 |
-| 仓库演进计划 | `aris-dev/to-developer/plans/REPO_EVOLUTION_PLAN.md` | Dev/Stable 分仓决策和触发条件 |
+| Promote 流程 | `aris-dev/to-developer/plans/20260613-PROMOTE_FLOW.md` | Dev → Stable 的准入检查和手动步骤 |
+| 仓库演进计划 | `aris-dev/to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md` | Dev/Stable 分仓决策和触发条件 |
 | Dev 框架说明 | `aris-dev/README.md` | Dev framework 目录结构和 promote 指引 |
 | 安装器脚本 | `aris-orangmood-edition/tools/install_aris.sh` | 核心契约，已加 `--dev` 和 version record |
 | 项目模板 | `aris-orangmood-edition/templates/project.yaml.tmpl` | 含 `framework.version` 和 `overrides` 注册表 |
@@ -61,7 +61,7 @@
 | P1 | **修复已有测试错误** | `test_watchdog.py` 等 64 个 pre-existing failures，Python 2/3 `bytes` vs `str` 问题 | 中等 |
 | P2 | **开发第一个 dev skill** | 在 `aris-dev/skills/` 下创建实验性 skill，验证 dev → stable promote 流程 | 大 |
 | P3 | **写 promote 检查脚本** | `dev/tools/check_promote_ready.sh`，在第一次真正 promote 前完成 | 小 |
-| P4 | **评估分仓** | 见 `REPO_EVOLUTION_PLAN.md` 触发条件，目前不满足 | 触发后评估 |
+| P4 | **评估分仓** | 见 `20260613-REPO_EVOLUTION_PLAN.md` 触发条件，目前不满足 | 触发后评估 |
 | P5 | **--reconcile 增强** | 当前 reconcile 支持 add/remove，可加强为检测 upstream skill 内容变更 | 中等 |
 
 ---
@@ -80,8 +80,8 @@ aris-dev/                  ← Dev framework（实验线）
 ├── skills/ tools/ templates/ ...
 └── to-developer/          ← 开发文档（plans/ logs/）
    └── plans/
-       ├── PROMOTE_FLOW.md
-       └── REPO_EVOLUTION_PLAN.md
+       ├── 20260613-PROMOTE_FLOW.md
+       └── 20260613-REPO_EVOLUTION_PLAN.md
 
 各科研项目/                  ← Project（独立仓库，轻量安装层接入 framework）
 ├── code/ data/ paper/ refine-logs/

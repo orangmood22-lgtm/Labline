@@ -1,20 +1,20 @@
 ✻ Baked for 3m 11s
   │                文档                │                 内容                 │        状态         │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
-  │ FULL_PROGRESS_REPORT.md            │ 你的 FPA-IOD 实验报告                │ 你提供的 ✅         │
+  │ 20260613-FULL_PROGRESS_REPORT.md            │ 你的 FPA-IOD 实验报告                │ 你提供的 ✅         │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
-  │ ARIS_ARCHITECTURE_ANALYSIS.md      │ ARIS 核心流水线骨架梳理              │ 第一步完成 ✅       │
+  │ 20260613-ARIS_ARCHITECTURE_ANALYSIS.md      │ ARIS 核心流水线骨架梳理              │ 第一步完成 ✅       │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
   ┌────────────────────────────────────┬──────────────────────────────────────┬─────────────────────┐
   │                文档                │                 内容                 │        状态         │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
-  │ FULL_PROGRESS_REPORT.md            │ 你的 FPA-IOD 实验报告                │ 你提供的 ✅         │
+  │ 20260613-FULL_PROGRESS_REPORT.md            │ 你的 FPA-IOD 实验报告                │ 你提供的 ✅         │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
-  │ ARIS_ARCHITECTURE_ANALYSIS.md      │ ARIS 核心流水线骨架梳理              │ 第一步完成 ✅       │
+  │ 20260613-ARIS_ARCHITECTURE_ANALYSIS.md      │ ARIS 核心流水线骨架梳理              │ 第一步完成 ✅       │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
-  │ PAIN_POINT_DIAGNOSIS.md            │ 痛点诊断（你的踩坑 × ARIS 架构缺陷） │ 第二步完成 ✅       │
+  │ 20260613-PAIN_POINT_DIAGNOSIS.md            │ 痛点诊断（你的踩坑 × ARIS 架构缺陷） │ 第二步完成 ✅       │
   ├────────────────────────────────────┼──────────────────────────────────────┼─────────────────────┤
-  │ ARCHITECTURE_EXPLORATION_REPORT.md │ 三边架构关键问题深度探索             │ 你休息时我完成的 ✅ │
+  │ 20260613-ARCHITECTURE_EXPLORATION_REPORT.md │ 三边架构关键问题深度探索             │ 你休息时我完成的 ✅ │
   └────────────────────────────────────┴──────────────────────────────────────┴─────────────────────┘
 
   探索报告的核心发现摘要：
@@ -28,14 +28,14 @@
   6. 模型适配：Opus 4.6 做 Leader ✅、GPT 5.5 做 Reviewer ✅（Codex MCP 完全兼容）、DeepSeek V4 Pro 做 Executor ⚠️ 需要验证 Claude Code Agent 工具是否支持外部模型切换
   7. Trae 问题定位：ARIS 是为 Claude Code CLI 设计的，Trae 缺少 MCP Server、Agent 子任务、长 session 等关键能力，导致流水线退化为"AI 自说自话"
 
-  你可以先打开 discussions/ARCHITECTURE_EXPLORATION_REPORT.md 详细看看，然后我们可以进入第三步——确定具体的改造方案和优先级。有什么想法或者哪些点想深入讨论的？
+  你可以先打开 discussions/20260613-ARCHITECTURE_EXPLORATION_REPORT.md 详细看看，然后我们可以进入第三步——确定具体的改造方案和优先级。有什么想法或者哪些点想深入讨论的？
 ✻ Conversation compacted (ctrl+o for history)
 
   ⎿  Read templates\EXPERIMENT_EXPECTATION_DECLARATION_TEMPLATE.md (36 lines)
   ⎿  Read templates\PSEUDOCODE_SPEC_TEMPLATE.md (46 lines)
   ⎿  Read templates\DATA_FLOW_SPEC_TEMPLATE.md (53 lines)
   ⎿  Read MANIFEST.md (10 lines)
-  ⎿  Read discussions\NIGHT_PROGRESS_20260512.md (28 lines)
+  ⎿  Read discussions\20260613-NIGHT_PROGRESS_20260512.md (28 lines)
 
 ● Bash(git status --short)
   ⎿   M mcp-servers/claude-review/run_with_claude_aws.sh

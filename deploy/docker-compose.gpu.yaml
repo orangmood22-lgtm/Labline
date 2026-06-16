@@ -33,6 +33,9 @@ services:
       - no_proxy=${no_proxy:-}
       - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
       - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
+      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-1}
+      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
+      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
       - FEISHU_APP_ID=${FEISHU_APP_ID:-}
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}
       - FEISHU_USER_ID=${FEISHU_USER_ID:-}
@@ -45,17 +48,17 @@ services:
       - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-}
     volumes:
       # Framework checkout used by install_aris.sh and agent skills.
-      - ${FRAMEWORK_PATH:-/data/aris/aris-framework}:/aris/framework
+      - ${FRAMEWORK_PATH:?set FRAMEWORK_PATH in .env}:/aris/framework
       # Optional dev framework checkout; install_aris.sh --dev discovers /aris/aris-dev.
-      - ${DEV_FRAMEWORK_PATH:-/data/aris/aris-dev}:/aris/aris-dev
+      - ${DEV_FRAMEWORK_PATH:?set DEV_FRAMEWORK_PATH in .env}:/aris/aris-dev
       # Project directory (your exp0516 etc.)
-      - ${PROJECT_PATH:-/data/aris/projects}:/aris/projects
+      - ${PROJECT_PATH:?set PROJECT_PATH in .env}:/aris/projects
       # Datasets (optional, read-only)
-      - ${DATASETS_PATH:-/data/datasets}:/aris/shared/datasets:ro
+      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro
       # Pretrained models cache
-      - ${PRETRAINED_PATH:-/data/pretrained}:/aris/shared/pretrained
+      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained
       # SSH keys from host
-      - ${SSH_PATH:-~/.ssh}:/run/secrets/ssh:ro
+      - ${SSH_PATH:?set SSH_PATH in .env}:/run/secrets/ssh:ro
       # Persist claude/codex config across rebuilds
       - claude-config:/home/${USERNAME:-researcher}/.claude
       - codex-config:/home/${USERNAME:-researcher}/.codex

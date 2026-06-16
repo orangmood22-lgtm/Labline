@@ -108,7 +108,7 @@ def changelog_has_version(repo: Path, version: str) -> bool:
 
 
 def development_log_ready(repo: Path) -> bool:
-    path = repo / "to-developer" / "DEVELOPMENT_LOG.md"
+    path = repo / "to-developer" / "20260613-DEVELOPMENT_LOG.md"
     if not path.exists():
         return False
     text = path.read_text(encoding="utf-8")
@@ -156,7 +156,7 @@ def collect_errors(repo: Path, version: str, release_kind: str, skip_git_state: 
         today = date.today().isoformat()
         errors.append(f"CHANGELOG.md must contain: ## [{version}] - {today}")
     if not development_log_ready(repo):
-        errors.append("to-developer/DEVELOPMENT_LOG.md must exist and contain non-placeholder Unreleased entries")
+        errors.append("to-developer/20260613-DEVELOPMENT_LOG.md must exist and contain non-placeholder Unreleased entries")
     if release_kind == "minor":
         missing = minor_release_files_exist(repo)
         if missing:

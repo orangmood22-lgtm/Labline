@@ -55,11 +55,11 @@ Research projects should pin formal release tags, not prerelease tags, unless th
 
 `CHANGELOG.md` is user-facing. It records only changes users need to know when deciding whether to upgrade.
 
-`to-developer/DEVELOPMENT_LOG.md` is maintainer-facing. It records module-level changes so maintainers do not reconstruct history from individual commits.
+`to-developer/20260613-DEVELOPMENT_LOG.md` is maintainer-facing. It records module-level changes so maintainers do not reconstruct history from individual commits.
 
 Use this flow:
 
-1. During development, update `to-developer/DEVELOPMENT_LOG.md` by module.
+1. During development, update `to-developer/20260613-DEVELOPMENT_LOG.md` by module.
 2. Before release, distill user-visible changes into `CHANGELOG.md`.
 3. Use Git history for the full commit-level trace.
 
@@ -67,7 +67,7 @@ Use this flow:
 
 Versioned:
 
-- `to-developer/DEVELOPMENT_LOG.md`
+- `to-developer/20260613-DEVELOPMENT_LOG.md`
 - `to-developer/plans/*.md`
 - `to-developer/deploy-QAs/*.md`
 - non-private `to-developer/discussions/*.md`
@@ -89,7 +89,7 @@ Use for `v0.1.0 -> v0.1.1`:
 - Worktree is clean.
 - Target tag does not already exist.
 - `CHANGELOG.md` has `## [vX.Y.Z] - YYYY-MM-DD`.
-- `to-developer/DEVELOPMENT_LOG.md` has relevant module entries.
+- `to-developer/20260613-DEVELOPMENT_LOG.md` has relevant module entries.
 - Related test or manual check passed.
 
 ### Minor Release Gate

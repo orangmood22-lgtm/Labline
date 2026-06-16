@@ -43,7 +43,7 @@ class ArisGpuDoctorTest(unittest.TestCase):
 
     def test_reports_stale_project_skill_symlink_with_repair_command(self):
         project = self.projects_root / "exp0603"
-        skills_dir = project / ".claude" / "skills"
+        skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
         os.symlink("/root/Projects/aris/Auto-research-in-sleep/aris-orangmood-edition/skills/leader", skills_dir / "leader")
 
@@ -52,13 +52,13 @@ class ArisGpuDoctorTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("FAIL exp0603 skills: stale target outside framework", result.stdout)
         self.assertIn(
-            "bash /aris/framework/tools/install_aris.sh /aris/projects/exp0603 --aris-repo /aris/framework --quiet --no-doc",
+            f"bash {self.framework}/tools/install_aris.sh {self.projects_root}/exp0603 --aris-repo {self.framework} --quiet --no-doc",
             result.stdout,
         )
 
     def test_reports_missing_project_dataset_link_with_repair_command(self):
         project = self.projects_root / "exp0603"
-        skills_dir = project / ".claude" / "skills"
+        skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
         os.symlink(str(self.framework / "skills" / "leader"), skills_dir / "leader")
         (project / "data").mkdir()
@@ -69,13 +69,13 @@ class ArisGpuDoctorTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("FAIL exp0603 dataset: missing data/VOCdevkit", result.stdout)
         self.assertIn(
-            "ln -s /aris/shared/datasets/VOCdevkit /aris/projects/exp0603/data/VOCdevkit",
+            f"ln -s {self.datasets}/VOCdevkit {self.projects_root}/exp0603/data/VOCdevkit",
             result.stdout,
         )
 
     def test_reports_host_only_dataset_symlink(self):
         project = self.projects_root / "exp0603"
-        skills_dir = project / ".claude" / "skills"
+        skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
         os.symlink(str(self.framework / "skills" / "leader"), skills_dir / "leader")
         (project / "data").mkdir()
@@ -91,7 +91,7 @@ class ArisGpuDoctorTest(unittest.TestCase):
 
     def test_accepts_project_with_framework_skills_and_dataset_link(self):
         project = self.projects_root / "exp0603"
-        skills_dir = project / ".claude" / "skills"
+        skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
         os.symlink(str(self.framework / "skills" / "leader"), skills_dir / "leader")
         (project / "data").mkdir()
@@ -106,9 +106,23 @@ class ArisGpuDoctorTest(unittest.TestCase):
 
     def test_accepts_container_framework_skill_links_when_checked_on_host(self):
         project = self.projects_root / "exp0603"
-        skills_dir = project / ".claude" / "skills"
+        skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
         os.symlink("/aris/framework/skills/leader", skills_dir / "leader")
+        (project / "data").mkdir()
+        (self.datasets / "VOCdevkit").mkdir()
+        os.symlink("/aris/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
+
+        result = self._run("--project", "exp0603")
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertIn("OK exp0603 skills", result.stdout)
+
+    def test_accepts_legacy_claude_skills_when_codex_skills_missing(self):
+        project = self.projects_root / "exp0603"
+        skills_dir = project / ".claude" / "skills"
+        skills_dir.mkdir(parents=True)
+        os.symlink(str(self.framework / "skills" / "leader"), skills_dir / "leader")
         (project / "data").mkdir()
         (self.datasets / "VOCdevkit").mkdir()
         os.symlink("/aris/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")

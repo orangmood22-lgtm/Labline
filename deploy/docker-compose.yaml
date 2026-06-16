@@ -1,5 +1,8 @@
 # ARIS Multi-User Deployment
-# One container per researcher, shared volumes for framework + data
+# One long-running container per researcher.
+# Each researcher gets an isolated framework checkout and projects directory.
+# Datasets, pretrained models, and download cache are shared across researcher
+# containers.
 #
 # Usage:
 #   1. Copy this file to your group server
@@ -7,7 +10,8 @@
 #   3. docker compose up -d
 #   4. docker exec -it aris-zhangsan bash
 #
-# Add more users: copy a researcher block, change name + UID
+# Add more users: copy a researcher block and change name/UID/GID/SSH,
+# USERn_FRAMEWORK_PATH, and USERn_PROJECTS_PATH.
 
 services:
   # ─── Self-hosted Git (Gitea) ──────────────────────────────────────────────
@@ -49,6 +53,9 @@ services:
       - no_proxy=${no_proxy:-}
       - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
       - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
+      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-1}
+      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
+      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
       - FEISHU_APP_ID=${FEISHU_APP_ID:-}
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}
       - FEISHU_USER_ID=${FEISHU_USER_ID:-}
@@ -57,18 +64,21 @@ services:
       - BRIDGE_PORT=${BRIDGE_PORT:-5000}
       - ARIS_PROJECT_ROOT=${ARIS_PROJECT_ROOT:-/aris/framework}
       - ARIS_FEISHU_CONTROL_ROOT=${ARIS_FEISHU_CONTROL_ROOT:-}
+      - ARIS_WORKSPACE=/aris
       - GITEA_URL=http://gitea:3000
     volumes:
-      # Framework (read-only, shared)
-      - aris-framework:/aris/framework:ro
-      # Projects (per-user, persistent)
-      - user1-projects:/aris/projects
+      # Per-user framework checkout: user controls update/rollback.
+      - ${USER1_FRAMEWORK_PATH:?set USER1_FRAMEWORK_PATH in .env}:/aris/framework
+      # Per-user projects: do not share this path with another researcher.
+      - ${USER1_PROJECTS_PATH:?set USER1_PROJECTS_PATH in .env}:/aris/projects
+      # Per-user ARIS local state: project registry, framework rollback history.
+      - ${USER1_STATE_PATH:?set USER1_STATE_PATH in .env}:/aris/.aris
       # Shared datasets (read-only)
-      - ${DATASETS_PATH:-./datasets}:/aris/shared/datasets:ro
-      # Public datasets (read-write, shared download cache)
-      - shared-downloads:/aris/shared/downloads
-      # Pretrained models
-      - shared-pretrained:/aris/shared/pretrained
+      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro
+      # Shared download cache
+      - ${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/aris/shared/downloads
+      # Shared pretrained models/cache
+      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained
       # SSH keys (mount from host)
       - ${USER1_SSH:-/dev/null}:/run/secrets/ssh:ro
     stdin_open: true
@@ -99,6 +109,9 @@ services:
       - no_proxy=${no_proxy:-}
       - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
       - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
+      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-1}
+      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
+      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
       - FEISHU_APP_ID=${FEISHU_APP_ID:-}
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}
       - FEISHU_USER_ID=${FEISHU_USER_ID:-}
@@ -107,13 +120,18 @@ services:
       - BRIDGE_PORT=${BRIDGE_PORT:-5000}
       - ARIS_PROJECT_ROOT=${ARIS_PROJECT_ROOT:-/aris/framework}
       - ARIS_FEISHU_CONTROL_ROOT=${ARIS_FEISHU_CONTROL_ROOT:-}
+      - ARIS_WORKSPACE=/aris
       - GITEA_URL=http://gitea:3000
     volumes:
-      - aris-framework:/aris/framework:ro
-      - user2-projects:/aris/projects
-      - ${DATASETS_PATH:-./datasets}:/aris/shared/datasets:ro
-      - shared-downloads:/aris/shared/downloads
-      - shared-pretrained:/aris/shared/pretrained
+      - ${USER2_FRAMEWORK_PATH:?set USER2_FRAMEWORK_PATH in .env}:/aris/framework
+      # Per-user projects: do not share this path with another researcher.
+      - ${USER2_PROJECTS_PATH:?set USER2_PROJECTS_PATH in .env}:/aris/projects
+      # Per-user ARIS local state: project registry, framework rollback history.
+      - ${USER2_STATE_PATH:?set USER2_STATE_PATH in .env}:/aris/.aris
+      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro
+      - ${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/aris/shared/downloads
+      # Shared pretrained models/cache
+      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained
       - ${USER2_SSH:-/dev/null}:/run/secrets/ssh:ro
     stdin_open: true
     tty: true
@@ -123,8 +141,3 @@ services:
 
 volumes:
   gitea-data:
-  aris-framework:
-  user1-projects:
-  user2-projects:
-  shared-downloads:
-  shared-pretrained:

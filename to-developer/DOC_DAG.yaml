@@ -10,48 +10,52 @@ nodes:
     title: "开发者文档 DAG Mermaid 图"
     layer: generated
     kind: generated
-  to-developer/DEVELOPMENT_LOG.md:
+  to-developer/20260613-DEVELOPMENT_LOG.md:
     title: "开发日志"
     layer: log
     kind: log
-  to-developer/FRAMEWORK_MODULES.md:
+  to-developer/20260615-FRAMEWORK_MODULES.md:
     title: "开发者侧框架模块说明"
     layer: architecture
     kind: guide
-  to-developer/HANDOFF_CLAUDE_TO_CODEX.md:
+  to-developer/20260613-HANDOFF_CLAUDE_TO_CODEX.md:
     title: "Claude 到 Codex handoff"
     layer: handoff
     kind: handoff
-  to-developer/handoff-2026-06-11.md:
+  to-developer/20260613-handoff-2026-06-11.md:
     title: "历史 handoff"
     layer: handoff
     kind: handoff
 
-  to-developer/plans/BRANCH_AND_PROMOTE_GUIDE.md:
+  to-developer/plans/20260613-BRANCH_AND_PROMOTE_GUIDE.md:
     title: "分支和 Promote 指南"
     layer: promote
     kind: plan
-  to-developer/plans/PROMOTE_FLOW.md:
+  to-developer/plans/20260613-PROMOTE_FLOW.md:
     title: "Dev Promote 流程草案"
     layer: promote
     kind: plan
-  to-developer/plans/VERSION_MANAGEMENT.md:
+  to-developer/plans/20260613-VERSION_MANAGEMENT.md:
     title: "版本管理方案"
     layer: release
     kind: plan
-  to-developer/plans/REPO_EVOLUTION_PLAN.md:
+  to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md:
     title: "仓库演进计划"
     layer: architecture
     kind: plan
-  to-developer/plans/AGENT_STATUS_STREAM.md:
+  to-developer/plans/20260613-AGENT_STATUS_STREAM.md:
     title: "Agent Status Stream 计划"
     layer: architecture
     kind: plan
-  to-developer/plans/LANGGRAPH_EVALUATION.md:
+  to-developer/plans/20260613-LANGGRAPH_EVALUATION.md:
     title: "LangGraph 引入评估"
     layer: architecture
     kind: plan
-  to-developer/plans/codex-migration.md:
+  to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md:
+    title: "CLI 与部署运行时机制"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260610-codex-migration.md:
     title: "Codex 迁移记录"
     layer: architecture
     kind: plan
@@ -65,7 +69,7 @@ nodes:
     layer: governance
     kind: glob
 
-  to-developer/deploy-QAs/clash_with_servers.md:
+  to-developer/deploy-QAs/20260613-clash_with_servers.md:
     title: "服务器代理 QA"
     layer: deploy
     kind: qa
@@ -82,11 +86,11 @@ nodes:
     title: "开发验证日志"
     layer: log
     kind: glob
-  to-developer/logs/AGENT_STATUS_STREAM_VALIDATION_20260613.md:
+  to-developer/logs/20260613-AGENT_STATUS_STREAM_VALIDATION_20260613.md:
     title: "Agent Status Stream 验证日志"
     layer: log
     kind: log
-  to-developer/logs/SKILL_USABILITY_AUDIT_20260614.md:
+  to-developer/logs/20260615-SKILL_USABILITY_AUDIT_20260614.md:
     title: "Skill 可用性审计汇总"
     layer: log
     kind: log
@@ -115,6 +119,14 @@ nodes:
     title: "飞书用户集成文档"
     layer: stable
     kind: guide
+  docs/OPERATIONS_GUIDE.md:
+    title: "Stable 操作与运维手册"
+    layer: stable
+    kind: stable_target
+  deploy/DEPLOY_GUIDE.md:
+    title: "Stable 管理员部署指南"
+    layer: stable
+    kind: stable_target
   docs/PROMOTE_FLOW.md:
     title: "Stable Promote 规范"
     layer: stable
@@ -138,18 +150,18 @@ edges:
     type: generates
     reason: "开发者文档 DAG 源数据生成 Mermaid 图。"
   - from: to-developer/DOC_DAG.yaml
-    to: to-developer/plans/REPO_EVOLUTION_PLAN.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
     type: informs
     reason: "仓库演进计划应知道 dev-only 文档结构。"
-  - from: to-developer/FRAMEWORK_MODULES.md
-    to: to-developer/DEVELOPMENT_LOG.md
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
     type: constrains
     reason: "开发日志按框架模块说明中的模块边界记录。"
-  - from: to-developer/FRAMEWORK_MODULES.md
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
     to: docs/FRAMEWORK_STRUCTURE.md
     type: related_to
     reason: "开发者侧模块边界需要和 stable 三层结构保持概念一致。"
-  - from: to-developer/FRAMEWORK_MODULES.md
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
     to: docs/README.md
     type: constrains
     reason: "用户侧 docs 索引只保留用户安装、配置和使用文档。"
@@ -158,76 +170,88 @@ edges:
     type: constrains
     reason: "开发者文档维护规则影响开发者 DAG 覆盖策略。"
 
-  - from: to-developer/plans/BRANCH_AND_PROMOTE_GUIDE.md
-    to: to-developer/plans/PROMOTE_FLOW.md
+  - from: to-developer/plans/20260613-BRANCH_AND_PROMOTE_GUIDE.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
     type: constrains
     reason: "Promote 流程依赖分支角色约定。"
-  - from: to-developer/plans/VERSION_MANAGEMENT.md
-    to: to-developer/plans/PROMOTE_FLOW.md
+  - from: to-developer/plans/20260613-VERSION_MANAGEMENT.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
     type: constrains
     reason: "Promote 后是否 release/tag 受版本管理方案约束。"
-  - from: to-developer/plans/PROMOTE_FLOW.md
+  - from: to-developer/plans/20260613-PROMOTE_FLOW.md
     to: docs/PROMOTE_FLOW.md
     type: promotes_to
     reason: "成熟的 promote 规范应进入 stable docs。"
-  - from: to-developer/plans/VERSION_MANAGEMENT.md
+  - from: to-developer/plans/20260613-VERSION_MANAGEMENT.md
     to: CONTEXT.md
     type: promotes_to
     reason: "成熟的版本术语应进入 stable governance context。"
-  - from: to-developer/plans/VERSION_MANAGEMENT.md
+  - from: to-developer/plans/20260613-VERSION_MANAGEMENT.md
     to: docs/PROMOTE_FLOW.md
     type: constrains
     reason: "Stable promote 规范中的 release gate 来自版本管理方案。"
 
-  - from: to-developer/plans/AGENT_STATUS_STREAM.md
+  - from: to-developer/plans/20260613-AGENT_STATUS_STREAM.md
     to: docs/DOC_DAG.yaml
     type: related_to
     reason: "Agent status 文档变化会影响 stable 文档 DAG 的 architecture/ADR 节点。"
-  - from: to-developer/plans/AGENT_STATUS_STREAM.md
-    to: to-developer/logs/AGENT_STATUS_STREAM_VALIDATION_20260613.md
+  - from: to-developer/plans/20260613-AGENT_STATUS_STREAM.md
+    to: to-developer/logs/20260613-AGENT_STATUS_STREAM_VALIDATION_20260613.md
     type: validated_by
     reason: "计划由本地验证日志支撑。"
-  - from: to-developer/plans/LANGGRAPH_EVALUATION.md
-    to: to-developer/plans/REPO_EVOLUTION_PLAN.md
+  - from: to-developer/plans/20260613-LANGGRAPH_EVALUATION.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
     type: informs
     reason: "LangGraph 是否引入影响仓库演进和运行时边界。"
-  - from: to-developer/plans/codex-migration.md
-    to: to-developer/FRAMEWORK_MODULES.md
+  - from: to-developer/plans/20260610-codex-migration.md
+    to: to-developer/20260615-FRAMEWORK_MODULES.md
     type: informs
     reason: "Codex 迁移记录影响开发者侧 runtime/module 边界理解。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: deploy/DEPLOY_GUIDE.md
+    type: constrains
+    reason: "CLI 与部署运行时机制约束管理员部署手册中的拓扑、状态文件和自动检查更新说明。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: docs/OPERATIONS_GUIDE.md
+    type: constrains
+    reason: "用户操作手册中的 CLI、framework 更新和管理员手册说明应从运行时机制中蒸馏。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: to-developer/20260615-FRAMEWORK_MODULES.md
+    type: informs
+    reason: "CLI/deploy runtime 横跨 tools、deploy、templates、tests，需要反映到模块边界理解。"
   - from: to-developer/adr/*.md
     to: docs/FEISHU_INTEGRATION.md
     type: informs
     reason: "用户侧飞书文档只暴露结论，详细决策保留在开发者 ADR。"
 
   - from: to-developer/logs/*.md
-    to: to-developer/DEVELOPMENT_LOG.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
     type: summarized_by
     reason: "开发验证日志需要蒸馏进模块级开发日志。"
   - from: to-developer/logs/skill-usability-parts/*.md
-    to: to-developer/logs/SKILL_USABILITY_AUDIT_20260614.md
+    to: to-developer/logs/20260615-SKILL_USABILITY_AUDIT_20260614.md
     type: summarized_by
     reason: "分片审计汇总为完整 skill 可用性审计。"
-  - from: to-developer/DEVELOPMENT_LOG.md
+  - from: to-developer/20260613-DEVELOPMENT_LOG.md
     to: CHANGELOG.md
     type: distilled_to
     reason: "用户可见部分从开发日志蒸馏到 changelog。"
 
   - from: to-developer/discussions/*.md
-    to: to-developer/DEVELOPMENT_LOG.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
     type: summarized_by
     reason: "重要讨论结论进入开发日志。"
   - from: to-developer/discussions/*.txt
-    to: to-developer/DEVELOPMENT_LOG.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
     type: summarized_by
     reason: "历史讨论文本中的决策需要沉淀。"
-  - from: to-developer/deploy-QAs/clash_with_servers.md
+  - from: to-developer/deploy-QAs/20260613-clash_with_servers.md
     to: docs/TOOLS_INDEX.md
     type: related_to
     reason: "代理/部署 QA 可能影响工具索引和运行说明。"
 
   - from: AGENTS.md
-    to: to-developer/plans/PROMOTE_FLOW.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
     type: constrains
     reason: "开发 agent 的 promote 行为受 Dev Agent 指南约束。"
   - from: docs/DOC_DAG.yaml

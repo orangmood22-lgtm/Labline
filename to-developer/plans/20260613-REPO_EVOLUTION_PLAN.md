@@ -81,7 +81,7 @@ github.com/orangmood22-lgtm/aris-dev.git
 
 ### 当前状态
 
-- ✅ 有准入检查清单（`PROMOTE_FLOW.md`）
+- ✅ 有准入检查清单（`20260613-PROMOTE_FLOW.md`）
 - ✅ 有开发者文档 DAG 自动更新脚本（`tools/update_developer_docs.py`）
 - ❌ 无跨仓库/跨目录的 promote 工具
 
@@ -124,7 +124,7 @@ bash tools/check_promote_ready.sh skills/<new-skill>
 
 ## 相关文件
 
-- `aris-dev/to-developer/plans/PROMOTE_FLOW.md` — Promote 手动流程
+- `aris-dev/to-developer/plans/20260613-PROMOTE_FLOW.md` — Promote 手动流程
 - `aris-dev/to-developer/DOC_DAG.yaml` — 开发者文档依赖源数据
 - `aris-dev/tools/update_developer_docs.py` — 生成/校验开发者文档 DAG
 - `aris-orangmood-edition/CHANGELOG.md` — 版本变更记录

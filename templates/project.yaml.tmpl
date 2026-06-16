@@ -1,5 +1,7 @@
 # project.yaml — ARIS 科研项目元数据
-# 由 /init-research 自动生成，手动编辑也 OK
+# 由 `aris project init` 自动生成，手动编辑也 OK
+
+schema_version: 1
 
 project:
   name: "{PROJECT_NAME}"
@@ -9,29 +11,29 @@ project:
   created: "{DATE}"
   author: "{USER}"
 
-# Git 配置 — /sync 读这个
+# Git 配置 — $sync 读这个
 git:
   auto_commit: true         # sync 时自动 commit
   remote: ""                # Gitea URL, 留空 = 纯本地
   branch: "main"
 
-# 远程 GPU 服务器 — /sync deploy 和 /leader Phase 3 读这个
+# 远程 GPU 服务器 — $sync deploy 和 $leader Phase 3 读这个
 servers: []                  # no remote servers by default
 # Example:
 # servers:
 #   - name: "4090x4"
 #     host: "4090x4-ai-original-22"
-#     path: "/data/{USER}/aris/{PROJECT_NAME}"
+#     path: "[服务器上的项目位置]/{PROJECT_NAME}"
 #     conda_env: "/path/to/conda/env"
 #     gpus: [0, 2, 3]
 
-# 框架路径 — /framework-update 读这个
+# 框架路径 — $framework-update 读这个
 framework:
-  path: "/aris/framework"   # 容器内框架位置
-  repo: "https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git"
-  version: ""             # 框架 tag/branch，如 "v2.1.0"
-  commit: ""              # 固定 commit hash
-  recorded_at: ""           # 记录版本时的 ISO 时间戳
+  path: "{FRAMEWORK_PATH}"
+  repo: "{FRAMEWORK_REPO}"
+  version: "{FRAMEWORK_VERSION}"
+  commit: "{FRAMEWORK_COMMIT}"
+  recorded_at: "{FRAMEWORK_RECORDED_AT}"
 
 # 项目级框架 override 注册表（集中管理）
 # 允许的项目本地定制条目，每个条目必须声明原因、负责人和预计迁移/删除日期
@@ -50,7 +52,7 @@ data:
   shared: "/aris/shared/datasets"
   project: "./data"         # 项目私有数据
 
-# 同步排除 — /sync 和 rsync 用
+# 同步排除 — $sync 和 rsync 用
 sync_exclude:
   - "outputs/"
   - "wandb/"

@@ -41,21 +41,30 @@ fail() {
 
 repair_install_cmd() {
     local project_name="$1"
-    echo "  repair: bash /aris/framework/tools/install_aris.sh /aris/projects/$project_name --aris-repo /aris/framework --quiet --no-doc"
+    echo "  repair: bash $FRAMEWORK/tools/install_aris.sh $PROJECTS_ROOT/$project_name --aris-repo $FRAMEWORK --quiet --no-doc"
 }
 
 check_project_skills() {
     local project_name="$1"
     local project_path="$PROJECTS_ROOT/$project_name"
-    local skills_dir="$project_path/.claude/skills"
+    local skills_dir=""
     local link target
+    local candidates=("$project_path/.agents/skills" "$project_path/.claude/skills")
 
     if [[ ! -d "$project_path" ]]; then
         fail "$project_name project: missing at $project_path"
         return
     fi
-    if [[ ! -d "$skills_dir" ]]; then
-        fail "$project_name skills: missing .claude/skills"
+
+    for candidate in "${candidates[@]}"; do
+        if [[ -d "$candidate" ]]; then
+            skills_dir="$candidate"
+            break
+        fi
+    done
+
+    if [[ -z "$skills_dir" ]]; then
+        fail "$project_name skills: missing .agents/skills or .claude/skills"
         repair_install_cmd "$project_name"
         return
     fi
@@ -87,10 +96,10 @@ check_project_dataset() {
         return
     fi
     if [[ -L "$dataset_path" ]]; then
-        if [[ "$(readlink "$dataset_path")" != "/aris/shared/datasets/VOCdevkit" ]]; then
+        if [[ "$(readlink "$dataset_path")" != "$DATASETS/VOCdevkit" && "$(readlink "$dataset_path")" != "/aris/shared/datasets/VOCdevkit" ]]; then
             fail "$project_name dataset: symlink target is not container shared dataset"
             echo "  link: $dataset_path -> $(readlink "$dataset_path")"
-            echo "  repair: rm /aris/projects/$project_name/data/VOCdevkit && ln -s /aris/shared/datasets/VOCdevkit /aris/projects/$project_name/data/VOCdevkit"
+            echo "  repair: rm $project_path/data/VOCdevkit && ln -s $DATASETS/VOCdevkit $project_path/data/VOCdevkit"
             return
         fi
         echo "OK $project_name dataset"
@@ -98,7 +107,7 @@ check_project_dataset() {
     fi
     if [[ ! -e "$dataset_path" ]]; then
         fail "$project_name dataset: missing data/VOCdevkit"
-        echo "  repair: mkdir -p /aris/projects/$project_name/data && ln -s /aris/shared/datasets/VOCdevkit /aris/projects/$project_name/data/VOCdevkit"
+        echo "  repair: mkdir -p $project_path/data && ln -s $DATASETS/VOCdevkit $project_path/data/VOCdevkit"
         return
     fi
     echo "OK $project_name dataset"

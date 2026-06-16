@@ -62,9 +62,38 @@ if [ -d /run/secrets/ssh ]; then
     chmod 644 ~/.ssh/*.pub 2>/dev/null || true
 fi
 
-# ─── Framework update on boot (if network available) ─────────────────────────
-if [ -d /aris/framework/.git ]; then
-    cd /aris/framework && git pull --ff-only 2>/dev/null || true
+# ─── Framework update check on boot/shell (if network available) ─────────────
+mkdir -p ~/.aris ~/.local/bin
+if [ -x /aris/framework/tools/aris ]; then
+    ln -sf /aris/framework/tools/aris ~/.local/bin/aris
+fi
+
+cat > ~/.aris/aris-shell-hook.sh <<'EOF'
+if [ "${ARIS_AUTO_CHECK_UPDATE:-1}" != "0" ] && [ -x /aris/framework/tools/aris ]; then
+    (
+        timeout "${ARIS_UPDATE_CHECK_TIMEOUT:-10s}" \
+            /aris/framework/tools/aris framework check-update \
+            --aris-repo /aris/framework \
+            --if-stale "${ARIS_UPDATE_CHECK_INTERVAL:-1d}" \
+            --notify 2>/dev/null || true
+    ) &
+fi
+EOF
+
+if ! grep -q "ARIS shell hook" ~/.bashrc 2>/dev/null; then
+    {
+        echo ""
+        echo "# ARIS shell hook"
+        echo "[ -f ~/.aris/aris-shell-hook.sh ] && . ~/.aris/aris-shell-hook.sh"
+    } >> ~/.bashrc
+fi
+
+if [ "${ARIS_AUTO_CHECK_UPDATE:-1}" != "0" ] && [ -x /aris/framework/tools/aris ]; then
+    timeout "${ARIS_UPDATE_CHECK_TIMEOUT:-10s}" \
+        /aris/framework/tools/aris framework check-update \
+        --aris-repo /aris/framework \
+        --if-stale "${ARIS_UPDATE_CHECK_INTERVAL:-1d}" \
+        --notify 2>/dev/null || true
 fi
 
 # ─── First boot: create default project dir ──────────────────────────────────

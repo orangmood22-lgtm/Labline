@@ -53,11 +53,11 @@ The user-facing `CHANGELOG.md` release note. It records only changes users need 
 _Avoid_: commit-by-commit logs, internal implementation diary
 
 **Development Log**:
-The maintainer-facing module log at `to-developer/DEVELOPMENT_LOG.md`. It groups changes by framework module so maintainers do not need to reconstruct development history from individual commits.
+The maintainer-facing module log in the dev checkout. It groups changes by framework module so maintainers do not need to reconstruct history from individual commits. It is not part of stable framework releases.
 _Avoid_: putting maintainer-only module notes in `CHANGELOG.md`
 
 **Developer Material**:
-Maintainer-facing files under `to-developer/`. `DEVELOPMENT_LOG.md`, `plans/*.md`, `deploy-QAs/*.md`, and non-private `discussions/*.md` are versioned; private settings and SSH notes are not versioned.
+Maintainer-facing planning, discussion, handoff, validation, and ADR files kept in the dev checkout. They are not part of stable framework releases.
 _Avoid_: committing credentials, host secrets, API keys, or private SSH notes
 
 **Release Gate**:
@@ -75,6 +75,38 @@ _Avoid_: implicit version inference from arbitrary commit messages
 **Initial Stable Release**:
 The first formal ARIS framework release from the current `main` line, tagged `v0.1.0`. It establishes the baseline that research projects can pin before later patch and minor releases.
 _Avoid_: treating pre-`v0.1.0` branch names as framework versions
+
+**In-Place Project Initialization**:
+Preparing the current directory as an ARIS research project by passing `.` as the project path to the project initialization command. This is the beginner-facing path when the user has already created an empty or existing project folder.
+_Avoid_: assuming an empty folder already has ARIS commands installed
+
+**New Project Creation**:
+Creating or selecting an ARIS research project directory by passing a non-`.` path to the project initialization command, then preparing that directory as an ARIS research project.
+_Avoid_: using "init project" ambiguously for both directory creation and current-directory setup
+
+**ARIS CLI**:
+The beginner-facing command entrypoint for installing, initializing, updating, and inspecting ARIS from a normal shell. It separates project-scoped commands under `aris project ...` from framework-scoped commands under `aris framework ...`.
+_Avoid_: exposing script names as the primary beginner workflow
+
+**Runnable Project Baseline**:
+The minimum state in which a directory is recognizably an ARIS research project and can be opened by supported agent clients without additional manual scaffolding. It includes project metadata, agent instructions, standard project folders, local framework installation records, and an initial version-control baseline.
+_Avoid_: treating skill symlink installation alone as a complete project initialization
+
+**Experiment Transparency Ledger**:
+A project-level evidence trail that records experiment blocks, runs, data splits, metric definitions, implementation deviations, result artifacts, and human checkpoint decisions as experiments progress. It is the canonical transparency surface for later audit and claim evaluation.
+_Avoid_: treating post-hoc audit reports as the only transparency mechanism
+
+**Fixed Checkpoint**:
+A predefined human decision point in a workflow, such as before launching experiments, after an experiment block finishes, or when a deviation or anomaly is detected. Fixed checkpoints are the first-stage human-in-the-loop mechanism before introducing a general workflow runtime.
+_Avoid_: arbitrary runtime interruption as a first implementation requirement
+
+**Workflow Runtime**:
+An optional execution backend for stateful, resumable, interruptible ARIS workflows. It may consume project artifacts and ledgers, but it must not replace the static skill protocol or make ordinary ARIS project initialization depend on a runtime engine.
+_Avoid_: making LangGraph or another runtime a core project format requirement
+
+**Project Detach**:
+Removing ARIS integration from an existing project while leaving project-owned content intact. It removes framework-managed links, manifests, and managed metadata, but it does not delete the research project itself.
+_Avoid_: uninstall, delete project, remove project directory
 
 **Agent Status Stream**:
 A shared local visibility channel that lets the Leader observe what delegated agents are doing while they run. It is for liveness, progress, blockers, and artifact pointers; it is not a task queue, planning surface, or peer-to-peer agent coordination mechanism.
@@ -108,6 +140,10 @@ _Avoid_: equating Reviewer with Codex MCP only, executor self-review
 Local, non-versioned state written inside a research project while ARIS workflows run, such as agent status snapshots and transient coordination metadata. The ARIS framework repository provides tools and protocols for this state but must not contain real project runtime state.
 _Avoid_: framework-owned runtime status, committed agent snapshots
 
+**Project Registry**:
+A non-versioned registry in a User Workspace that records ARIS project paths initialized for that user. Framework updates use it to keep registered projects in sync with the user's framework copy, and project detach removes projects from it.
+_Avoid_: framework repo state, global project database, manually maintained project list
+
 **Codex Session**:
 A live local Codex CLI process that can read project files, request approvals, and update Project Runtime State. A previous closed thread is historical context; it can be recovered from artifacts or traces into a new Codex Session, but it is not itself a controllable live session.
 _Avoid_: using thread to mean both a live process and past conversation history
@@ -136,6 +172,26 @@ _Avoid_: simultaneous unsynchronised input, permanent remote lockout
 A mergeable record of work performed through a Feishu-Controlled Session while the user is away. It captures auditable facts such as messages, responses, commands, file changes, decisions, and open questions; it is not a dump of hidden model context.
 _Avoid_: transcript merge, hidden context merge, memory graft
 
+**User Workspace**:
+The administrator-assigned research workspace for one ARIS user in a managed deployment. A User Workspace owns that user's framework copy and project area while sharing group-level research assets.
+_Avoid_: shared project folder, everyone in one container, framework shared by all users
+
+**User-Owned Framework Copy**:
+The framework checkout inside one User Workspace whose version may be updated, pinned, or rolled back independently by that user. Administrators may provide a default baseline and inspect versions, but they do not silently overwrite a user's framework copy.
+_Avoid_: globally shared framework, admin-only framework version, implicit forced upgrade
+
+**Workspace Framework Rollback**:
+Returning a User-Owned Framework Copy to the last known working framework commit after an update causes problems. It is a user-level recovery action, not a per-project version pin.
+_Avoid_: project rollback, multi-project version matrix, forced admin downgrade
+
+**Framework Update Check**:
+A non-destructive check that tells a user whether their User-Owned Framework Copy is behind its configured upstream. It may inform the user that an update is available, but it does not change the working framework version or resync projects.
+_Avoid_: automatic upgrade, silent pull, forced admin refresh
+
+**Shared Research Assets**:
+Group-level assets reused across User Workspaces, such as datasets, pretrained models, and download caches. They are not owned by a single project or user.
+_Avoid_: per-user dataset copy, project-owned pretrained cache
+
 ## Example Dialogue
 
 Developer: "This is a new skill workflow, so I will open a feature branch from `dev`."
@@ -160,11 +216,11 @@ Maintainer: "Do not release. Internal `to-developer/` changes are not framework 
 
 Developer: "This change touched skills, tools, and docs. Where do I record the developer detail?"
 
-Maintainer: "Record it by module in `to-developer/DEVELOPMENT_LOG.md`, then distill only user-visible entries into `CHANGELOG.md` at release time."
+Maintainer: "Record it by module in the dev-only development log, then distill only user-visible entries into `CHANGELOG.md` at release time."
 
 Developer: "Should developer notes be committed?"
 
-Maintainer: "Commit structured developer material, but never commit `to-developer/discussions/settings*.json` or `to-developer/discussions/ssh.txt`."
+Maintainer: "Keep structured developer material in the dev checkout, but never commit private settings, API keys, or SSH notes."
 
 Developer: "This is only a patch release for a deployment doc fix."
 

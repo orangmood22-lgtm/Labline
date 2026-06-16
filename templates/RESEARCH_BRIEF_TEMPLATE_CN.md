@@ -1,6 +1,6 @@
 # 研究简报
 
-> **用于 `/idea-discovery` 或 `/research-pipeline` 的文档化输入模板。** 提供详细上下文，替代一行式提示。
+> **用于 `$idea-discovery` 或 `$research-pipeline` 的文档化输入模板。** 提供详细上下文，替代一行式提示。
 
 ## 问题陈述
 [2-3 段：当前方法存在什么问题/缺失？]

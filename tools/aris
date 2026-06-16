@@ -1,0 +1,618 @@
+#!/usr/bin/env python3
+"""Beginner-facing ARIS CLI."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=check, capture_output=True, text=True)
+
+
+def copy_text(src: Path, dst: Path, replacements: dict[str, str]) -> None:
+    if dst.exists():
+        return
+    text = src.read_text(encoding="utf-8")
+    for key, value in replacements.items():
+        text = text.replace(key, value)
+    dst.write_text(text, encoding="utf-8")
+
+
+def ensure_dirs(project: Path, size: str) -> None:
+    common = ["code", "data", "outputs", "refine-logs", "idea-stage", "paper", "discussions", "figures", "overrides"]
+    small = ["code", "data", "outputs"]
+    for rel in (common if size == "full" else small):
+        (project / rel).mkdir(parents=True, exist_ok=True)
+
+
+def write_gitignore(project: Path) -> None:
+    if (project / ".gitignore").exists():
+        return
+    (project / ".gitignore").write_text(
+        "\n".join(
+            [
+                "outputs/",
+                "wandb/",
+                "*.pth",
+                "*.pt",
+                "*.onnx",
+                "*.tar.gz",
+                "datasets/",
+                "data/*.tar*",
+                "data/*.zip",
+                "__pycache__/",
+                "*.pyc",
+                "*.pyo",
+                ".pytest_cache/",
+                ".vscode/",
+                ".idea/",
+                "*.swp",
+                ".DS_Store",
+                ".aris/",
+                ".claude/",
+                ".agents/",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_manifest(project: Path, name: str, direction: str, clients: list[str]) -> None:
+    payload = {
+        "schema_version": 1,
+        "project_name": name,
+        "direction": direction,
+        "clients": clients,
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    (project / ".aris").mkdir(parents=True, exist_ok=True)
+    (project / ".aris" / "manifest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def git_output(cwd: Path, args: list[str], fallback: str = "") -> str:
+    try:
+        result = run(["git", *args], cwd=cwd)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return fallback
+    return result.stdout.strip() or fallback
+
+
+def git_has_commits(cwd: Path) -> bool:
+    result = run(["git", "rev-list", "--count", "HEAD"], cwd=cwd, check=False)
+    return result.returncode == 0 and result.stdout.strip() not in {"", "0"}
+
+
+def resolve_aris_repo(args: argparse.Namespace) -> Path:
+    repo = getattr(args, "aris_repo", None)
+    if repo is None:
+        workspace = discover_workspace(required=False)
+        if workspace and (workspace / "framework").exists():
+            repo = workspace / "framework"
+        else:
+            repo = REPO_ROOT
+    repo = Path(repo).expanduser().resolve()
+    if not (repo / "tools").is_dir() or not (repo / "templates").is_dir():
+        raise SystemExit(f"invalid ARIS repo: {repo}")
+    return repo
+
+
+def discover_workspace(required: bool = True) -> Path | None:
+    env = os.environ.get("ARIS_WORKSPACE")
+    if env:
+        return Path(env).expanduser().resolve()
+
+    parts = REPO_ROOT.resolve().parts
+    if len(parts) >= 2 and parts[-1] == "framework":
+        return Path(*parts[:-1])
+
+    container_workspace = Path("/aris")
+    if (container_workspace / "framework").exists() or (container_workspace / "projects").exists():
+        return container_workspace
+
+    if required:
+        raise SystemExit("cannot discover ARIS workspace; set ARIS_WORKSPACE")
+    return None
+
+
+def registry_path() -> Path:
+    workspace = discover_workspace()
+    return workspace / ".aris" / "project-registry.json"
+
+
+def load_registry() -> dict:
+    path = registry_path()
+    if not path.exists():
+        return {"schema_version": 1, "projects": []}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "projects" not in data or not isinstance(data["projects"], list):
+        data["projects"] = []
+    data.setdefault("schema_version", 1)
+    return data
+
+
+def save_registry(data: dict) -> None:
+    path = registry_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    projects = sorted({str(Path(p).expanduser().resolve()) for p in data.get("projects", [])})
+    payload = {"schema_version": 1, "projects": projects}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def register_project(project: Path) -> None:
+    data = load_registry()
+    projects = set(data.get("projects", []))
+    projects.add(str(project.resolve()))
+    data["projects"] = sorted(projects)
+    save_registry(data)
+
+
+def unregister_project(project: Path) -> None:
+    data = load_registry()
+    target = str(project.resolve())
+    data["projects"] = [p for p in data.get("projects", []) if str(Path(p).expanduser().resolve()) != target]
+    save_registry(data)
+
+
+def project_from_arg(path: str | None) -> Path:
+    return Path(path or ".").expanduser().resolve()
+
+
+def install_clients(project: Path, framework: Path) -> list[str]:
+    clients: list[str] = []
+    install = framework / "tools" / "install_aris.sh"
+    codex = framework / "tools" / "install_aris_codex.sh"
+    if install.exists():
+        run(["bash", str(install), str(project), "--aris-repo", str(framework), "--quiet", "--no-doc"])
+        clients.append("claude")
+    if codex.exists():
+        run(["bash", str(codex), str(project), "--aris-repo", str(framework), "--quiet", "--no-doc"])
+        clients.append("codex")
+    return clients
+
+
+def init_project(args: argparse.Namespace, project: Path, name: str) -> None:
+    project.mkdir(parents=True, exist_ok=True)
+    ensure_dirs(project, args.size)
+    write_gitignore(project)
+    if not (project / ".git").exists():
+        run(["git", "init"], cwd=project)
+    framework = resolve_aris_repo(args)
+    clients = install_clients(project, framework)
+    repl = {
+        "{PROJECT_NAME}": name,
+        "{RESEARCH_DIRECTION}": args.direction,
+        "{DATE}": datetime.now().strftime("%Y-%m-%d"),
+        "{USER}": os.environ.get("USER", "unknown"),
+        "{project-name}": name,
+        "{FRAMEWORK_PATH}": str(framework),
+        "{FRAMEWORK_REPO}": git_output(framework, ["config", "--get", "remote.origin.url"], "local"),
+        "{FRAMEWORK_VERSION}": git_output(framework, ["describe", "--tags", "--always"], "unknown"),
+        "{FRAMEWORK_COMMIT}": git_output(framework, ["rev-parse", "HEAD"], "unknown"),
+        "{FRAMEWORK_RECORDED_AT}": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    copy_text(framework / "templates" / "project.yaml.tmpl", project / "project.yaml", repl)
+    copy_text(framework / "templates" / "AGENTS_MD_TEMPLATE.md", project / "AGENTS.md", repl)
+    copy_text(framework / "templates" / "CLAUDE_MD_TEMPLATE.md", project / "CLAUDE.md", repl)
+    write_manifest(project, name, args.direction, clients)
+    register_project(project)
+    if args.no_commit:
+        return
+    if git_has_commits(project):
+        return
+    status = run(["git", "status", "--porcelain"], cwd=project)
+    if status.stdout:
+        run(["git", "add", "-A"], cwd=project)
+        run(["git", "-c", "user.name=ARIS CLI", "-c", "user.email=aris@example.invalid", "commit", "-m", f"init: {name} ({args.direction})"], cwd=project)
+
+
+def cmd_project_init(args: argparse.Namespace) -> int:
+    project = Path(args.path).expanduser().resolve()
+    name = args.project_name or project.name
+    init_project(args, project, name)
+    return 0
+
+
+def cmd_project_doctor(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_aris_repo(args)
+    checks = []
+    checks.append(("project.yaml", (project / "project.yaml").exists()))
+    checks.append(("AGENTS.md", (project / "AGENTS.md").exists()))
+    checks.append(("CLAUDE.md", (project / "CLAUDE.md").exists()))
+    checks.append((".aris", (project / ".aris").exists()))
+    checks.append(("framework", framework.exists()))
+    yaml_text = (project / "project.yaml").read_text(encoding="utf-8") if (project / "project.yaml").exists() else ""
+    checks.append(("project.yaml.schema_version", yaml_text.count("schema_version:") == 1))
+    checks.append(("project.yaml.framework.path", f'path: "{framework}"' in yaml_text))
+    checks.append((".aris.manifest", (project / ".aris" / "manifest.json").exists()))
+    checks.append((".claude.skills", (project / ".claude" / "skills").exists() or not (project / ".claude").exists()))
+    checks.append((".agents.skills", (project / ".agents" / "skills").exists() or not (project / ".agents").exists()))
+    status = 0
+    for key, ok in checks:
+        print(f"{key}: {'ok' if ok else 'missing' if key != 'project.yaml.schema_version' else 'duplicate'}")
+        if not ok:
+            status = 1
+    return status
+
+
+def cmd_project_update(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_aris_repo(args)
+    install_clients(project, framework)
+    register_project(project)
+    return 0
+
+
+def cmd_project_detach(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_aris_repo(args)
+    uninstallers = [
+        (project / ".aris" / "installed-skills.txt", framework / "tools" / "install_aris.sh"),
+        (project / ".aris" / "installed-skills-codex.txt", framework / "tools" / "install_aris_codex.sh"),
+    ]
+    for manifest, installer in uninstallers:
+        if manifest.exists() and installer.exists():
+            run(["bash", str(installer), str(project), "--aris-repo", str(framework), "--quiet", "--uninstall"])
+    for rel in [".aris/manifest.json", ".aris/installed-skills.txt", ".aris/installed-skills-codex.txt"]:
+        path = project / rel
+        if path.exists():
+            path.unlink()
+    unregister_project(project)
+    return 0
+
+
+def cmd_project_version(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_aris_repo(args)
+    print(f"project: {project}")
+    print(f"framework_path: {framework}")
+    print(f"framework_version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
+    print(f"framework_commit: {git_output(framework, ['rev-parse', 'HEAD'], 'unknown')}")
+    return 0
+
+
+def history_dir() -> Path:
+    workspace = discover_workspace()
+    path = workspace / ".aris" / "framework-history"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def record_previous_commit(framework: Path) -> str:
+    current = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    hist = history_dir()
+    (hist / "previous").write_text(current + "\n", encoding="utf-8")
+    return current
+
+
+def previous_commit() -> str:
+    path = history_dir() / "previous"
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8").strip()
+
+
+def framework_update_status_path(framework: Path) -> Path:
+    workspace = discover_workspace(required=False)
+    if workspace:
+        return workspace / ".aris" / "framework-update-status.json"
+    return framework / ".aris" / "framework-update-status.json"
+
+
+def load_framework_update_status(framework: Path) -> dict:
+    path = framework_update_status_path(framework)
+    if not path.exists():
+        return {"schema_version": 1}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {"schema_version": 1}
+    if not isinstance(data, dict):
+        return {"schema_version": 1}
+    data.setdefault("schema_version", 1)
+    return data
+
+
+def save_framework_update_status(framework: Path, data: dict) -> None:
+    path = framework_update_status_path(framework)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data["schema_version"] = 1
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def utc_stamp(value: datetime | None = None) -> str:
+    return (value or utc_now()).isoformat().replace("+00:00", "Z")
+
+
+def parse_utc_stamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def parse_duration(value: str) -> timedelta:
+    units = {
+        "s": "seconds",
+        "m": "minutes",
+        "h": "hours",
+        "d": "days",
+    }
+    if not value:
+        raise argparse.ArgumentTypeError("duration cannot be empty")
+    suffix = value[-1]
+    if suffix in units:
+        raw = value[:-1]
+        if not raw.isdigit():
+            raise argparse.ArgumentTypeError(f"invalid duration: {value}")
+        return timedelta(**{units[suffix]: int(raw)})
+    if value.isdigit():
+        return timedelta(seconds=int(value))
+    raise argparse.ArgumentTypeError(f"invalid duration: {value}")
+
+
+def is_recent(timestamp: str | None, interval: timedelta) -> bool:
+    parsed = parse_utc_stamp(timestamp)
+    if parsed is None:
+        return False
+    return utc_now() - parsed < interval
+
+
+def sync_registered_projects(args: argparse.Namespace, framework: Path) -> tuple[int, int]:
+    updated = 0
+    missing = 0
+    data = load_registry()
+    for raw in data.get("projects", []):
+        project = Path(raw).expanduser()
+        if not project.exists():
+            missing += 1
+            continue
+        install_clients(project, framework)
+        updated += 1
+    return updated, missing
+
+
+def cmd_framework_version(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    print(f"framework: {framework}")
+    print(f"version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
+    print(f"commit: {git_output(framework, ['rev-parse', 'HEAD'], 'unknown')}")
+    prev = previous_commit()
+    if prev:
+        print(f"rollback_commit: {prev}")
+    return 0
+
+
+def cmd_framework_check_update(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    cached = load_framework_update_status(framework)
+    if args.if_stale and is_recent(cached.get("last_checked_at"), parse_duration(args.if_stale)):
+        return emit_framework_update_status(args, framework, cached)
+
+    upstream = git_output(framework, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], "")
+    local = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    if not upstream:
+        data = {
+            **cached,
+            "last_checked_at": utc_stamp(),
+            "framework": str(framework),
+            "local_commit": local,
+            "upstream": "",
+            "upstream_commit": "",
+            "status": "unknown",
+        }
+        save_framework_update_status(framework, data)
+        return emit_framework_update_status(args, framework, data)
+
+    if not args.no_fetch:
+        result = run(["git", "fetch", "--quiet"], cwd=framework, check=False)
+        if result.returncode != 0:
+            data = {
+                **cached,
+                "last_checked_at": utc_stamp(),
+                "framework": str(framework),
+                "local_commit": local,
+                "upstream": upstream,
+                "upstream_commit": "",
+                "status": "check failed",
+                "error": result.stderr.strip(),
+            }
+            save_framework_update_status(framework, data)
+            return emit_framework_update_status(args, framework, data, returncode=result.returncode)
+
+    remote = git_output(framework, ["rev-parse", upstream], "unknown")
+    base = git_output(framework, ["merge-base", "HEAD", upstream], "")
+    if local == remote:
+        status = "up-to-date"
+    elif local == base:
+        status = "update available"
+    elif remote == base:
+        status = "local ahead"
+    else:
+        status = "diverged"
+    data = {
+        **cached,
+        "last_checked_at": utc_stamp(),
+        "framework": str(framework),
+        "local_commit": local,
+        "upstream": upstream,
+        "upstream_commit": remote,
+        "status": status,
+        "error": "",
+    }
+    save_framework_update_status(framework, data)
+    return emit_framework_update_status(args, framework, data)
+
+
+def emit_framework_update_status(args: argparse.Namespace, framework: Path, data: dict, returncode: int = 0) -> int:
+    if getattr(args, "notify", False):
+        return notify_framework_update_once_per_day(framework, data, returncode)
+
+    local = data.get("local_commit", "unknown")
+    upstream = data.get("upstream", "")
+    remote = data.get("upstream_commit", "")
+    print(f"framework: {data.get('framework') or framework}")
+    print(f"local: {local[:7]}")
+    if upstream:
+        suffix = f" {remote[:7]}" if remote else ""
+        print(f"upstream: {upstream}{suffix}")
+    else:
+        print("upstream: none")
+    print(f"status: {data.get('status', 'unknown')}")
+    if data.get("error"):
+        print(data["error"])
+    return returncode
+
+
+def notify_framework_update_once_per_day(framework: Path, data: dict, returncode: int = 0) -> int:
+    if data.get("status") != "update available":
+        return returncode
+    if is_recent(data.get("last_notified_at"), timedelta(days=1)):
+        return returncode
+
+    local = data.get("local_commit", "unknown")[:7]
+    remote = data.get("upstream_commit", "unknown")[:7]
+    print(f"[ARIS] framework update available: local {local} -> upstream {remote}")
+    print("       run: aris framework update")
+    print("       rollback: aris framework rollback")
+    data["last_notified_at"] = utc_stamp()
+    save_framework_update_status(framework, data)
+    return returncode
+
+
+def cmd_framework_update(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    before = record_previous_commit(framework)
+    result = run(["git", "pull", "--ff-only"], cwd=framework, check=False)
+    after = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    if result.returncode != 0:
+        # A local-only test repo has no remote; still record history and continue.
+        if "There is no tracking information" not in result.stderr and "No remote repository" not in result.stderr:
+            print(result.stderr.strip())
+            return result.returncode
+    print(f"framework: {before[:7]} -> {after[:7]}")
+    if args.no_project_sync:
+        print("project sync: skipped")
+        return 0
+    updated, missing = sync_registered_projects(args, framework)
+    msg = f"project sync: {updated} updated"
+    if missing:
+        msg += f", {missing} missing"
+    print(msg)
+    return 0
+
+
+def cmd_framework_rollback(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    prev = previous_commit()
+    if not prev:
+        print("no rollback commit recorded")
+        return 1
+    current = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    run(["git", "reset", "--hard", prev], cwd=framework)
+    print(f"framework rollback: {current[:7]} -> {prev[:7]}")
+    if args.no_project_sync:
+        print("project sync: skipped")
+        return 0
+    updated, missing = sync_registered_projects(args, framework)
+    msg = f"project sync: {updated} updated"
+    if missing:
+        msg += f", {missing} missing"
+    print(msg)
+    return 0
+
+
+def add_common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--aris-repo", type=Path)
+    p.add_argument("--quiet", action="store_true")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="aris")
+    add_common(p)
+    sub = p.add_subparsers(dest="scope", required=True)
+
+    project = sub.add_parser("project")
+    add_common(project)
+    project.add_argument("--version", action="store_true")
+    project_sub = project.add_subparsers(dest="project_command")
+
+    init = project_sub.add_parser("init")
+    add_common(init)
+    init.add_argument("path")
+    init.add_argument("--name", dest="project_name")
+    init.add_argument("--direction", required=True)
+    init.add_argument("--size", choices=["full", "small"], default="full")
+    init.add_argument("--no-commit", action="store_true")
+    init.set_defaults(func=cmd_project_init)
+
+    update = project_sub.add_parser("update")
+    add_common(update)
+    update.add_argument("path", nargs="?")
+    update.set_defaults(func=cmd_project_update)
+
+    doctor = project_sub.add_parser("doctor")
+    add_common(doctor)
+    doctor.add_argument("path", nargs="?")
+    doctor.set_defaults(func=cmd_project_doctor)
+
+    detach = project_sub.add_parser("detach")
+    add_common(detach)
+    detach.add_argument("path", nargs="?")
+    detach.set_defaults(func=cmd_project_detach)
+
+    framework = sub.add_parser("framework")
+    add_common(framework)
+    framework.add_argument("--version", action="store_true")
+    framework_sub = framework.add_subparsers(dest="framework_command")
+
+    fw_update = framework_sub.add_parser("update")
+    add_common(fw_update)
+    fw_update.add_argument("--no-project-sync", action="store_true")
+    fw_update.set_defaults(func=cmd_framework_update)
+
+    check_update = framework_sub.add_parser("check-update")
+    add_common(check_update)
+    check_update.add_argument("--no-fetch", action="store_true")
+    check_update.add_argument("--if-stale", metavar="DURATION")
+    check_update.add_argument("--notify", action="store_true")
+    check_update.set_defaults(func=cmd_framework_check_update)
+
+    rollback = framework_sub.add_parser("rollback")
+    add_common(rollback)
+    rollback.add_argument("--no-project-sync", action="store_true")
+    rollback.set_defaults(func=cmd_framework_rollback)
+
+    return p
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    if args.scope == "project" and args.version:
+        args.path = None
+        return cmd_project_version(args)
+    if args.scope == "framework" and args.version:
+        return cmd_framework_version(args)
+    if not hasattr(args, "func"):
+        raise SystemExit("missing command")
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,6 +1,6 @@
 # ARIS 痛点诊断：FPA-IOD 实验复盘 × 架构根因分析
 
-> 基于 `FULL_PROGRESS_REPORT.md` 的实际踩坑经验，对照 ARIS 源码架构，逐一定位根因。
+> 基于 `20260613-FULL_PROGRESS_REPORT.md` 的实际踩坑经验，对照 ARIS 源码架构，逐一定位根因。
 
 ---
 

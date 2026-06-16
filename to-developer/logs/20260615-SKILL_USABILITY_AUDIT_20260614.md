@@ -8,10 +8,10 @@ Overnight practical audit of ARIS skill usability. The goal was not to execute e
 
 Four parallel sub-agents audited skills by caller class:
 
-- `leader`: `to-developer/logs/skill-usability-parts/leader.md`
-- `executor`: `to-developer/logs/skill-usability-parts/executor.md`
-- `reviewer`: `to-developer/logs/skill-usability-parts/reviewer.md`
-- `any`: `to-developer/logs/skill-usability-parts/any.md`
+- `leader`: `to-developer/logs/skill-usability-parts/20260615-leader.md`
+- `executor`: `to-developer/logs/skill-usability-parts/20260615-executor.md`
+- `reviewer`: `to-developer/logs/skill-usability-parts/20260615-reviewer.md`
+- `any`: `to-developer/logs/skill-usability-parts/20260615-any.md`
 
 Safety policy:
 
@@ -341,7 +341,7 @@ These fields should feed `docs/SKILL_DAG.yaml`, `docs/SKILL_CATALOG.md`, and fut
 
 Detailed sub-agent reports:
 
-- `to-developer/logs/skill-usability-parts/leader.md`
-- `to-developer/logs/skill-usability-parts/executor.md`
-- `to-developer/logs/skill-usability-parts/reviewer.md`
-- `to-developer/logs/skill-usability-parts/any.md`
+- `to-developer/logs/skill-usability-parts/20260615-leader.md`
+- `to-developer/logs/skill-usability-parts/20260615-executor.md`
+- `to-developer/logs/skill-usability-parts/20260615-reviewer.md`
+- `to-developer/logs/skill-usability-parts/20260615-any.md`

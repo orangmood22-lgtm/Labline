@@ -30,21 +30,21 @@ curl -s --max-time 5 https://registry-1.docker.io/v2/ && echo "OK"
 文件已经通过 rsync 传过去了，确认一下：
 
 ```bash
-ls /workspace/Orangmood/ARIS/aris-framework/deploy/
+ls [你的framework位置]/deploy/
 # 应该看到：Dockerfile.gpu  docker-compose.gpu.yaml  .env.gpu.example  entrypoint.sh
 ```
 
 如果没有，从本机重传：
 ```bash
 # 在本机 WSL 执行：
-rsync -avz deploy/ 3090x2-original:/workspace/Orangmood/ARIS/aris-framework/deploy/
-rsync -avz templates/api-config.yaml.tmpl 3090x2-original:/workspace/Orangmood/ARIS/aris-framework/templates/
+rsync -avz deploy/ 3090x2-original:[你的framework位置]/deploy/
+rsync -avz templates/api-config.yaml.tmpl 3090x2-original:[你的framework位置]/templates/
 ```
 
 ## Step 2: 配置 .env
 
 ```bash
-cd /workspace/Orangmood/ARIS/aris-framework
+cd [你的framework位置]
 cp deploy/.env.gpu.example deploy/.env
 ```
 
@@ -56,12 +56,12 @@ vim deploy/.env
 
 需要改的字段：
 ```ini
-# 必填（至少填一个才能用 Claude Code）
+# Codex 默认入口
+OPENAI_API_KEY=sk-xxx
+
+# Claude Code 兼容入口
 ANTHROPIC_API_KEY=sk-ant-xxx（或中转站 key）
 ANTHROPIC_BASE_URL=https://your-proxy.com/v1（留空=官方）
-
-# 可选（Codex Reviewer 用）
-OPENAI_API_KEY=sk-xxx
 
 # 3090x2 上 clash 当前跑在 7897 端口
 HTTP_PROXY=http://127.0.0.1:7897
@@ -73,18 +73,20 @@ GIT_HTTP_PROXY=http://127.0.0.1:7897
 GIT_HTTPS_PROXY=http://127.0.0.1:7897
 
 # 3090x2 host paths
-FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-framework
-DEV_FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-dev
-PROJECT_PATH=/workspace/Orangmood/ARIS
-DATASETS_PATH=/workspace/shared/datasets
+FRAMEWORK_PATH=[你的framework位置]
+DEV_FRAMEWORK_PATH=[你的dev framework位置]
+PROJECT_PATH=[你的项目工作区]
+DATASETS_PATH=[你的数据集目录]
+PRETRAINED_PATH=[你的预训练模型目录]
+SSH_PATH=[你的SSH目录]
 ```
 
-其他字段默认值已经对了（USERNAME=orangmood, UID=1000, PROJECT_PATH=/workspace/Orangmood/ARIS）。
+`USERNAME`、`USER_UID`、`USER_GID` 按服务器用户实际值填写。
 
 ## Step 3: Build Docker 镜像
 
 ```bash
-cd /workspace/Orangmood/ARIS/aris-framework
+cd [你的framework位置]
 
 docker build -f deploy/Dockerfile.gpu -t aris-gpu \
   --build-arg BUILD_HTTP_PROXY=http://127.0.0.1:7897 \
@@ -116,12 +118,12 @@ docker run -d \
   --restart unless-stopped \
   --gpus all \
   --network host \
-  -v /workspace/Orangmood/ARIS/aris-framework:/aris/framework \
-  -v /workspace/Orangmood/ARIS/aris-dev:/aris/aris-dev \
-  -v /workspace/Orangmood/ARIS:/aris/projects \
-  -v /workspace/shared/datasets:/aris/shared/datasets:ro \
-  -v /workspace/Orangmood/pretrained:/aris/shared/pretrained \
-  -v /home/dell/.ssh:/run/secrets/ssh:ro \
+  -v "$FRAMEWORK_PATH:/aris/framework" \
+  -v "$DEV_FRAMEWORK_PATH:/aris/aris-dev" \
+  -v "$PROJECT_PATH:/aris/projects" \
+  -v "$DATASETS_PATH:/aris/shared/datasets:ro" \
+  -v "$PRETRAINED_PATH:/aris/shared/pretrained" \
+  -v "$SSH_PATH:/run/secrets/ssh:ro" \
   -e ANTHROPIC_API_KEY="$(grep ANTHROPIC_API_KEY deploy/.env | cut -d= -f2)" \
   -e ANTHROPIC_BASE_URL="$(grep ANTHROPIC_BASE_URL deploy/.env | cut -d= -f2)" \
   -e OPENAI_API_KEY="$(grep OPENAI_API_KEY deploy/.env | cut -d= -f2)" \
@@ -148,7 +150,8 @@ ls /aris/framework/skills/ | head -5
 ls -ld /aris/aris-dev
 bash /aris/framework/deploy/aris_gpu_doctor.sh --project exp0516 --project exp0603
 
-# Claude Code
+# Codex / Claude Code
+codex --version
 claude --version
 
 # 项目文件和数据集
@@ -167,6 +170,7 @@ bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --repla
 
 验证：
 ```bash
+ls -la .agents/skills/ | head -5
 ls -la .claude/skills/ | head -5
 # 应该指向 /aris/framework/skills/...
 ```
@@ -176,9 +180,8 @@ ls -la .claude/skills/ | head -5
 ```bash
 # 回到本机 WSL
 rsync -avz --progress \
-  /root/Projects/aris/Auto-research-in-sleep/exp0516/VOC2007.tar.gz \
-  /root/Projects/aris/Auto-research-in-sleep/exp0516/VOCdevkit_full.tar.gz \
-  3090x2-original:/workspace/Orangmood/ARIS/exp0516/
+  [你的本地数据集压缩包] \
+  3090x2-original:[你的项目工作区]/exp0516/
 ```
 
 约 5GB，取决于网速。
@@ -197,8 +200,11 @@ tar xzf VOCdevkit_full.tar.gz
 # 进入项目目录
 cd /aris/projects/exp0516
 
-# 启动 Claude Code
-claude
+# 启动 Codex
+codex
+
+# 或 Claude Code 兼容模式
+# claude
 
 # 或直接跑实验
 python3 code/train.py
@@ -227,7 +233,7 @@ docker stop aris-gpu
 
 ```bash
 docker stop aris-gpu && docker rm aris-gpu
-cd /workspace/Orangmood/ARIS/aris-framework
+cd [你的framework位置]
 git pull
 docker build -f deploy/Dockerfile.gpu -t aris-gpu \
   --build-arg BUILD_HTTP_PROXY=http://127.0.0.1:7897 \

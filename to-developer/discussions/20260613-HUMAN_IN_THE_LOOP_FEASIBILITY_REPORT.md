@@ -1,6 +1,6 @@
 # 人机协作与质量保障机制可行性方案
 
-> 基于 ARCHITECTURE_EXPLORATION_REPORT.md 讨论后的四个核心问题展开深度研究。
+> 基于 20260613-ARCHITECTURE_EXPLORATION_REPORT.md 讨论后的四个核心问题展开深度研究。
 > 日期：2026-05-12
 > 状态：方案探索阶段，待讨论确认
 
@@ -395,7 +395,7 @@ Reviewer 需要判断：
 
 #### 按需深度报告
 
-当人要求"详细说说实验结果"时，Agent 生成详细技术报告（类似 `FULL_PROGRESS_REPORT.md` 的格式，但针对特定主题）。
+当人要求"详细说说实验结果"时，Agent 生成详细技术报告（类似 `20260613-FULL_PROGRESS_REPORT.md` 的格式，但针对特定主题）。
 
 ### 2.6 可行性评估
 

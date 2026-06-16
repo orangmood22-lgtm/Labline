@@ -1,6 +1,6 @@
 # ARIS Development Log
 
-开发者侧按模块记录的 ARIS 框架开发日志。模块边界见 `to-developer/FRAMEWORK_MODULES.md`；用户可见部分在发布前再蒸馏到 `CHANGELOG.md`。
+开发者侧按模块记录的 ARIS 框架开发日志。模块边界见 `to-developer/20260615-FRAMEWORK_MODULES.md`；用户可见部分在发布前再蒸馏到 `CHANGELOG.md`。
 
 ## [Unreleased]
 
@@ -32,16 +32,18 @@
 
 ### docs
 - 整理 `docs/` 用户侧入口，将开发者 ADR、迁移记录、LangGraph 评估和文档依赖维护规则迁入 `to-developer/`。
-- 新增 `to-developer/FRAMEWORK_MODULES.md`，明确开发者侧框架模块边界，并约束 `DEVELOPMENT_LOG.md` 的模块记录方式。
+- 新增 `to-developer/20260615-FRAMEWORK_MODULES.md`，明确开发者侧框架模块边界，并约束 `to-developer/20260613-DEVELOPMENT_LOG.md` 的模块记录方式。
+- 将 `to-developer/` 下的 `.md` / `.txt` 开发者文档统一改为 `YYYYMMDD-` 创建日期前缀，并同步 DAG、引用、release gate 和测试路径。
+- 新增 `to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md`，面向开发者详细说明 ARIS CLI、Project Registry、framework update/check/rollback、容器 shell hook 和部署拓扑的机制与测试契约。
 - 新增 dev-only 开发者文档 DAG：`to-developer/DOC_DAG.yaml` / `to-developer/DOC_DAG.mmd`，用于统一维护开发计划、日志、讨论记录和 stable handoff 目标之间的更新关系。
 - Added Feishu integration docs and ADRs for opt-in remote control, live TUI takeover, and Feishu-priority control leases.
-- Added ADR-0002 and `to-developer/plans/AGENT_STATUS_STREAM.md` for the status-stream architecture and rollout plan.
+- Added ADR-0002 and `to-developer/plans/20260613-AGENT_STATUS_STREAM.md` for the status-stream architecture and rollout plan.
 - Added local GPU validation report under `to-developer/logs/`.
-- 新增 `to-developer/plans/LANGGRAPH_EVALUATION.md`。
+- 新增 `to-developer/plans/20260613-LANGGRAPH_EVALUATION.md`。
 - Added `docs/README.md` and `mcp-servers/README.md` indexes.
 - Updated repository paths and removed obsolete ARIS-Code/Matt Pocock/image assets.
 - Added `CONTEXT.md` language for framework version governance.
-- Added `to-developer/plans/VERSION_MANAGEMENT.md`.
+- Added `to-developer/plans/20260613-VERSION_MANAGEMENT.md`.
 
 ### deploy
 - 更新部署文档和 `.env` 示例，补齐 Feishu bridge/session runner 部署、git proxy、大小写 proxy 环境变量一致性说明。

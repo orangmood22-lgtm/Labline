@@ -72,7 +72,7 @@ RUN git clone --depth 1 -b ${ARIS_BRANCH} ${ARIS_REPO} /aris/framework || true
 RUN mkdir -p ~/.claude ~/.codex ~/.aris ~/.ssh \
     && chmod 700 ~/.ssh
 
-# ─── Default API config (user overrides via mount or /init-research) ─────────
+# ─── Default API config (user overrides via mount or `aris project init`) ────
 COPY templates/api-config.yaml.tmpl /home/${USERNAME}/.aris/api.yaml
 
 # ─── Entrypoint ──────────────────────────────────────────────────────────────

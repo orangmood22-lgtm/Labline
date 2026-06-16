@@ -2,7 +2,7 @@
 
 > 面向第一次部署 ARIS 的同学。
 >
-> 目标：在任意一台 Linux GPU 服务器上启动 `aris-gpu` Docker 容器，让容器能访问 GPU、ARIS framework、实验项目、共享数据集，并能运行 Claude Code / Codex CLI。
+> 目标：在任意一台 Linux GPU 服务器上启动 `aris-gpu` Docker 容器，让容器能访问 GPU、ARIS framework、实验项目、共享数据集，并能运行 Codex CLI / Claude Code。
 >
 > 本文不是 3090x2 专用文档。3090x2 只作为一个示例；真实部署时请替换成你的服务器用户名、路径、项目名、代理端口。
 
@@ -12,15 +12,15 @@
 
 | 变量 | 含义 | 示例 |
 |------|------|------|
-| `SERVER` | SSH alias 或服务器地址 | `gpu-server`、`3090x2-original` |
+| `SERVER` | SSH alias 或服务器地址 | `[你的服务器SSH别名]` |
 | `HOST_USER` | 服务器上的 Linux 用户名 | `alice`、`dell`、`researcher` |
-| `ARIS_ROOT` | ARIS 总目录 | `/data/aris`、`/workspace/Orangmood/ARIS` |
-| `FRAMEWORK_PATH` | 宿主机上的 ARIS framework 目录 | `$ARIS_ROOT/aris-framework` |
-| `DEV_FRAMEWORK_PATH` | 可选开发版 framework 目录 | `$ARIS_ROOT/aris-dev` |
-| `PROJECTS_ROOT` | 宿主机上的项目根目录 | `$ARIS_ROOT/projects` 或 `$ARIS_ROOT` |
-| `DATASETS_PATH` | 宿主机上的共享数据集目录 | `/data/datasets`、`/workspace/shared/datasets` |
-| `PRETRAINED_PATH` | 宿主机上的预训练模型缓存目录 | `/data/pretrained` |
-| `SSH_PATH` | 宿主机上的 SSH key 目录 | `/home/$HOST_USER/.ssh` |
+| `ARIS_ROOT` | 可选：你自己定义的 ARIS 总目录 | `[你的ARIS总目录]` |
+| `FRAMEWORK_PATH` | 宿主机上的 ARIS framework 目录 | `[你的framework位置]` |
+| `DEV_FRAMEWORK_PATH` | 可选开发版 framework 目录 | `[你的dev framework位置]` |
+| `PROJECTS_ROOT` | 宿主机上的项目根目录 | `[你的项目工作区]` |
+| `DATASETS_PATH` | 宿主机上的共享数据集目录 | `[你的数据集目录]` |
+| `PRETRAINED_PATH` | 宿主机上的预训练模型缓存目录 | `[你的预训练模型目录]` |
+| `SSH_PATH` | 宿主机上的 SSH key 目录 | `[你的SSH目录]` |
 | `CONTAINER_NAME` | Docker 容器名 | `aris-gpu` |
 | `CONTAINER_USER` | 容器内默认用户名 | `researcher`、`alice` |
 | `USER_UID` | 容器用户 UID，通常与宿主机用户一致 | `1000` |
@@ -28,42 +28,22 @@
 | `HTTP_PROXY_URL` | 可选代理地址 | 空值、`http://127.0.0.1:7897` |
 | `HTTPS_PROXY_URL` | 可选代理地址 | 空值、`http://127.0.0.1:7897` |
 
-3090x2 的示例取值：
+示例取值：
 
 ```bash
-SERVER=3090x2-original
-HOST_USER=dell
-ARIS_ROOT=/workspace/Orangmood/ARIS
-FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-framework
-DEV_FRAMEWORK_PATH=/workspace/Orangmood/ARIS/aris-dev
-PROJECTS_ROOT=/workspace/Orangmood/ARIS
-DATASETS_PATH=/workspace/shared/datasets
-PRETRAINED_PATH=/workspace/Orangmood/pretrained
-SSH_PATH=/home/dell/.ssh
+SERVER=[你的服务器SSH别名]
+HOST_USER=[你的服务器用户名]
+ARIS_ROOT=[你的ARIS总目录]
+FRAMEWORK_PATH=[你的framework位置]
+DEV_FRAMEWORK_PATH=[你的dev framework位置]
+PROJECTS_ROOT=[你的项目工作区]
+DATASETS_PATH=[你的数据集目录]
+PRETRAINED_PATH=[你的预训练模型目录]
+SSH_PATH=[你的SSH目录]
 CONTAINER_NAME=aris-gpu
-CONTAINER_USER=orangmood
+CONTAINER_USER=researcher
 USER_UID=1000
 USER_GID=1000
-HTTP_PROXY_URL=http://127.0.0.1:7897
-HTTPS_PROXY_URL=http://127.0.0.1:7897
-```
-
-另一台普通服务器可能是：
-
-```bash
-SERVER=my-a100-box
-HOST_USER=alice
-ARIS_ROOT=/data/aris
-FRAMEWORK_PATH=/data/aris/aris-framework
-DEV_FRAMEWORK_PATH=/data/aris/aris-dev
-PROJECTS_ROOT=/data/aris/projects
-DATASETS_PATH=/data/datasets
-PRETRAINED_PATH=/data/pretrained
-SSH_PATH=/home/alice/.ssh
-CONTAINER_NAME=aris-gpu
-CONTAINER_USER=alice
-USER_UID=1001
-USER_GID=1001
 HTTP_PROXY_URL=
 HTTPS_PROXY_URL=
 ```
@@ -72,15 +52,15 @@ HTTPS_PROXY_URL=
 
 ```bash
 cat > ~/aris-deploy.env <<'EOF'
-SERVER=my-a100-box
-HOST_USER=alice
-ARIS_ROOT=/data/aris
-FRAMEWORK_PATH=/data/aris/aris-framework
-DEV_FRAMEWORK_PATH=/data/aris/aris-dev
-PROJECTS_ROOT=/data/aris/projects
-DATASETS_PATH=/data/datasets
-PRETRAINED_PATH=/data/pretrained
-SSH_PATH=/home/alice/.ssh
+SERVER=[你的服务器SSH别名]
+HOST_USER=[你的服务器用户名]
+ARIS_ROOT=[你的ARIS总目录]
+FRAMEWORK_PATH=[你的framework位置]
+DEV_FRAMEWORK_PATH=[你的dev framework位置]
+PROJECTS_ROOT=[你的项目工作区]
+DATASETS_PATH=[你的数据集目录]
+PRETRAINED_PATH=[你的预训练模型目录]
+SSH_PATH=[你的SSH目录]
 CONTAINER_NAME=aris-gpu
 CONTAINER_USER=alice
 USER_UID=1001
@@ -118,9 +98,10 @@ source ~/aris-deploy.env
 - 容器内访问 dev framework 永远用 `/aris/aris-dev`。
 - 容器内访问项目永远用 `/aris/projects/<project>`。
 - 容器内访问共享数据集永远用 `/aris/shared/datasets/...`。
-- 项目里的 `.claude/skills/*` 应该指向 `/aris/framework/skills/...`。
+- 项目里的 `.agents/skills/*` 应该指向 `/aris/framework/skills/...`。
+- Claude Code 兼容模式的 `.claude/skills/*` 也应该指向 `/aris/framework/skills/...`。
 - 项目里的数据集 symlink 应该指向 `/aris/shared/datasets/...`。
-- 不要在容器要用的 symlink 里写宿主机路径，例如 `/workspace/...` 或 `/data/...`。
+- 不要在容器要用的 symlink 里写宿主机路径；容器内统一使用 `/aris/...`。
 - API key 只放服务器本地的 `deploy/.env`，不要提交到 Git。
 
 ## 3. 前置条件
@@ -343,12 +324,12 @@ no_proxy=127.0.0.1,localhost
 GIT_HTTP_PROXY=
 GIT_HTTPS_PROXY=
 
-FRAMEWORK_PATH=/data/aris/aris-framework
-DEV_FRAMEWORK_PATH=/data/aris/aris-dev
-PROJECT_PATH=/data/aris/projects
-DATASETS_PATH=/data/datasets
-PRETRAINED_PATH=/data/pretrained
-SSH_PATH=/home/researcher/.ssh
+FRAMEWORK_PATH=[你的framework位置]
+DEV_FRAMEWORK_PATH=[你的dev framework位置]
+PROJECT_PATH=[你的项目工作区]
+DATASETS_PATH=[你的数据集目录]
+PRETRAINED_PATH=[你的预训练模型目录]
+SSH_PATH=[你的SSH目录]
 ```
 
 如果服务器需要代理：
@@ -372,9 +353,9 @@ HTTPS_PROXY=
 
 API key 说明：
 
-- `ANTHROPIC_API_KEY` 给 Claude Code 用。
-- `ANTHROPIC_BASE_URL` 只在你使用中转站时填写。
 - `OPENAI_API_KEY` 给 Codex CLI 用。
+- `ANTHROPIC_API_KEY` 给 Claude Code 兼容模式用。
+- `ANTHROPIC_BASE_URL` 只在你使用中转站时填写。
 - 不要把 `deploy/.env` 提交到 Git。
 - 不要在截图、日志、文档里展示 key。
 
@@ -555,8 +536,8 @@ ls -ld /aris/shared/datasets
 检查 CLI：
 
 ```bash
-claude --version
 codex --version
+claude --version
 ```
 
 运行部署健康检查。把项目名换成你自己的：
@@ -607,6 +588,8 @@ bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --quiet
 检查：
 
 ```bash
+ls -la /aris/projects/YOUR_PROJECT/.agents/skills | head
+# Claude Code 兼容模式：
 ls -la /aris/projects/YOUR_PROJECT/.claude/skills | head
 ```
 
@@ -626,14 +609,7 @@ mkdir -p /aris/projects/YOUR_PROJECT/data
 ln -s /aris/shared/datasets/VOCdevkit /aris/projects/YOUR_PROJECT/data/VOCdevkit
 ```
 
-不要指向宿主机路径，例如：
-
-```text
-/workspace/shared/datasets/VOCdevkit
-/data/datasets/VOCdevkit
-```
-
-容器内应使用：
+不要指向宿主机路径。容器内应使用：
 
 ```text
 /aris/shared/datasets/VOCdevkit
