@@ -8,6 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [v0.3.3] - 2026-06-16
+
+### Fixed
+- Feishu-controlled sessions now send status cards and final replies back to the actual message sender instead of relying on a fixed configured recipient.
+- Feishu session state writes are now atomic, reducing transient failures when the bridge and runner access session state concurrently.
+
+---
+
 ## [v0.3.2] - 2026-06-16
 
 ### Changed
