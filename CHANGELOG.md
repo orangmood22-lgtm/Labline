@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [v0.3.2] - 2026-06-16
+
+### Changed
+- Leader readiness checks are now Codex-first and no longer require Claude Code `settings.local.json` permission allowlists by default.
+
+---
+
 ## [v0.3.1] - 2026-06-16
 
 ### Fixed
