@@ -37,6 +37,7 @@ CN_DESC = {
     "experiment-plan": "设计严谨实验计划，声明预期并设置差异断言。",
     "experiment-queue": "通过 SSH 管理多种子/多配置 ML 实验队列，支持 OOM 重试。",
     "feishu-notify": "向飞书/Lark 发送状态更新通知。",
+    "feishu-session": "管理飞书/Lark 远程 Codex 或 Claude Code 会话；默认使用 lark-channel-bridge，ARIS 自研 runner 仅作审计/合并 fallback。",
     "figure-description": "处理专利附图并生成正式附图说明。",
     "figure-spec": "生成可编辑 SVG 的确定性出版级架构/流程/管线图。",
     "formula-derivation": "整理并推导研究公式，生成可用于论文的推导包。",

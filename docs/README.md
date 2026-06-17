@@ -9,7 +9,7 @@
 | [FRAMEWORK_STRUCTURE.md](FRAMEWORK_STRUCTURE.md) | 理解 framework / project / dev 边界 |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | 日常操作、API 配置、workflow 使用 |
 | [TRIPARTITE_ARCHITECTURE_GUIDE.md](TRIPARTITE_ARCHITECTURE_GUIDE.md) | Leader / Executor / Reviewer 三边协作 |
-| [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | 飞书通知、长连接收消息、受控 Codex runner 接入 |
+| [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | 飞书/Lark 远控：默认 `lark-channel-bridge`，旧版 ARIS runner fallback |
 
 ## 项目文件和恢复
 

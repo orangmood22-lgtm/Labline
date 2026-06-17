@@ -415,12 +415,67 @@ git config --global --unset https.proxy || true
 
 ## 飞书远程控制部署
 
-新增的飞书能力由两部分组成：
+Codex + Claude Code 的飞书/Lark 远程控制默认推荐使用外部桥接器 `lark-channel-bridge`。它只是消息传输适配器：飞书负责收发消息，真正执行仍发生在本机或容器里的 Codex/Claude Code session；它不是 ARIS Leader，不接管 workflow，也不是远程 shell。
+
+前置要求：
+
+- Node.js >= 20.12
+- 容器或宿主机内已安装并登录 Codex CLI / Claude Code
+- 飞书/Lark PersonalAgent app；首次启动可按上游 QR 引导绑定
+
+安装：
+
+```bash
+npm i -g lark-channel-bridge
+```
+
+在用户项目目录启动 Codex profile：
+
+```bash
+lark-channel-bridge run \
+  --profile codex \
+  --agent codex \
+  --workspace [你的project位置]
+```
+
+后台启动：
+
+```bash
+lark-channel-bridge start \
+  --profile codex \
+  --agent codex \
+  --workspace [你的project位置]
+```
+
+Claude Code 使用独立 profile：
+
+```bash
+lark-channel-bridge run \
+  --profile claude \
+  --agent claude \
+  --workspace [你的project位置]
+```
+
+飞书/Lark 里常用命令：
+
+| 命令 | 作用 |
+|------|------|
+| `/cd <path>` | 切换当前项目/workspace |
+| `/ws` | 管理已保存 workspace |
+| `/status` | 查看 profile、agent、工作目录、session 和运行状态 |
+
+如果启动时没传 `--workspace`，或者要切到另一个 ARIS 项目，在飞书里执行 `/cd [你的project位置]`。
+
+### 旧版 ARIS-managed runner
+
+仓库内仍保留旧版 fallback 路径：
 
 | 组件 | 路径 | 职责 |
 |------|------|------|
 | Feishu bridge | `mcp-servers/feishu-bridge/server.py` | HTTP 发送/更新卡片、长连接接收飞书消息、写入 session inbox |
 | Feishu session runner | `tools/aris_feishu_session.py` | 消费 inbox，启动/恢复 Codex Session，把最终回复发回飞书 |
+
+只有在你需要 ARIS 管理的 inbox/outbox 文件、phone-session merge report、或 tmux live-TUI 注入时，才优先使用这条路径。
 
 `.env` 里增加：
 
@@ -462,9 +517,10 @@ export ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
 
 部署注意：
 
-- `BRIDGE_PORT` 默认是 `5000`；如果报 `Address already in use`，换端口并同步修改 `--bridge-url`。
+- 默认优先使用 `lark-channel-bridge`；旧版 in-repo runner 是 fallback/ARIS-managed runner。
+- `BRIDGE_PORT` 默认是 `5000`；如果旧版 bridge 报 `Address already in use`，换端口并同步修改 `--bridge-url`。
 - 飞书长连接需要服务器能访问飞书开放平台；如果连接不上，按上面的大小写 proxy 规则同时设置 `HTTP_PROXY/HTTPS_PROXY/http_proxy/https_proxy`。
-- bridge 不执行 shell、tools、skills；真正执行发生在 opt-in 的 Codex session runner。
+- bridge 不执行 shell、tools、skills；真正执行发生在 opt-in 的本地 Codex/Claude session 或旧版 Codex session runner。
 - `--yolo` 只应在可信服务器和可信项目中使用。
 - 详细飞书配置见 [docs/FEISHU_INTEGRATION.md](../docs/FEISHU_INTEGRATION.md)。
 
@@ -487,7 +543,7 @@ export ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
 | `git clone` / `git pull` 连不上 GitHub | 先设置大小写 proxy env；仍失败再设置 `git config --global http.proxy/https.proxy` |
 | 容器里 `curl` 能联网但 git 不行 | 在 `.env` 填 `GIT_HTTP_PROXY` / `GIT_HTTPS_PROXY` 后 `docker compose up -d --force-recreate` |
 | Python/pip/Feishu SDK 不认代理 | 同时设置 `HTTP_PROXY/HTTPS_PROXY` 和 `http_proxy/https_proxy` |
-| Feishu bridge 启动时报 `Address already in use` | 修改 `BRIDGE_PORT`，并同步修改 runner 的 `--bridge-url` |
+| 旧版 Feishu bridge 启动时报 `Address already in use` | 修改 `BRIDGE_PORT`，并同步修改 runner 的 `--bridge-url` |
 | SSH 到 GPU 超时 | 检查 SSH key mount，`ls ~/.ssh/` |
 | API 403/401 | 检查 key 是否过期，base_url 是否正确 |
 | CUDA not available (GPU 服务器) | 检查 `LD_LIBRARY_PATH`，参考 exp0516 的 conda activate hook |

@@ -1,0 +1,47 @@
+# ARIS Dedicated Real-Machine Test Container
+# Dev-only. Mount a framework checkout, a scratch projects dir, and a host log
+# dir; every run writes logs visible from the host.
+#
+# Usage:
+#   cp to-developer/realtest/.env.test.example to-developer/realtest/.env.test
+#   docker compose --env-file to-developer/realtest/.env.test -f to-developer/realtest/docker-compose.test.yaml up --build aris-realtest
+
+services:
+  aris-realtest:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile
+      args:
+        USERNAME: ${TEST_USERNAME:-aris-test}
+        UID: ${TEST_UID:-1000}
+        GID: ${TEST_GID:-1000}
+        ARIS_BRANCH: ${TEST_ARIS_BRANCH:-stable}
+    container_name: aris-realtest
+    hostname: aris-realtest
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-127.0.0.1,localhost}
+      - http_proxy=${http_proxy:-}
+      - https_proxy=${https_proxy:-}
+      - no_proxy=${no_proxy:-127.0.0.1,localhost}
+      - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
+      - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
+      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-0}
+      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
+      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
+      - ARIS_WORKSPACE=/home/${TEST_USERNAME:-aris-test}
+      - ARIS_REALTEST_NAME=${ARIS_REALTEST_NAME:-smoke}
+      - ARIS_REALTEST_COMMAND=${ARIS_REALTEST_COMMAND:-}
+    volumes:
+      - ${TEST_FRAMEWORK_PATH:?set TEST_FRAMEWORK_PATH in to-developer/realtest/.env.test}:/aris/framework
+      - ${TEST_PROJECTS_PATH:?set TEST_PROJECTS_PATH in to-developer/realtest/.env.test}:/aris/projects
+      - ${TEST_LOGS_PATH:?set TEST_LOGS_PATH in to-developer/realtest/.env.test}:/aris/test-logs
+      - ${TEST_DATASETS_PATH:-/tmp/aris-empty-datasets}:/aris/shared/datasets:ro
+      - ${TEST_PRETRAINED_PATH:-/tmp/aris-empty-pretrained}:/aris/shared/pretrained:ro
+    stdin_open: true
+    tty: true
+    command: ["bash", "-lc", "/aris/framework/to-developer/realtest/test-runner.sh"]

@@ -35,6 +35,8 @@
 - 新增 `to-developer/20260615-FRAMEWORK_MODULES.md`，明确开发者侧框架模块边界，并约束 `to-developer/20260613-DEVELOPMENT_LOG.md` 的模块记录方式。
 - 将 `to-developer/` 下的 `.md` / `.txt` 开发者文档统一改为 `YYYYMMDD-` 创建日期前缀，并同步 DAG、引用、release gate 和测试路径。
 - 新增 `to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md`，面向开发者详细说明 ARIS CLI、Project Registry、framework update/check/rollback、容器 shell hook 和部署拓扑的机制与测试契约。
+- 新增 `to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md`，说明开发侧默认由 Codex/leader 收口、gpt-5.4-mini 或命名 cheap worker provider 负责批量文档、扫引用、测试草案与低风险 patch 草案，并要求所有 worker 输出可追踪。
+- 新增 `to-developer/realtest/20260616-REALTEST_CONTAINER.md` 和 dev-only 实机测试容器资产，用于新功能在独立容器中做带日志的 smoke/integration 测试。
 - 新增 dev-only 开发者文档 DAG：`to-developer/DOC_DAG.yaml` / `to-developer/DOC_DAG.mmd`，用于统一维护开发计划、日志、讨论记录和 stable handoff 目标之间的更新关系。
 - Added Feishu integration docs and ADRs for opt-in remote control, live TUI takeover, and Feishu-priority control leases.
 - Added ADR-0002 and `to-developer/plans/20260613-AGENT_STATUS_STREAM.md` for the status-stream architecture and rollout plan.
@@ -58,6 +60,7 @@
 ### tests
 - 扩展 GPU 部署合约测试，覆盖 `.env` 示例、compose 环境变量、entrypoint proxy/git proxy 持久化。
 - 新增开发者文档 DAG 回归测试。
+- 新增实机测试容器 contract test，确保 dev-only realtest 资产保持独立路径、日志 mount 和默认 smoke 行为。
 - Added Feishu bridge/control/session tests covering card update semantics, queue ack behavior, live TUI status updates, `/interrupt`, and `/btw`.
 - Added Agent Status Stream CLI behavior tests and local GPU smoke validation.
 - Updated release tooling tests to use the current Python executable in direct-run mode.

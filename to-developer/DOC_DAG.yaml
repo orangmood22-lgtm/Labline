@@ -55,6 +55,10 @@ nodes:
     title: "CLI 与部署运行时机制"
     layer: architecture
     kind: plan
+  to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md:
+    title: "cheap worker 默认分工"
+    layer: architecture
+    kind: plan
   to-developer/plans/20260610-codex-migration.md:
     title: "Codex 迁移记录"
     layer: architecture
@@ -73,6 +77,10 @@ nodes:
     title: "服务器代理 QA"
     layer: deploy
     kind: qa
+  to-developer/realtest/20260616-REALTEST_CONTAINER.md:
+    title: "实机测试容器说明"
+    layer: deploy
+    kind: guide
 
   to-developer/discussions/*.md:
     title: "开发讨论记录"
@@ -80,6 +88,10 @@ nodes:
     kind: glob
   to-developer/discussions/*.txt:
     title: "开发讨论文本"
+    layer: discussion
+    kind: glob
+  to-developer/context-archive/*.md:
+    title: "Design Grilling Context 归档"
     layer: discussion
     kind: glob
   to-developer/logs/*.md:
@@ -219,6 +231,10 @@ edges:
     to: to-developer/20260615-FRAMEWORK_MODULES.md
     type: informs
     reason: "CLI/deploy runtime 横跨 tools、deploy、templates、tests，需要反映到模块边界理解。"
+  - from: to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "开发侧 cheap worker 默认分工需要进入开发日志，便于恢复和交接。"
   - from: to-developer/adr/*.md
     to: docs/FEISHU_INTEGRATION.md
     type: informs
@@ -245,10 +261,22 @@ edges:
     to: to-developer/20260613-DEVELOPMENT_LOG.md
     type: summarized_by
     reason: "历史讨论文本中的决策需要沉淀。"
+  - from: to-developer/context-archive/*.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "重要 context grilling 结论需要进入开发日志或后续功能 lineage。"
   - from: to-developer/deploy-QAs/20260613-clash_with_servers.md
     to: docs/TOOLS_INDEX.md
     type: related_to
     reason: "代理/部署 QA 可能影响工具索引和运行说明。"
+  - from: to-developer/realtest/20260616-REALTEST_CONTAINER.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "实机测试容器是 dev-only 验证资产，变更需进入开发日志。"
+  - from: to-developer/realtest/20260616-REALTEST_CONTAINER.md
+    to: deploy/DEPLOY_GUIDE.md
+    type: constrains
+    reason: "管理员部署指南只保留 dev-only 实机测试容器的边界提示，不展开测试操作。"
 
   - from: AGENTS.md
     to: to-developer/plans/20260613-PROMOTE_FLOW.md

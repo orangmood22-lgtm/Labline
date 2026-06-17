@@ -7,6 +7,8 @@ import argparse
 import json
 import os
 import subprocess
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -148,6 +150,99 @@ def save_registry(data: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def dev_worker_config_path() -> Path:
+    return state_root() / "dev-workers.json"
+
+
+def default_dev_worker_config() -> dict:
+    return {
+        "schema_version": 1,
+        "defaults": {
+            "provider": "codex_subagent",
+            "transport": "codex_subagent",
+            "model": "gpt-5.4-mini",
+            "reasoning_effort": "medium",
+        },
+        "providers": {
+            "codex_subagent": {
+                "transport": "codex_subagent",
+                "model": "gpt-5.4-mini",
+            }
+        },
+        "roles": {
+            "worker": {
+                "provider": "codex_subagent",
+                "transport": "codex_subagent",
+                "model": "gpt-5.4-mini",
+                "allowed_work": [
+                    "batch documentation edits",
+                    "reference/path sweeps",
+                    "test drafts",
+                    "low-risk patch drafts",
+                ],
+                "forbidden_work": [
+                    "final architecture decisions",
+                    "release or promote decisions",
+                    "rollback or destructive git operations",
+                    "credential handling",
+                ],
+            }
+        },
+    }
+
+
+def load_dev_worker_config(init: bool = False) -> dict:
+    path = dev_worker_config_path()
+    if not path.exists():
+        data = default_dev_worker_config()
+        if init:
+            save_dev_worker_config(data)
+        return data
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        data = default_dev_worker_config()
+    data.setdefault("schema_version", 1)
+    data.setdefault("defaults", {})
+    data["defaults"].setdefault("provider", "codex_subagent")
+    data["defaults"].setdefault("transport", "codex_subagent")
+    data["defaults"].setdefault("model", "gpt-5.4-mini")
+    data["defaults"].setdefault("reasoning_effort", "medium")
+    data.setdefault("providers", {})
+    data["providers"].setdefault("codex_subagent", default_dev_worker_config()["providers"]["codex_subagent"])
+    data.setdefault("roles", {})
+    data["roles"].setdefault("worker", default_dev_worker_config()["roles"]["worker"])
+    if init:
+        save_dev_worker_config(data)
+    return data
+
+
+def save_dev_worker_config(data: dict) -> None:
+    path = dev_worker_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def dev_worker_log_root(framework: Path) -> Path:
+    root = framework / "to-developer" / "logs" / "dev-workers"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def sanitize_slug(value: str, limit: int = 48) -> str:
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in value).strip("-")
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    return (slug or "task")[:limit].strip("-") or "task"
+
+
+def slug_from_text(text: str) -> str:
+    first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if not first_line:
+        return "task"
+    return sanitize_slug(first_line)
+
+
 def register_project(project: Path) -> None:
     data = load_registry()
     projects = set(data.get("projects", []))
@@ -278,6 +373,271 @@ def cmd_project_version(args: argparse.Namespace) -> int:
     print(f"framework_path: {framework}")
     print(f"framework_version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
     print(f"framework_commit: {git_output(framework, ['rev-parse', 'HEAD'], 'unknown')}")
+    return 0
+
+
+def cmd_dev_worker_config(args: argparse.Namespace) -> int:
+    data = load_dev_worker_config(init=args.init)
+    defaults = data["defaults"]
+    print(f"config: {dev_worker_config_path()}")
+    print(f"default_provider: {defaults.get('provider', 'codex_subagent')}")
+    print(f"default_transport: {defaults.get('transport', 'codex_subagent')}")
+    print(f"default_model: {defaults.get('model', 'gpt-5.4-mini')}")
+    print(f"default_reasoning_effort: {defaults.get('reasoning_effort', 'medium')}")
+    for provider, spec in sorted(data.get("providers", {}).items()):
+        parts = [spec.get("transport", "unknown"), spec.get("model", "unknown")]
+        if spec.get("base_url"):
+            parts.append(spec["base_url"])
+        if spec.get("api_key_env"):
+            parts.append(f"api_key_env={spec['api_key_env']}")
+        print(f"provider.{provider}: {'/'.join(parts)}")
+    for role, spec in sorted(data.get("roles", {}).items()):
+        provider = spec.get("provider", defaults.get("provider", "codex_subagent"))
+        transport = spec.get("transport", defaults.get("transport"))
+        model = spec.get("model", defaults.get("model"))
+        print(f"role.{role}: provider={provider} {transport}/{model}")
+    return 0
+
+
+def upsert_worker_provider(data: dict, name: str, spec: dict) -> dict:
+    providers = data.setdefault("providers", {})
+    providers[name] = {k: v for k, v in spec.items() if v is not None}
+    return providers[name]
+
+
+def resolve_worker_provider(data: dict, provider_name: str | None, role: dict, defaults: dict) -> tuple[str, dict]:
+    selected = provider_name or role.get("provider") or defaults.get("provider") or "codex_subagent"
+    providers = data.get("providers", {})
+    base = dict(providers.get(selected, {}))
+    if not base:
+        base = {
+            "transport": role.get("transport") or defaults.get("transport", "codex_subagent"),
+            "model": role.get("model") or defaults.get("model", "gpt-5.4-mini"),
+        }
+    base.setdefault("transport", role.get("transport") or defaults.get("transport", "codex_subagent"))
+    base.setdefault("model", role.get("model") or defaults.get("model", "gpt-5.4-mini"))
+    return selected, base
+
+
+def cmd_dev_worker_provider_set(args: argparse.Namespace) -> int:
+    data = load_dev_worker_config(init=True)
+    spec = {
+        "transport": args.transport,
+        "model": args.model,
+        "base_url": args.base_url,
+        "api_key_env": args.api_key_env,
+    }
+    if args.name == "deepseek-v4-flash":
+        spec.setdefault("base_url", "https://api.deepseek.com/v1")
+        spec.setdefault("api_key_env", "DEEPSEEK_API_KEY")
+    saved = upsert_worker_provider(data, args.name, spec)
+    defaults = data.setdefault("defaults", {})
+    if args.set_default:
+        defaults["provider"] = args.name
+        defaults["transport"] = saved.get("transport", defaults.get("transport", "codex_subagent"))
+        defaults["model"] = saved.get("model", defaults.get("model", "gpt-5.4-mini"))
+    save_dev_worker_config(data)
+    print(f"provider: {args.name}")
+    print(f"transport: {saved.get('transport')}")
+    print(f"model: {saved.get('model')}")
+    if saved.get("base_url"):
+        print(f"base_url: {saved['base_url']}")
+    if saved.get("api_key_env"):
+        print(f"api_key_env: {saved['api_key_env']}")
+    return 0
+
+
+def resolve_worker_task(args: argparse.Namespace) -> tuple[str, Path | None]:
+    if args.task and args.task_file:
+        raise SystemExit("choose either task or --task-file, not both")
+    if args.task_file:
+        task_path = Path(args.task_file).expanduser().resolve()
+        if not task_path.exists():
+            raise SystemExit(f"task file not found: {task_path}")
+        return task_path.read_text(encoding="utf-8"), task_path
+    if args.task:
+        return args.task, None
+    raise SystemExit("missing task or --task-file")
+
+
+def worker_system_guardrails(
+    role: str,
+    provider: str,
+    transport: str,
+    model: str,
+    base_url: str | None,
+    api_key_env: str | None,
+    effort: str | None,
+) -> str:
+    return f"""# ARIS Dev Worker Guardrails
+
+role: {role}
+provider: {provider}
+transport: {transport}
+model: {model}
+base_url: {base_url or '<none>'}
+api_key_env: {api_key_env or '<none>'}
+reasoning_effort: {effort or '<none>'}
+
+## Rules
+
+- Stay inside the declared task.
+- Do not apply patches automatically.
+- Do not commit changes automatically.
+- Do not promote or release anything automatically.
+- Do not handle credentials, private keys, or secrets.
+- Do not log API key values.
+- Report concrete files, commands, and results.
+"""
+
+
+def openai_compatible_chat_completion(base_url: str, api_key: str, model: str, messages: list[dict], timeout: int) -> dict:
+    endpoint = base_url.rstrip("/") + "/chat/completions"
+    payload = json.dumps({"model": model, "messages": messages}).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=payload,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read().decode("utf-8")
+            return json.loads(body)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"openai-compatible request failed: HTTP {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"openai-compatible request failed: {exc.reason}") from exc
+
+
+def write_worker_run_artifacts(run_dir: Path, task_text: str, request_payload: dict, response_text: str, metadata: dict) -> None:
+    run_dir.mkdir(parents=True, exist_ok=False)
+    (run_dir / "task.md").write_text(task_text, encoding="utf-8")
+    (run_dir / "request.json").write_text(json.dumps(request_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (run_dir / "response.md").write_text(response_text, encoding="utf-8")
+    (run_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def cmd_dev_worker_prompt(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    data = load_dev_worker_config(init=True)
+    defaults = data["defaults"]
+    role = data.get("roles", {}).get(args.role, data["roles"]["worker"])
+    provider_name, provider = resolve_worker_provider(data, args.provider, role, defaults)
+    transport = args.transport or provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
+    model = args.model or provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
+    base_url = args.base_url or provider.get("base_url")
+    api_key_env = args.api_key_env or provider.get("api_key_env")
+    effort = args.reasoning_effort or role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    slug = sanitize_slug(args.task)
+    task_file = dev_worker_log_root(framework) / f"{stamp}-{slug}.md"
+    files = args.file or []
+    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
+    prompt = f"""# ARIS Dev Worker Task
+
+created_at: {utc_stamp()}
+role: {args.role}
+provider: {provider_name}
+transport: {transport}
+model: {model}
+base_url: {base_url or '<none>'}
+api_key_env: {api_key_env or '<none>'}
+reasoning_effort: {effort}
+
+## Task
+
+{args.task}
+
+## Write Scope
+
+{file_lines}
+
+## Operating Rules
+
+- You are not alone in the codebase. Do not revert unrelated user or agent changes.
+- Stay inside the declared write scope. If the task requires another file, report it instead of editing silently.
+- Prefer producing a small patch, test draft, doc draft, reference sweep, or concrete finding list.
+- Do not make final architecture, release, promote, or rollback decisions.
+- Do not run destructive git commands.
+- Do not handle credentials, private keys, or secrets.
+- Never log, print, or persist API key values; only record the environment variable name.
+- Report changed files and verification commands.
+"""
+    task_file.write_text(prompt, encoding="utf-8")
+    print(f"task_file: {task_file}")
+    print(f"worker_provider: {provider_name}")
+    print(f"worker_transport: {transport}")
+    print(f"worker_model: {model}")
+    print(f"worker_base_url: {base_url or '<none>'}")
+    print(f"worker_api_key_env: {api_key_env or '<none>'}")
+    print(f"worker_reasoning_effort: {effort}")
+    print("spawn_hint: use this prompt with a gpt-5.4-mini worker and review its patch before applying")
+    return 0
+
+
+def cmd_dev_worker_run(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    data = load_dev_worker_config(init=True)
+    defaults = data["defaults"]
+    role = data.get("roles", {}).get(args.role, data["roles"]["worker"])
+    provider_name, provider = resolve_worker_provider(data, args.provider, role, defaults)
+    transport = args.transport or provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
+    model = args.model or provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
+    base_url = args.base_url or provider.get("base_url")
+    api_key_env = args.api_key_env or provider.get("api_key_env")
+    effort = args.reasoning_effort or role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
+    task_text, task_path = resolve_worker_task(args)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    slug_source = task_path.name if task_path else task_text
+    run_dir = dev_worker_log_root(framework) / f"{stamp}-{slug_from_text(slug_source)}"
+
+    if transport == "codex_subagent":
+        raise SystemExit("transport codex_subagent is executed by the current Codex session's subagent tool, not by the CLI runner")
+    if transport != "openai_compatible":
+        raise SystemExit(f"unsupported worker transport: {transport}")
+    if not base_url:
+        raise SystemExit("missing base_url for openai_compatible provider")
+    if not api_key_env:
+        raise SystemExit("missing api_key_env for openai_compatible provider")
+    api_key = os.environ.get(api_key_env)
+    if not api_key:
+        raise SystemExit(f"missing API key environment variable: {api_key_env}")
+
+    system_prompt = worker_system_guardrails(args.role, provider_name, transport, model, base_url, api_key_env, effort)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": task_text},
+    ]
+    request_payload = {"model": model, "messages": messages}
+    response = openai_compatible_chat_completion(base_url, api_key, model, messages, timeout=args.timeout)
+    response_text = json.dumps(response, ensure_ascii=False, indent=2)
+    choice_text = ""
+    choices = response.get("choices") or []
+    if choices:
+        message = choices[0].get("message") or {}
+        choice_text = message.get("content") or ""
+    metadata = {
+        "schema_version": 1,
+        "timestamp": utc_stamp(),
+        "provider": provider_name,
+        "transport": transport,
+        "model": model,
+        "base_url": base_url,
+        "api_key_env": api_key_env,
+        "timeout": args.timeout,
+        "task_file": str(task_path) if task_path else "",
+        "response_file": str(run_dir / "response.md"),
+    }
+    write_worker_run_artifacts(run_dir, task_text, request_payload, choice_text or response_text, metadata)
+    print(f"run_dir: {run_dir}")
+    print(f"provider: {provider_name}")
+    print(f"model: {model}")
+    print(f"response_file: {run_dir / 'response.md'}")
     return 0
 
 
@@ -581,6 +941,60 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(framework)
     framework.add_argument("--version", action="store_true")
     framework_sub = framework.add_subparsers(dest="framework_command")
+
+    dev = sub.add_parser("dev")
+    add_common(dev)
+    dev_sub = dev.add_subparsers(dest="dev_command", required=True)
+
+    worker = dev_sub.add_parser("worker")
+    add_common(worker)
+    worker_sub = worker.add_subparsers(dest="worker_command", required=True)
+
+    worker_config = worker_sub.add_parser("config")
+    add_common(worker_config)
+    worker_config.add_argument("--init", action="store_true")
+    worker_config.set_defaults(func=cmd_dev_worker_config)
+
+    worker_provider = worker_sub.add_parser("provider")
+    add_common(worker_provider)
+    worker_provider_sub = worker_provider.add_subparsers(dest="worker_provider_command", required=True)
+
+    provider_set = worker_provider_sub.add_parser("set")
+    add_common(provider_set)
+    provider_set.add_argument("name")
+    provider_set.add_argument("--transport", required=True)
+    provider_set.add_argument("--model", required=True)
+    provider_set.add_argument("--base-url")
+    provider_set.add_argument("--api-key-env")
+    provider_set.add_argument("--set-default", action="store_true")
+    provider_set.set_defaults(func=cmd_dev_worker_provider_set)
+
+    worker_prompt = worker_sub.add_parser("prompt")
+    add_common(worker_prompt)
+    worker_prompt.add_argument("task")
+    worker_prompt.add_argument("--file", action="append")
+    worker_prompt.add_argument("--role", default="worker")
+    worker_prompt.add_argument("--provider")
+    worker_prompt.add_argument("--transport")
+    worker_prompt.add_argument("--model")
+    worker_prompt.add_argument("--base-url")
+    worker_prompt.add_argument("--api-key-env")
+    worker_prompt.add_argument("--reasoning-effort")
+    worker_prompt.set_defaults(func=cmd_dev_worker_prompt)
+
+    worker_run = worker_sub.add_parser("run")
+    add_common(worker_run)
+    worker_run.add_argument("task", nargs="?")
+    worker_run.add_argument("--task-file")
+    worker_run.add_argument("--role", default="worker")
+    worker_run.add_argument("--provider")
+    worker_run.add_argument("--transport")
+    worker_run.add_argument("--model")
+    worker_run.add_argument("--base-url")
+    worker_run.add_argument("--api-key-env")
+    worker_run.add_argument("--reasoning-effort")
+    worker_run.add_argument("--timeout", type=int, default=120)
+    worker_run.set_defaults(func=cmd_dev_worker_run)
 
     fw_update = framework_sub.add_parser("update")
     add_common(fw_update)

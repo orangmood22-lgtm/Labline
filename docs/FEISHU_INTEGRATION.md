@@ -1,6 +1,76 @@
-# Feishu Integration
+# Feishu / Lark Integration
 
-ARIS Feishu integration lets you receive notifications, send messages from Feishu into an opt-in Codex Session, and receive Codex responses back in Feishu.
+For Codex + Claude Code remote control from Feishu/Lark, ARIS recommends
+[`lark-channel-bridge`](https://github.com/zarazhangrui/lark-coding-agent-bridge) as the default bridge. It is an external transport adapter for local Codex CLI or Claude Code sessions, with streaming cards, per-chat sessions, workspace switching, and first-run QR setup.
+
+The older in-repo path, `mcp-servers/feishu-bridge` plus `tools/aris_feishu_session.py`, remains documented below as a legacy/fallback ARIS-managed runner. Use it when you specifically need ARIS inbox/outbox files, report generation, or tmux injection behavior.
+
+## Recommended Path: `lark-channel-bridge`
+
+`lark-channel-bridge` forwards Feishu/Lark messages to a local `codex` or `claude` process. It does not make Feishu a remote shell, does not become the ARIS Leader, and does not own workflow decisions. Execution still happens in the local Codex/Claude Code session, under that agent's normal permissions and the selected workspace.
+
+Prerequisites:
+
+- Node.js >= 20.12
+- Codex CLI or Claude Code installed and logged in locally
+- A Feishu/Lark PersonalAgent app; the first-run QR wizard can create and bind one
+
+Install:
+
+```bash
+npm i -g lark-channel-bridge
+```
+
+Start a Codex profile in the foreground:
+
+```bash
+lark-channel-bridge run \
+  --profile codex \
+  --agent codex \
+  --workspace [你的project位置]
+```
+
+Or start the Codex profile as a background service:
+
+```bash
+lark-channel-bridge start \
+  --profile codex \
+  --agent codex \
+  --workspace [你的project位置]
+```
+
+For Claude Code, use a separate profile:
+
+```bash
+lark-channel-bridge run \
+  --profile claude \
+  --agent claude \
+  --workspace [你的project位置]
+```
+
+Common Feishu/Lark commands:
+
+| Command | Effect |
+|---------|--------|
+| `/cd <path>` | Switch the current project/workspace directory |
+| `/ws` | Manage saved workspaces, such as list/save/use |
+| `/status` | Show profile, agent, working directory, session, identity, and run state |
+
+Use `/cd [你的project位置]` after startup if you did not pass `--workspace`, or when moving a chat thread to another ARIS project.
+
+## ARIS Boundary
+
+Feishu/Lark integration is a Transport Adapter Skill boundary in ARIS terms. The bridge transports messages, status, approvals, files, or reports between chat and a local agent process. It is not a Leader, not a workflow runtime, and not a remote shell. Research orchestration remains in the active Codex/Claude Code session and the ARIS skills it invokes.
+
+## Legacy / Fallback: ARIS-Managed Runner
+
+The sections below describe the older ARIS-managed path:
+
+```text
+mcp-servers/feishu-bridge/server.py + tools/aris_feishu_session.py
+```
+
+Keep using this path only when you need ARIS-managed runtime files, explicit inbox/outbox inspection, phone-session merge reports, or the tmux live-TUI injection flow.
 
 ## What Works
 
@@ -8,22 +78,23 @@ ARIS Feishu integration lets you receive notifications, send messages from Feish
 |-----------|--------|------|
 | Local to Feishu | Supported | `POST /send`, `POST /update` for card updates |
 | Feishu to local | Supported | Feishu long connection -> `/control/message` |
-| Feishu message to Codex | Supported | `tools/aris_feishu_session.py` consumes inbox and runs `codex exec` |
-| Codex response to Feishu | Supported | runner writes outbox and calls `/send` |
-| Already-open Codex TUI takeover | Supported when TUI is in tmux | `--tmux-pane <target>` injects Feishu text into the live pane |
+| Feishu message to Codex | Legacy/fallback | `tools/aris_feishu_session.py` consumes inbox and runs `codex exec` |
+| Codex response to Feishu | Legacy/fallback | runner writes outbox and calls `/send` |
+| Already-open Codex TUI takeover | Legacy/fallback | `--tmux-pane <target>` injects Feishu text into the live pane |
 
 The bridge does not execute shell commands, tools, or skills itself. It only records messages and approvals. Codex execution happens inside the opt-in session runner.
 
 ## Terms
 
-- **Feishu Bridge**: `mcp-servers/feishu-bridge/server.py`, local HTTP + Feishu long-connection process.
+- **Recommended Bridge**: `lark-channel-bridge`, external Feishu/Lark transport adapter for local Codex CLI or Claude Code.
+- **Legacy Feishu Bridge**: `mcp-servers/feishu-bridge/server.py`, local HTTP + Feishu long-connection process.
 - **Remote Session Inbox**: `.aris/feishu-control/inbox/<session_id>.jsonl`.
-- **Feishu-Controlled Session**: a registered session consumed by `tools/aris_feishu_session.py`.
+- **Feishu-Controlled Session**: a legacy registered session consumed by `tools/aris_feishu_session.py`.
 - **Control Lease**: input ownership marker. Feishu messages can take remote priority; `/release` returns control to local.
 
 See [CONTEXT.md](../CONTEXT.md) for stable terminology. Detailed ADRs are kept in the dev checkout and are not part of stable releases.
 
-## Feishu App Setup
+## Legacy Feishu App Setup
 
 Create an internal app at <https://open.feishu.cn/app>.
 
@@ -44,7 +115,7 @@ Required event:
 
 Use long connection mode for local/server deployment. After changing permissions or events, create and publish a new app version. Ensure app visibility includes your account.
 
-## Local Config
+## Legacy Local Config
 
 Create `.env` in the framework or project root. Do not commit it.
 
@@ -87,7 +158,7 @@ export no_proxy=127.0.0.1,localhost
 
 Adjust port to your local proxy.
 
-## Start Bridge
+## Start Legacy Bridge
 
 Terminal 1:
 
@@ -115,7 +186,7 @@ curl -sS -X POST http://127.0.0.1:5000/send \
   -d '{"type":"text","content":"ARIS Feishu bridge live test"}'
 ```
 
-## Start Codex Runner
+## Start Legacy Codex Runner
 
 Terminal 2:
 
@@ -267,7 +338,7 @@ Bind a specific saved Codex conversation:
   --codex-session-id <codex-session-id>
 ```
 
-## Feishu Commands
+## Legacy Feishu Commands
 
 | Message | Effect |
 |---------|--------|
@@ -288,9 +359,9 @@ Rejected commands:
 - `/run ...`
 - `/tool ...`
 
-These are intentionally not executed by the bridge.
+These are intentionally not executed by the legacy bridge.
 
-## Runtime Files
+## Legacy Runtime Files
 
 Default root:
 
@@ -307,7 +378,7 @@ Default root:
 
 These files are project runtime state and are ignored by Git.
 
-## Phone Session Merge
+## Legacy Phone Session Merge
 
 Phone control is treated as a fork. Do not rely on hidden Codex context moving from phone runner back into the local TUI. Merge only auditable state.
 
@@ -331,7 +402,7 @@ Generate a report and print a local merge prompt:
 
 The report includes inbox messages, outbox responses, runner state, `git status --short`, and `git diff --stat`. Use the printed prompt in the local Codex thread after returning to the computer.
 
-The same workflow is exposed as the `feishu-session` skill.
+The same fallback workflow is exposed as the `feishu-session` skill.
 
 ## Testing
 
@@ -382,9 +453,9 @@ Confirm bridge output says connected to `msg-frontier.feishu.cn`. If not, check 
 
 Uppercase and lowercase proxy env vars may point to different ports. Make them consistent.
 
-## Limitations
+## Legacy Limitations
 
-- Runner does not inject text into an already-open Codex TUI.
-- Each Feishu message invokes `codex exec` or `codex exec resume`.
+- The legacy fresh runner path invokes `codex exec` or `codex exec resume` for each Feishu message.
 - Approval UI cards/buttons are backend-ready but not yet polished as interactive cards.
-- Bridge executes no tools. This is deliberate.
+- The legacy bridge executes no tools. This is deliberate.
+- The legacy path is Codex-oriented; use `lark-channel-bridge` for the default Codex + Claude Code remote-control bridge.

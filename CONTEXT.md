@@ -192,6 +192,82 @@ _Avoid_: automatic upgrade, silent pull, forced admin refresh
 Group-level assets reused across User Workspaces, such as datasets, pretrained models, and download caches. They are not owned by a single project or user.
 _Avoid_: per-user dataset copy, project-owned pretrained cache
 
+**Semantic Root**:
+The top-level glossary and language reference for ARIS framework governance. `CONTEXT.md` is the Semantic Root: it does not replace implementation docs, but it defines the shared meaning that lower-level plans, ADRs, skills, and archives should stay consistent with.
+_Avoid_: treating the glossary as a throwaway note, duplicating root semantics in every other document
+
+**Feature Decision Lineage**:
+The trace from a feature or workflow change back through the relevant context archive, ADR, plan, implementation change, and validation artifacts. It makes each upgrade or behavior change auditable without requiring every document to directly depend on `CONTEXT.md` in a literal DAG edge.
+_Avoid_: relying on memory to reconstruct why a feature changed, forcing every document to point at the glossary directly
+
+**Grilling Context Archive**:
+A dated, topic-scoped archive of the context changes and decisions produced by a Design Grilling session. The active `CONTEXT.md` remains the current glossary, while archived copies preserve historical reasoning and topic evolution for later reference. Archive placement is context-specific and belongs to the documentation governance layer rather than the glossary.
+_Avoid_: replacing the active glossary with scattered historical notes, losing the reasoning behind major context changes
+
+**Global Context Sweep**:
+The mandatory breadth check at the start of Design Grilling. It keeps the discussion connected to the project goal, active workflow, role boundaries, skill graph, experiment integrity, human checkpoints, and user-facing or developer-facing documentation impact before narrowing into a local decision. It is an internal grilling obligation by default, not a required standalone artifact, and it must not override the one-question-at-a-time interaction rule.
+_Avoid_: resolving a local term while ignoring adjacent workflow, role, evidence, or documentation consequences; treating grilling as a whole-library skill-audit tool
+
+**ARIS Role**:
+A stable responsibility boundary such as Leader, Planner, Coder, Deployer, Writer, or Reviewer. A role describes what work is allowed and what independence or handoff contract applies; it does not imply a specific model, process, MCP server, or CLI session.
+_Avoid_: defining responsibilities by whichever transport happens to run them today
+
+**Role Transport**:
+The implementation mechanism used to run a role, such as the current Codex session, a spawned local agent, a separate CLI session, an MCP-backed model, or an OpenAI-compatible API provider. Transport changes must not change the role's responsibility contract.
+_Avoid_: treating a model/provider switch as a skill architecture change
+
+**Logical Skill Graph**:
+The transport-independent graph of roles, skills, workflow modules, and declared dependency edges. It describes allowed invocation and reference structure, not the current runtime binding to a model or API.
+_Avoid_: mixing model/provider configuration into skill topology
+
+**Runtime Binding View**:
+The current mapping from roles to concrete transports, models, sessions, providers, and credentials. It can vary per deployment or project while the Logical Skill Graph stays stable.
+_Avoid_: hard-coding cheap worker or reviewer topology into prose mentions
+
+**Skill Invocation Edge**:
+A machine-readable edge saying one skill or workflow step may call, delegate to, or require another skill. It must come from structured metadata or an explicit governance file, not from casual prose mention.
+_Avoid_: inferring runtime dependencies from a skill name appearing in documentation
+
+**Skill Reference Edge**:
+A machine-readable edge saying one skill or document is human-facing context for another. A reference edge helps readers navigate but is not a runtime dependency.
+_Avoid_: letting references trigger implicit calls
+
+**Skill List Entry**:
+A discovery edge that puts a skill into a catalog, menu, capability list, or queryable inventory. It affects discovery and selection, but it does not by itself authorize invocation.
+_Avoid_: treating catalog membership as caller permission
+
+**Unclassified Skill Mention**:
+An occurrence of a skill, role, or workflow name in prose that has not been classified as invocation, reference, list entry, or another explicit semantic edge. Architecture-critical documents should not keep unclassified mentions.
+_Avoid_: ambiguous dependency prose that tools cannot interpret
+
+**Experiment Integrity Workflow**:
+A persistent, project-local workflow/module that keeps experiment transparency visible throughout the research process. It is not a one-shot skill; it records checkpoints, ledger entries, evidence pointers, and audit-facing summaries that humans can inspect at any time.
+_Avoid_: treating integrity verification as a final report after results are already selected
+
+**Experiment Integrity Verification**:
+A node or activity inside the Experiment Integrity Workflow that checks whether an experiment claim is backed by transparent data split, metric, code, config, run artifact, and deviation records. It is not the name of the whole workflow.
+_Avoid_: using verification to mean the entire integrity system
+
+**Experiment Integrity Entry Point**:
+A single human-facing summary artifact for the current integrity state of a project. It is the first audit-facing place to look for status, evidence pointers, and unresolved checkpoints. The checkpoint queue is separate from this summary, and live status snapshots stay in Project Runtime State.
+_Avoid_: scattering the integrity state across unrelated chat messages or making users hunt through the full ledger first
+
+**Checkpoint Queue**:
+The fixed list of pending human checkpoint decisions in an experiment workflow. It is the minimum first-stage human-in-the-loop mechanism and does not replace future general interruption support.
+_Avoid_: arbitrary hidden pauses, unbounded free-form intervention state
+
+**Cheap Worker**:
+A low-cost development or execution worker used for bounded, reviewable tasks such as batch documentation edits, reference sweeps, test drafts, and low-risk patch drafts. Cheap workers do not make final architecture, release, promote, rollback, or secret-handling decisions.
+_Avoid_: delegating ownership or final judgment to the cheapest model
+
+**OpenAI-Compatible Provider**:
+A worker provider configured with `base_url`, `model`, and `api_key_env` for chat-completions style APIs. ARIS stores the environment variable name, not the API key value.
+_Avoid_: writing API keys into config, logs, task files, or recovered artifacts
+
+**DeepSeek V4 Flash Worker**:
+A named Cheap Worker provider using `transport=openai_compatible`, `model=deepseek-v4-flash`, `base_url=https://api.deepseek.com/v1`, and `api_key_env=DEEPSEEK_API_KEY`.
+_Avoid_: making DeepSeek the role definition instead of one runtime provider
+
 ## Example Dialogue
 
 Developer: "This is a new skill workflow, so I will open a feature branch from `dev`."

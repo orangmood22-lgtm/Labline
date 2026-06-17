@@ -1,6 +1,6 @@
 ---
 name: feishu-session
-description: Manage Feishu-controlled Codex sessions, phone runners, and auditable phone-session merge reports. Use when user mentions Feishu control, phone control, mobile takeover, session merge, or wants to start/stop/report a Feishu Codex runner.
+description: Manage Feishu/Lark remote Codex or Claude Code access, with lark-channel-bridge as the default transport and ARIS phone-session reports as legacy/fallback audit support. Use when user mentions Feishu/Lark control, phone control, mobile takeover, session merge, or wants to start/stop/report a Feishu-controlled coding session.
 argument-hint: "[start|mark-seen|report|merge]"
 allowed-tools: Bash(*), Read
 caller: any
@@ -18,13 +18,62 @@ examples:
 
 # Feishu Session
 
-Use this skill to operate the Feishu bridge and the opt-in Codex runner. The bridge records messages; the runner either injects into a live tmux Codex TUI or runs Codex in a separate exec session.
+Use this skill to control an auditable Feishu/Lark-facing Codex or Claude Code session. Prefer `lark-channel-bridge` as the transport adapter for normal Feishu/Lark remote control. Use the in-repo ARIS Feishu runner only as a legacy/fallback path when you need ARIS-managed inbox/outbox files, phone-session merge reports, or tmux live-TUI injection.
+
+The bridge is transport, not workflow runtime: it forwards messages/status between Feishu/Lark and a local agent process. It does not become the ARIS Leader, own workflow decisions, or execute research work outside the active Codex/Claude Code session's normal permissions.
 
 ## Core rule
 
 Do not claim hidden model context moved between sessions. Phone control is a fork. Merge only auditable state: user messages, Codex replies, files, commands, decisions, and open questions.
 
-## Health check
+## Default transport: lark-channel-bridge
+
+Install the external bridge:
+
+```bash
+npm i -g lark-channel-bridge
+```
+
+Start a Codex profile in the target workspace:
+
+```bash
+lark-channel-bridge run \
+  --profile codex \
+  --agent codex \
+  --workspace "[你的project位置]"
+```
+
+Or run it as a background service:
+
+```bash
+lark-channel-bridge start \
+  --profile codex \
+  --agent codex \
+  --workspace "[你的project位置]"
+```
+
+For Claude Code, use a separate profile:
+
+```bash
+lark-channel-bridge run \
+  --profile claude \
+  --agent claude \
+  --workspace "[你的project位置]"
+```
+
+Common Feishu/Lark-side controls:
+
+- `/cd <path>`: switch the current workspace.
+- `/ws`: manage saved workspaces.
+- `/status`: inspect profile, agent, workspace, session, identity, and run state.
+
+Keep merge discipline even with the default bridge: before resuming locally from a phone-controlled thread, inspect the visible transcript, `git status --short`, and `git diff`; summarize files changed, commands run, decisions made, and open questions.
+
+## Legacy/fallback ARIS runner
+
+Use this path only when the default transport cannot provide the audit surface you need, especially `.aris/feishu-control/` reports or tmux live-TUI injection.
+
+### Health check
 
 ```bash
 curl -sS http://127.0.0.1:5000/health
@@ -41,7 +90,7 @@ export ARIS_PROJECT_ROOT=/aris/aris-dev
 .venv-feishu/bin/python mcp-servers/feishu-bridge/server.py
 ```
 
-## Start phone runner
+### Start phone runner
 
 Prefer live TUI takeover when the local Codex CLI is in tmux:
 
@@ -97,7 +146,7 @@ tmux new -d -s feishu-runner-leader-phone \
 
 Avoid `--resume-last` while a local Codex TUI is active. It can attach to the live TUI and produce an empty runner response.
 
-## Mark old messages seen
+### Mark old messages seen
 
 Use before starting a runner if the inbox contains stale messages:
 
@@ -109,7 +158,7 @@ Use before starting a runner if the inbox contains stale messages:
   --once
 ```
 
-## Generate phone report
+### Generate phone report
 
 ```bash
 .venv-feishu/bin/python tools/aris_feishu_session.py \
@@ -120,7 +169,7 @@ Use before starting a runner if the inbox contains stale messages:
 
 This writes `.aris/feishu-control/reports/leader-phone.md`.
 
-## Merge back locally
+### Merge back locally
 
 ```bash
 .venv-feishu/bin/python tools/aris_feishu_session.py \
