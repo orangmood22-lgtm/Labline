@@ -204,7 +204,7 @@ aris framework rollback
 
 #### 启动方式
 
-默认只需要一个 Codex 主会话。Leader 在本会话中编排并派生本地 agents；Executor 拆成 Coder / Deployer / Writer 三个主执行子职责，并提供 Worker 作为低风险辅助执行角色；Reviewer 是本地独立审查 agent。Claude Code 只作为兼容客户端。
+默认只需要一个 Codex 主会话。Leader 在本会话中编排并派生本地 agents；Executor 拆成 Coder / Deployer / Writer 三个主执行子职责；Reviewer 是本地独立审查 agent。Claude Code 只作为兼容客户端。
 
 ```bash
 cd ~/projects/my-research
@@ -231,11 +231,10 @@ $leader "研究方向"
 - 替 Executor 干活（即使 Executor 遇到权限问题）
 - 遇到问题自己解决 → 应报告给人
 
-**Executor 拆成三个主执行子职责，另有一个辅助角色：**
+**Executor 拆成三个主执行子职责：**
 - Coder：写代码、测试、修 bug、重构；不 SSH、不部署、不写论文
 - Deployer：同步服务器、启动训练、监控实验、收集结果；不改代码逻辑
 - Writer：写论文、文档、rebuttal；不写实验代码、不跑实验、不编造结果
-- Worker：批量文档、引用清扫、测试草案、低风险 patch 草案；不做架构决策、不碰密钥、不替代主执行角色
 
 **Reviewer 做：**
 - 独立审查代码/实验/claim
@@ -272,7 +271,6 @@ Agent 遇到权限/网络/资源阻塞时：
 | Coder | 本地派生 agent / `$coder` | 代码实现与测试 |
 | Deployer | 本地派生 agent / `$deployer` | 部署、运行、监控、收集结果 |
 | Writer | 本地派生 agent / `$writer` | 论文、文档、rebuttal |
-| Worker | Codex harness worker / `$worker` | 批量辅助执行、测试草案、低风险 patch 草案 |
 | Reviewer | 本地独立 reviewer agent | 原始文件审查，不自审 |
 - 输出审查报告（pass/fail + 具体问题）
 
@@ -283,7 +281,6 @@ Agent 遇到权限/网络/资源阻塞时：
 - Coder 产出：`code/`、测试、偏差记录
 - Deployer 产出：job handle、日志、`refine-logs/EXPERIMENT_RESULTS/`
 - Writer 产出：`paper/`、报告、rebuttal
-- Worker 产出：小范围 patch 草案、文档清扫、测试草案、来源和验证记录
 - Reviewer 产出：审查报告（JSON + Markdown）
 
 产出后在 `MANIFEST.md` 登记。

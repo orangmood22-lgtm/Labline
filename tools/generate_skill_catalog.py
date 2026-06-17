@@ -142,7 +142,6 @@ CATEGORY_MAP = {
     "coder": "开发工具",
     "deployer": "开发工具",
     "writer": "开发工具",
-    "worker": "开发工具",
 }
 
 # 跨类引用（skill 主类之外也常被哪些方向使用）
@@ -222,7 +221,6 @@ EXAMPLES = {
     "skill-dag-check": "/skill-dag-check",
     "feishu-session": "/feishu-session report leader-phone",
     "writer": "/writer",
-    "worker": "/worker",
 }
 
 

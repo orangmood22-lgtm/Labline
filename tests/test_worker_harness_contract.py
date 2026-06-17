@@ -15,46 +15,22 @@ def read(rel: str) -> str:
     return (REPO_ROOT / rel).read_text(encoding="utf-8")
 
 
-def test_worker_is_a_mainline_and_codex_role_skill() -> None:
-    main = read("skills/worker/SKILL.md")
-    codex = read("skills/skills-codex/worker/SKILL.md")
-
-    for content in [main, codex]:
-        assert "name: worker" in content
-        assert "caller: executor" in content
-        assert "Codex harness subagent" in content
-        assert "OpenAI-compatible/DeepSeek 只是可选 transport" in content
-        assert "不做最终决策" in content
-        assert "不自动 commit / push / promote" in content
+def test_worker_is_not_a_user_project_role_skill() -> None:
+    assert not (REPO_ROOT / "skills" / "worker" / "SKILL.md").exists()
+    assert not (REPO_ROOT / "skills" / "skills-codex" / "worker" / "SKILL.md").exists()
 
 
-def test_leader_can_dispatch_worker_through_codex_harness() -> None:
+def test_user_leader_does_not_dispatch_worker() -> None:
     leader = read("skills/skills-codex/leader/SKILL.md")
 
-    assert "worker" in leader
-    assert "spawn_agent:" in leader
-    assert "agent_type: worker" in leader
-    assert "model: gpt-5.4-mini" in leader
-    assert ".agents/skills/worker/SKILL.md" in leader
-    assert "不是外部 CLI 替代品" in leader
+    assert "agent_type: worker" not in leader
+    assert ".agents/skills/worker/SKILL.md" not in leader
+    assert "Worker 何时使用" not in leader
     assert "codex exec" not in leader.lower()
     assert "aris dev worker run" not in leader
 
 
-def test_worker_contract_does_not_define_external_cli_as_primary_runtime() -> None:
-    for rel in ["skills/worker/SKILL.md", "skills/skills-codex/worker/SKILL.md"]:
-        content = read(rel)
-        lowered = content.lower()
-
-        assert "spawn_agent:" in content
-        assert "agent_type: worker" in content
-        assert "默认 worker transport 是 Codex harness subagent" in content
-        assert "runtime binding view" in lowered
-        assert "codex exec" not in lowered
-        assert "aris dev worker run" not in content
-
-
-def test_codex_shared_references_include_worker_runtime_protocols() -> None:
+def test_codex_shared_references_do_not_define_worker_user_role() -> None:
     for rel in [
         "skills/skills-codex/shared-references/agent-guide.md",
         "skills/skills-codex/shared-references/agent-status-stream.md",
@@ -62,7 +38,9 @@ def test_codex_shared_references_include_worker_runtime_protocols() -> None:
         "skills/skills-codex/shared-references/executor-blocked-protocol.md",
     ]:
         content = read(rel)
-        assert "Worker" in content or "worker" in content
+        assert "agent_type: worker" not in content
+        assert ".agents/skills/worker/SKILL.md" not in content
+        assert "| Worker |" not in content
 
 
 def test_dev_worker_config_default_is_codex_harness_provider() -> None:
@@ -89,12 +67,20 @@ def test_dev_worker_config_default_is_codex_harness_provider() -> None:
         assert config["roles"]["worker"]["provider"] == "codex_subagent"
 
 
-def test_user_docs_show_worker_as_harness_role() -> None:
+def test_dev_worker_runtime_is_documented_as_dev_only() -> None:
+    plan = read("to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md")
+
+    assert "状态: dev-only 草案" in plan
+    assert "不引入新的 ARIS Role" in plan
+    assert "aris dev worker provider set" in plan
+
+
+def test_user_docs_do_not_show_worker_as_project_role() -> None:
     tripartite = read("docs/TRIPARTITE_ARCHITECTURE_GUIDE.md")
     operations = read("docs/OPERATIONS_GUIDE.md")
     template = read("templates/AGENTS_MD_TEMPLATE.md")
 
-    assert "Worker" in tripartite
-    assert "低风险辅助执行角色" in tripartite
-    assert "Codex harness worker" in operations
-    assert "Codex harness worker / cheap provider" in template
+    for content in [tripartite, operations, template]:
+        assert "Codex harness worker" not in content
+        assert "$worker" not in content
+        assert "| **Worker**" not in content

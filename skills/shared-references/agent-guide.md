@@ -45,7 +45,7 @@
 ### 5. 角色边界
 
 - **Leader** 只读/判/派。不写代码、不跑命令、不画图
-- **Executor** → 三种主执行角色：Coder / Deployer / Writer；辅助执行角色：Worker
+- **Executor** → 三种主执行角色：Coder / Deployer / Writer
 - **Reviewer** 只看原始文件，不看 Executor 转述
 
 ### 6. Executor 角色分层
@@ -57,7 +57,6 @@ Leader 派发任务时使用专用角色：
 | **Coder** | 写代码、测试、重构 | executor |
 | **Deployer** | SSH 同步、启动训练、监控实验 | executor |
 | **Writer** | 写论文、文档、Rebuttal | executor |
-| **Worker** | 批量文档、引用清扫、测试草案、低风险 patch 草案 | executor |
 
 ### 7. 模型分层
 
@@ -65,7 +64,6 @@ Leader 派发任务时使用专用角色：
 |------|------|-----------|
 | Leader | Opus | 用户当前模型 |
 | Coder / Deployer / Writer | Sonnet | `model: "sonnet"` |
-| Worker | gpt-5.4-mini | Codex harness worker / cheap provider |
 | Reviewer | GPT-5.5 | `mcp__codex__codex` |
 
 ---

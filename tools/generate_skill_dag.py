@@ -255,7 +255,7 @@ def generate_html(nodes: dict, dag_data: dict) -> str:
     EXECUTOR_DEPLOYER = {"run-experiment", "monitor-experiment", "sync", "framework-update", "system-profile", "vast-gpu", "serverless-modal", "experiment-queue", "training-check"}
     EXECUTOR_WRITER = {"paper-write", "paper-compile", "paper-figure", "paper-illustration", "paper-illustration-image2", "paper-slides", "paper-poster", "paper-talk", "rebuttal", "claims-drafting", "formula-derivation", "figure-spec", "figure-description", "mermaid-diagram", "pixel-art", "slides-polish", "proof-writer", "patent-pipeline", "grant-proposal", "invention-structuring", "specification-writing", "embodiment-description", "jurisdiction-format", "writing-systems-papers", "overleaf-sync", "paper-plan"}
     # Meta skills (role definitions, not tools)
-    EXECUTOR_META = {"coder", "deployer", "writer", "worker"}
+    EXECUTOR_META = {"coder", "deployer", "writer"}
 
     # Build enriched nodes
     nodes_json = []

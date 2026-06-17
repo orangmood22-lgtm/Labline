@@ -1,6 +1,6 @@
 ---
 name: leader
-description: "三边架构总编排：自动派生 Coder/Deployer/Writer/Worker，并调独立 Reviewer。一个窗口全流程。"
+description: "三边架构总编排：自动派生 Coder/Deployer/Writer，并调独立 Reviewer。一个窗口全流程。"
 argument-hint: [research-direction-or-plan-path]
 allowed-tools: Read, Grep, Glob, spawn_agent, wait_agent, Skill, WebSearch, WebFetch
 caller: leader
@@ -11,7 +11,6 @@ invokes:
   - coder
   - deployer
   - writer
-  - worker
   - tdd
   - diagnose
   - run-experiment
@@ -36,7 +35,6 @@ examples:
 |------|-------------------|----------------|-----------|
 | Leader (本窗口) | Opus | DeepSeek V4 Pro | 用户当前模型 |
 | Coder / Deployer / Writer | Sonnet | DeepSeek V4 Pro | `model: "sonnet"` |
-| Worker | gpt-5.4-mini | DeepSeek V4 Flash | Codex harness worker / cheap provider |
 | Reviewer | GPT-5.5 / independent Codex profile | GPT-5.5 | fresh reviewer agent |
 
 备用切换：`cc-switch provider switch deepseek`（会话级，整体切）。
@@ -49,7 +47,7 @@ examples:
 |------|------|
 | **读** — 读代码、读输出、读日志，了解状态 | Read, Grep, Glob |
 | **判** — 判断 gate 是否通过、方向是否继续、权限是否就绪 | 大脑 + Reviewer |
-| **派** — 把实现/实验/画图/写作/低风险批量工作分发给专用 agent | spawn_agent, Skill |
+| **派** — 把实现/实验/画图/写作任务分发给专用 agent | spawn_agent, Skill |
 
 **除此之外一律不做。** 不管 Agent 有没有权限、有没有能力，Leader 都不替代执行。
 
@@ -78,49 +76,6 @@ examples:
 ```
 
 **Leader 绝对不做：** 自己尝试绕过、自己执行命令、自己修配置。
-
-### Worker 何时使用
-
-Worker 是 Leader 可直接派发的辅助 agent，默认走 Codex harness subagent，不是外部 CLI 替代品。
-
-适合派给 Worker：
-
-- 批量文档整理、链接/路径/术语清扫
-- 测试草案、断言补全、低风险 patch 草案
-- 对已有材料做结构化摘要并标明来源
-
-不派给 Worker：
-
-- 架构决策、实验设计、claim 判定
-- release / promote / rollback
-- 密钥、账户、服务器权限配置
-- Coder / Deployer / Writer 的高风险主任务
-
-Codex harness 推荐派发模板：
-
-```
-spawn_agent:
-  agent_type: worker
-  model: gpt-5.4-mini
-  message: |
-    你是 ARIS Worker，只做低风险辅助执行。
-    你不是一个人在代码库里，不要 revert 别人的改动。
-
-    先读：
-    - .agents/skills/worker/SKILL.md
-    - .agents/skills/shared-references/agent-guide.md
-    - .agents/skills/shared-references/agent-status-stream.md
-
-    任务：
-    [具体任务]
-
-    写入范围：
-    - [明确文件或目录]
-
-    约束：
-    - 不碰密钥，不做最终决策，不自动 commit/push/promote
-    - 如需越界，停止并报告
-```
 
 - 通过独立 reviewer agent 做审查。
 - 维护 `PIPELINE_STATE.json`，每个 stage 完成后更新。

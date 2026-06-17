@@ -1,11 +1,11 @@
 version: 1
 generated_by: tools/generate_skill_dag.py
 stats:
-  total_skills: 96
-  total_edges: 30
+  total_skills: 95
+  total_edges: 29
   total_inferred_mentions: 131
   caller_distribution:
-    executor: 38
+    executor: 37
     any: 25
     reviewer: 11
     leader: 22
@@ -530,7 +530,7 @@ nodes:
   - simulate hostile reviewer
 - name: leader
   caller: leader
-  description: 三边架构总编排：自动派生 Coder/Deployer/Writer/Worker，并调独立 Reviewer。一个窗口全流程。
+  description: 三边架构总编排：自动派生 Coder/Deployer/Writer，并调独立 Reviewer。一个窗口全流程。
   invokes:
   - coder
   - deployer
@@ -543,7 +543,6 @@ nodes:
   - sync
   - tdd
   - training-check
-  - worker
   - writer
   platform: both
   status: active
@@ -1163,16 +1162,6 @@ nodes:
   - /vast-gpu rent RTX 3090
   - rent a GPU for training
   - list my vast.ai instances
-- name: worker
-  caller: executor
-  description: 低成本辅助执行角色 - 只做批量文档、引用清扫、测试草案和低风险 patch 草案；默认由 Codex harness subagent
-    执行，可绑定 cheap provider
-  platform: both
-  status: active
-  examples:
-  - /worker sweep docs links
-  - 批量检查文档引用
-  - draft focused tests for this CLI behavior
 - name: write-a-skill
   caller: any
   description: Create new agent skills with proper structure, progressive disclosure,
