@@ -331,97 +331,7 @@ class ArisCliTest(unittest.TestCase):
         self.assertFalse((project / ".aris" / "installed-skills.txt").exists())
         self.assertIn("project sync: skipped", result.stdout)
 
-    def test_dev_worker_config_defaults_to_gpt54_mini(self):
-        result = self._run(self.tmp, "dev", "worker", "config", "--init")
-        self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertIn("default_provider: codex_subagent", result.stdout)
-        self.assertIn("default_model: gpt-5.4-mini", result.stdout)
-        self.assertIn("default_transport: codex_subagent", result.stdout)
-
-        config = json.loads((self.workspace / ".aris" / "dev-workers.json").read_text())
-        self.assertEqual(config["defaults"]["provider"], "codex_subagent")
-        self.assertEqual(config["defaults"]["model"], "gpt-5.4-mini")
-        self.assertEqual(config["defaults"]["transport"], "codex_subagent")
-        self.assertIn("worker", config["roles"])
-
-    def test_dev_worker_provider_set_writes_openai_compatible_provider_config(self):
-        result = self._run(
-            self.tmp,
-            "dev",
-            "worker",
-            "provider",
-            "set",
-            "deepseek-v4-flash",
-            "--transport",
-            "openai_compatible",
-            "--model",
-            "deepseek-v4-flash",
-            "--base-url",
-            "https://api.deepseek.com/v1",
-            "--api-key-env",
-            "DEEPSEEK_API_KEY",
-        )
-        self.assertEqual(result.returncode, 0, msg=result.stderr)
-        config = json.loads((self.workspace / ".aris" / "dev-workers.json").read_text())
-        provider = config["providers"]["deepseek-v4-flash"]
-        self.assertEqual(provider["transport"], "openai_compatible")
-        self.assertEqual(provider["model"], "deepseek-v4-flash")
-        self.assertEqual(provider["base_url"], "https://api.deepseek.com/v1")
-        self.assertEqual(provider["api_key_env"], "DEEPSEEK_API_KEY")
-
-    def test_dev_worker_prompt_uses_named_provider_and_never_writes_key_value(self):
-        self._run(
-            self.tmp,
-            "dev",
-            "worker",
-            "provider",
-            "set",
-            "deepseek-v4-flash",
-            "--transport",
-            "openai_compatible",
-            "--model",
-            "deepseek-v4-flash",
-            "--base-url",
-            "https://api.deepseek.com/v1",
-            "--api-key-env",
-            "DEEPSEEK_API_KEY",
-        )
-        env = os.environ.copy()
-        env["ARIS_WORKSPACE"] = str(self.workspace)
-        env["DEEPSEEK_API_KEY"] = "super-secret-value"
-        env["NO_PROXY"] = "127.0.0.1,localhost"
-        env["no_proxy"] = "127.0.0.1,localhost"
-        result = subprocess.run(
-            [
-                str(ARIS_CLI),
-                "dev",
-                "worker",
-                "prompt",
-                "batch a docs sweep",
-                "--provider",
-                "deepseek-v4-flash",
-                "--file",
-                "docs/FEISHU_INTEGRATION.md",
-                "--aris-repo",
-                str(self.framework),
-                "--quiet",
-            ],
-            cwd=str(self.tmp),
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-        self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertNotIn("super-secret-value", result.stdout)
-        task_line = next(line for line in result.stdout.splitlines() if line.startswith("task_file: "))
-        task_path = Path(task_line.split(": ", 1)[1])
-        content = task_path.read_text()
-        self.assertIn("provider: deepseek-v4-flash", content)
-        self.assertIn("api_key_env: DEEPSEEK_API_KEY", content)
-        self.assertIn("- docs/FEISHU_INTEGRATION.md", content)
-        self.assertNotIn("super-secret-value", content)
-
-    def test_dev_worker_run_openai_compatible_posts_messages_and_writes_artifacts(self):
+    def test_dev_runtime_run_openai_compatible_posts_messages_and_writes_artifacts(self):
         received = {}
 
         class Handler(BaseHTTPRequestHandler):
@@ -447,7 +357,7 @@ class ArisCliTest(unittest.TestCase):
         self._run(
             self.tmp,
             "dev",
-            "worker",
+            "rt",
             "provider",
             "set",
             "deepseek-v4-flash",
@@ -467,8 +377,9 @@ class ArisCliTest(unittest.TestCase):
             [
                 str(ARIS_CLI),
                 "dev",
-                "worker",
+                "rt",
                 "run",
+                "dev-worker",
                 "write a tiny finding",
                 "--provider",
                 "deepseek-v4-flash",
@@ -487,14 +398,23 @@ class ArisCliTest(unittest.TestCase):
         self.assertEqual(received["path"], "/chat/completions")
         self.assertEqual(received["auth"], "Bearer super-secret-value")
         self.assertEqual(received["body"]["model"], "deepseek-v4-flash")
-        self.assertIn("ARIS Dev Worker Guardrails", received["body"]["messages"][0]["content"])
+        self.assertIn("ARIS Dev Runtime Guardrails", received["body"]["messages"][0]["content"])
+        self.assertIn("role: dev-worker", received["body"]["messages"][0]["content"])
+        self.assertIn("provider: deepseek-v4-flash", received["body"]["messages"][0]["content"])
         self.assertIn("write a tiny finding", received["body"]["messages"][1]["content"])
         self.assertNotIn("super-secret-value", result.stdout)
+        self.assertIn("run_dir: ", result.stdout)
+        self.assertIn("provider: deepseek-v4-flash", result.stdout)
+        self.assertIn("model: deepseek-v4-flash", result.stdout)
+        self.assertIn("response_file: ", result.stdout)
 
         run_line = next(line for line in result.stdout.splitlines() if line.startswith("run_dir: "))
         run_dir = Path(run_line.split(": ", 1)[1])
         self.assertEqual((run_dir / "response.md").read_text(), "worker result")
         metadata = json.loads((run_dir / "metadata.json").read_text())
+        self.assertEqual(metadata["provider"], "deepseek-v4-flash")
+        self.assertEqual(metadata["transport"], "openai_compatible")
+        self.assertEqual(metadata["model"], "deepseek-v4-flash")
         self.assertEqual(metadata["api_key_env"], "DEEPSEEK_API_KEY")
         self.assertNotIn("super-secret-value", (run_dir / "request.json").read_text())
         self.assertNotIn("super-secret-value", (run_dir / "metadata.json").read_text())

@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### skills
+- Added dev-only Developer Skill forks under `to-developer/skills/dev-*`, including `dev-worker`, `dev-caveman`, `dev-tdd`, `dev-diagnose`, `dev-review`, `dev-grill-docs`, `dev-handoff`, and `dev-zoom-out`.
 - Removed `worker` from the user project role graph and Codex skill mirror; cheap worker remains a dev-only runtime/helper concept instead of a Coder/Deployer/Writer peer.
 - Added `skills/feishu-session/` for operating the Feishu-controlled Codex session bridge and runner.
 - Added Agent Status Stream protocol and wired Leader/Coder/Deployer/Writer role instructions to project-local status snapshots.
@@ -15,6 +16,10 @@
 - Enhanced `skills-codex-claude-review` overlays with reviewer bias guard, edit whitelist, reviewer memory, debate protocol, and broader venue support.
 
 ### tools
+- Added `aris dev rt/runtime ...` as the Developer Runtime Surface for provider registration, role binding, prompt generation, and OpenAI-compatible cheap worker runs; removed `aris dev worker ...` from the canonical CLI.
+- Added `aris dev skills ...` and `tools/install_aris_dev_skills.sh` for Codex-only dev skill installation into the dev checkout `.agents/skills/dev-*` surface.
+- Added `aris dev user-surface ...` so user-facing catalog/DAG generation is explicit and separate from dev skill installation.
+- Added `tools/generate_dev_skill_catalog.py` and `tools/generate_dev_skill_dag.py` for dev-only skill catalog and DAG generation.
 - 新增 `tools/update_developer_docs.py`，用于校验 dev-only 文档覆盖并重新生成 `to-developer/DOC_DAG.mmd`。
 - Added `tools/feishu_control.py` for session registration, inbox routing, control leases, approvals, `/interrupt`, and `/btw`.
 - Added `tools/aris_feishu_session.py` for managed `codex exec` sessions and live tmux injection with Feishu status-card updates.
@@ -32,6 +37,7 @@
 - Updated idea candidate template paths to the current project file layout.
 
 ### docs
+- Added `to-developer/DEV_SKILL_CATALOG.md`, `to-developer/DEV_SKILL_DAG.yaml`, `to-developer/DEV_SKILL_DAG.mmd`, and ADR-0005 to define Developer Skills, their fork lineage, and their separate install surface.
 - Updated tripartite architecture, operations guide, project agent template, skill catalog, and skill DAG so user-facing roles stay limited to Leader, Coder, Deployer, Writer, and Reviewer; cheap worker/provider documentation stays under `to-developer/`.
 - 整理 `docs/` 用户侧入口，将开发者 ADR、迁移记录、LangGraph 评估和文档依赖维护规则迁入 `to-developer/`。
 - 新增 `to-developer/20260615-FRAMEWORK_MODULES.md`，明确开发者侧框架模块边界，并约束 `to-developer/20260613-DEVELOPMENT_LOG.md` 的模块记录方式。
@@ -60,6 +66,7 @@
 - Made Codex review bridge portable across local paths.
 
 ### tests
+- Added dev runtime CLI, dev skill installer, and dev skill surface tests covering `aris dev rt/runtime`, `aris dev skills`, dev-only catalog/DAG generation, and legacy `aris dev worker` rejection.
 - Updated Worker harness contract tests to assert dev-only worker configuration remains available while user-facing skills, docs, and Leader dispatch do not expose Worker as a project role.
 - 扩展 GPU 部署合约测试，覆盖 `.env` 示例、compose 环境变量、entrypoint proxy/git proxy 持久化。
 - 新增开发者文档 DAG 回归测试。

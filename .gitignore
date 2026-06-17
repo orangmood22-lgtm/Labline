@@ -49,6 +49,9 @@ patent/
 # ARIS project-local runtime state
 .aris/status/
 .aris/feishu-control/
+.aris/dev-runtime.json
+.aris/installed-dev-skills.txt
+to-developer/logs/dev-runtime/
 
 # Developer-local private notes
 to-developer/discussions/settings*.json

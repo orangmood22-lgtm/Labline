@@ -15,9 +15,13 @@ graph LR
     to_developer_20260613_HANDOFF_CLAUDE_TO_CODEX_md["to-developer/20260613-HANDOFF_CLAUDE_TO_CODEX.md<br/><small>Claude 到 Codex handoff · handoff</small>"]
     to_developer_20260613_handoff_2026_06_11_md["to-developer/20260613-handoff-2026-06-11.md<br/><small>历史 handoff · handoff</small>"]
     to_developer_20260615_FRAMEWORK_MODULES_md["to-developer/20260615-FRAMEWORK_MODULES.md<br/><small>开发者侧框架模块说明 · architecture</small>"]
+    to_developer_DEV_SKILL_CATALOG_md["to-developer/DEV_SKILL_CATALOG.md<br/><small>Developer Skill 目录 · generated</small>"]
+    to_developer_DEV_SKILL_DAG_mmd["to-developer/DEV_SKILL_DAG.mmd<br/><small>Developer Skill DAG Mermaid 图 · generated</small>"]
+    to_developer_DEV_SKILL_DAG_yaml["to-developer/DEV_SKILL_DAG.yaml<br/><small>Developer Skill DAG 源数据 · generated</small>"]
     to_developer_DOC_DAG_mmd["to-developer/DOC_DAG.mmd<br/><small>开发者文档 DAG Mermaid 图 · generated</small>"]
     to_developer_DOC_DAG_yaml["to-developer/DOC_DAG.yaml<br/><small>开发者文档 DAG 源数据 · governance</small>"]
     to_developer_adr___md["to-developer/adr/*.md<br/><small>开发者 ADR · architecture</small>"]
+    to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md["to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md<br/><small>Developer Skill 安装面 ADR · architecture</small>"]
     to_developer_context_archive___md["to-developer/context-archive/*.md<br/><small>Design Grilling Context 归档 · discussion</small>"]
     to_developer_deploy_QAs_20260613_clash_with_servers_md["to-developer/deploy-QAs/20260613-clash_with_servers.md<br/><small>服务器代理 QA · deploy</small>"]
     to_developer_discussions___md["to-developer/discussions/*.md<br/><small>开发讨论记录 · discussion</small>"]
@@ -37,6 +41,7 @@ graph LR
     to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md["to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md<br/><small>cheap worker 默认分工 · architecture</small>"]
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md["to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md<br/><small>CLI 与部署运行时机制 · architecture</small>"]
     to_developer_realtest_20260616_REALTEST_CONTAINER_md["to-developer/realtest/20260616-REALTEST_CONTAINER.md<br/><small>实机测试容器说明 · deploy</small>"]
+    to_developer_skills_dev___SKILL_md["to-developer/skills/dev-*/SKILL.md<br/><small>Developer Skill 源文件 · architecture</small>"]
 
     to_developer_DOC_DAG_yaml -- "generates" --> to_developer_DOC_DAG_mmd
     to_developer_DOC_DAG_yaml -- "informs" --> to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md
@@ -58,6 +63,13 @@ graph LR
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "informs" --> to_developer_20260615_FRAMEWORK_MODULES_md
     to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md -- "summarized_by" --> to_developer_20260613_DEVELOPMENT_LOG_md
     to_developer_adr___md -- "informs" --> docs_FEISHU_INTEGRATION_md
+    to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md -- "constrains" --> to_developer_20260615_FRAMEWORK_MODULES_md
+    to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md -- "constrains" --> to_developer_plans_20260613_PROMOTE_FLOW_md
+    to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md -- "constrains" --> to_developer_DEV_SKILL_CATALOG_md
+    to_developer_skills_dev___SKILL_md -- "generates" --> to_developer_DEV_SKILL_CATALOG_md
+    to_developer_skills_dev___SKILL_md -- "generates" --> to_developer_DEV_SKILL_DAG_yaml
+    to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md -- "constrains" --> to_developer_DEV_SKILL_DAG_yaml
+    to_developer_DEV_SKILL_DAG_yaml -- "generates" --> to_developer_DEV_SKILL_DAG_mmd
     to_developer_logs___md -- "summarized_by" --> to_developer_20260613_DEVELOPMENT_LOG_md
     to_developer_logs_skill_usability_parts___md -- "summarized_by" --> to_developer_logs_20260615_SKILL_USABILITY_AUDIT_20260614_md
     to_developer_20260613_DEVELOPMENT_LOG_md -- "distilled_to" --> CHANGELOG_md
@@ -80,10 +92,10 @@ graph LR
     classDef deploy fill:#e0f2fe,stroke:#0369a1
     classDef discussion fill:#ffedd5,stroke:#c2410c
     classDef stable fill:#ecfccb,stroke:#4d7c0f
-    class to_developer_20260615_FRAMEWORK_MODULES_md,to_developer_adr___md,to_developer_plans_20260610_codex_migration_md,to_developer_plans_20260613_AGENT_STATUS_STREAM_md,to_developer_plans_20260613_LANGGRAPH_EVALUATION_md,to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md,to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md,to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md architecture
+    class to_developer_20260615_FRAMEWORK_MODULES_md,to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md,to_developer_adr___md,to_developer_plans_20260610_codex_migration_md,to_developer_plans_20260613_AGENT_STATUS_STREAM_md,to_developer_plans_20260613_LANGGRAPH_EVALUATION_md,to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md,to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md,to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md,to_developer_skills_dev___SKILL_md architecture
     class to_developer_deploy_QAs_20260613_clash_with_servers_md,to_developer_realtest_20260616_REALTEST_CONTAINER_md deploy
     class to_developer_context_archive___md,to_developer_discussions___md,to_developer_discussions___txt discussion
-    class to_developer_DOC_DAG_mmd generated
+    class to_developer_DEV_SKILL_CATALOG_md,to_developer_DEV_SKILL_DAG_mmd,to_developer_DEV_SKILL_DAG_yaml,to_developer_DOC_DAG_mmd generated
     class AGENTS_md,to_developer_DOC_DAG_yaml,to_developer_docs___md governance
     class to_developer_20260613_HANDOFF_CLAUDE_TO_CODEX_md,to_developer_20260613_handoff_2026_06_11_md handoff
     class to_developer_20260613_DEVELOPMENT_LOG_md,to_developer_logs_20260613_AGENT_STATUS_STREAM_VALIDATION_20260613_md,to_developer_logs_20260615_SKILL_USABILITY_AUDIT_20260614_md,to_developer_logs___md,to_developer_logs_skill_usability_parts___md log

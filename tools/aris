@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -18,6 +19,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=check, capture_output=True, text=True)
+
+
+def run_relay(cmd: list[str], cwd: Path | None = None) -> int:
+    result = run(cmd, cwd=cwd, check=False)
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+    return result.returncode
 
 
 def copy_text(src: Path, dst: Path, replacements: dict[str, str]) -> None:
@@ -150,11 +160,11 @@ def save_registry(data: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def dev_worker_config_path() -> Path:
-    return state_root() / "dev-workers.json"
+def dev_runtime_config_path() -> Path:
+    return state_root() / "dev-runtime.json"
 
 
-def default_dev_worker_config() -> dict:
+def default_dev_runtime_config() -> dict:
     return {
         "schema_version": 1,
         "defaults": {
@@ -170,7 +180,7 @@ def default_dev_worker_config() -> dict:
             }
         },
         "roles": {
-            "worker": {
+            "dev-worker": {
                 "provider": "codex_subagent",
                 "transport": "codex_subagent",
                 "model": "gpt-5.4-mini",
@@ -191,17 +201,17 @@ def default_dev_worker_config() -> dict:
     }
 
 
-def load_dev_worker_config(init: bool = False) -> dict:
-    path = dev_worker_config_path()
+def load_dev_runtime_config(init: bool = False) -> dict:
+    path = dev_runtime_config_path()
     if not path.exists():
-        data = default_dev_worker_config()
+        data = default_dev_runtime_config()
         if init:
-            save_dev_worker_config(data)
+            save_dev_runtime_config(data)
         return data
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
-        data = default_dev_worker_config()
+        data = default_dev_runtime_config()
     data.setdefault("schema_version", 1)
     data.setdefault("defaults", {})
     data["defaults"].setdefault("provider", "codex_subagent")
@@ -209,22 +219,22 @@ def load_dev_worker_config(init: bool = False) -> dict:
     data["defaults"].setdefault("model", "gpt-5.4-mini")
     data["defaults"].setdefault("reasoning_effort", "medium")
     data.setdefault("providers", {})
-    data["providers"].setdefault("codex_subagent", default_dev_worker_config()["providers"]["codex_subagent"])
+    data["providers"].setdefault("codex_subagent", default_dev_runtime_config()["providers"]["codex_subagent"])
     data.setdefault("roles", {})
-    data["roles"].setdefault("worker", default_dev_worker_config()["roles"]["worker"])
+    data["roles"].setdefault("dev-worker", default_dev_runtime_config()["roles"]["dev-worker"])
     if init:
-        save_dev_worker_config(data)
+        save_dev_runtime_config(data)
     return data
 
 
-def save_dev_worker_config(data: dict) -> None:
-    path = dev_worker_config_path()
+def save_dev_runtime_config(data: dict) -> None:
+    path = dev_runtime_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def dev_worker_log_root(framework: Path) -> Path:
-    root = framework / "to-developer" / "logs" / "dev-workers"
+def dev_runtime_log_root(framework: Path, role: str) -> Path:
+    root = framework / "to-developer" / "logs" / "dev-runtime" / role
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -376,10 +386,10 @@ def cmd_project_version(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_dev_worker_config(args: argparse.Namespace) -> int:
-    data = load_dev_worker_config(init=args.init)
+def cmd_dev_runtime_config(args: argparse.Namespace) -> int:
+    data = load_dev_runtime_config(init=args.init)
     defaults = data["defaults"]
-    print(f"config: {dev_worker_config_path()}")
+    print(f"config: {dev_runtime_config_path()}")
     print(f"default_provider: {defaults.get('provider', 'codex_subagent')}")
     print(f"default_transport: {defaults.get('transport', 'codex_subagent')}")
     print(f"default_model: {defaults.get('model', 'gpt-5.4-mini')}")
@@ -399,13 +409,13 @@ def cmd_dev_worker_config(args: argparse.Namespace) -> int:
     return 0
 
 
-def upsert_worker_provider(data: dict, name: str, spec: dict) -> dict:
+def upsert_runtime_provider(data: dict, name: str, spec: dict) -> dict:
     providers = data.setdefault("providers", {})
     providers[name] = {k: v for k, v in spec.items() if v is not None}
     return providers[name]
 
 
-def resolve_worker_provider(data: dict, provider_name: str | None, role: dict, defaults: dict) -> tuple[str, dict]:
+def resolve_runtime_provider(data: dict, provider_name: str | None, role: dict, defaults: dict) -> tuple[str, dict]:
     selected = provider_name or role.get("provider") or defaults.get("provider") or "codex_subagent"
     providers = data.get("providers", {})
     base = dict(providers.get(selected, {}))
@@ -419,8 +429,8 @@ def resolve_worker_provider(data: dict, provider_name: str | None, role: dict, d
     return selected, base
 
 
-def cmd_dev_worker_provider_set(args: argparse.Namespace) -> int:
-    data = load_dev_worker_config(init=True)
+def cmd_dev_runtime_provider_set(args: argparse.Namespace) -> int:
+    data = load_dev_runtime_config(init=True)
     spec = {
         "transport": args.transport,
         "model": args.model,
@@ -430,13 +440,13 @@ def cmd_dev_worker_provider_set(args: argparse.Namespace) -> int:
     if args.name == "deepseek-v4-flash":
         spec.setdefault("base_url", "https://api.deepseek.com/v1")
         spec.setdefault("api_key_env", "DEEPSEEK_API_KEY")
-    saved = upsert_worker_provider(data, args.name, spec)
+    saved = upsert_runtime_provider(data, args.name, spec)
     defaults = data.setdefault("defaults", {})
     if args.set_default:
         defaults["provider"] = args.name
         defaults["transport"] = saved.get("transport", defaults.get("transport", "codex_subagent"))
         defaults["model"] = saved.get("model", defaults.get("model", "gpt-5.4-mini"))
-    save_dev_worker_config(data)
+    save_dev_runtime_config(data)
     print(f"provider: {args.name}")
     print(f"transport: {saved.get('transport')}")
     print(f"model: {saved.get('model')}")
@@ -447,7 +457,25 @@ def cmd_dev_worker_provider_set(args: argparse.Namespace) -> int:
     return 0
 
 
-def resolve_worker_task(args: argparse.Namespace) -> tuple[str, Path | None]:
+def cmd_dev_runtime_use(args: argparse.Namespace) -> int:
+    data = load_dev_runtime_config(init=True)
+    providers = data.get("providers", {})
+    if args.provider not in providers:
+        raise SystemExit(f"unknown provider: {args.provider}")
+    role = data.setdefault("roles", {}).setdefault(args.role, {})
+    provider = providers[args.provider]
+    role["provider"] = args.provider
+    role["transport"] = provider.get("transport", role.get("transport", "codex_subagent"))
+    role["model"] = provider.get("model", role.get("model", "gpt-5.4-mini"))
+    save_dev_runtime_config(data)
+    print(f"role: {args.role}")
+    print(f"provider: {args.provider}")
+    print(f"transport: {role.get('transport')}")
+    print(f"model: {role.get('model')}")
+    return 0
+
+
+def resolve_runtime_task(args: argparse.Namespace) -> tuple[str, Path | None]:
     if args.task and args.task_file:
         raise SystemExit("choose either task or --task-file, not both")
     if args.task_file:
@@ -460,7 +488,7 @@ def resolve_worker_task(args: argparse.Namespace) -> tuple[str, Path | None]:
     raise SystemExit("missing task or --task-file")
 
 
-def worker_system_guardrails(
+def runtime_system_guardrails(
     role: str,
     provider: str,
     transport: str,
@@ -469,7 +497,7 @@ def worker_system_guardrails(
     api_key_env: str | None,
     effort: str | None,
 ) -> str:
-    return f"""# ARIS Dev Worker Guardrails
+    return f"""# ARIS Dev Runtime Guardrails
 
 role: {role}
 provider: {provider}
@@ -514,7 +542,7 @@ def openai_compatible_chat_completion(base_url: str, api_key: str, model: str, m
         raise RuntimeError(f"openai-compatible request failed: {exc.reason}") from exc
 
 
-def write_worker_run_artifacts(run_dir: Path, task_text: str, request_payload: dict, response_text: str, metadata: dict) -> None:
+def write_runtime_run_artifacts(run_dir: Path, task_text: str, request_payload: dict, response_text: str, metadata: dict) -> None:
     run_dir.mkdir(parents=True, exist_ok=False)
     (run_dir / "task.md").write_text(task_text, encoding="utf-8")
     (run_dir / "request.json").write_text(json.dumps(request_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -522,12 +550,12 @@ def write_worker_run_artifacts(run_dir: Path, task_text: str, request_payload: d
     (run_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def cmd_dev_worker_prompt(args: argparse.Namespace) -> int:
+def cmd_dev_runtime_prompt(args: argparse.Namespace) -> int:
     framework = resolve_aris_repo(args)
-    data = load_dev_worker_config(init=True)
+    data = load_dev_runtime_config(init=True)
     defaults = data["defaults"]
-    role = data.get("roles", {}).get(args.role, data["roles"]["worker"])
-    provider_name, provider = resolve_worker_provider(data, args.provider, role, defaults)
+    role = data.get("roles", {}).get(args.role, data["roles"].get("dev-worker", {}))
+    provider_name, provider = resolve_runtime_provider(data, args.provider, role, defaults)
     transport = args.transport or provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
     model = args.model or provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
     base_url = args.base_url or provider.get("base_url")
@@ -535,7 +563,7 @@ def cmd_dev_worker_prompt(args: argparse.Namespace) -> int:
     effort = args.reasoning_effort or role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     slug = sanitize_slug(args.task)
-    task_file = dev_worker_log_root(framework) / f"{stamp}-{slug}.md"
+    task_file = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug}.md"
     files = args.file or []
     file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
     prompt = f"""# ARIS Dev Worker Task
@@ -570,31 +598,31 @@ reasoning_effort: {effort}
 """
     task_file.write_text(prompt, encoding="utf-8")
     print(f"task_file: {task_file}")
-    print(f"worker_provider: {provider_name}")
-    print(f"worker_transport: {transport}")
-    print(f"worker_model: {model}")
-    print(f"worker_base_url: {base_url or '<none>'}")
-    print(f"worker_api_key_env: {api_key_env or '<none>'}")
-    print(f"worker_reasoning_effort: {effort}")
-    print("spawn_hint: use this prompt with a gpt-5.4-mini worker and review its patch before applying")
+    print(f"runtime_provider: {provider_name}")
+    print(f"runtime_transport: {transport}")
+    print(f"runtime_model: {model}")
+    print(f"runtime_base_url: {base_url or '<none>'}")
+    print(f"runtime_api_key_env: {api_key_env or '<none>'}")
+    print(f"runtime_reasoning_effort: {effort}")
+    print("spawn_hint: use this prompt with a low-cost dev runtime role and review its patch before applying")
     return 0
 
 
-def cmd_dev_worker_run(args: argparse.Namespace) -> int:
+def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
     framework = resolve_aris_repo(args)
-    data = load_dev_worker_config(init=True)
+    data = load_dev_runtime_config(init=True)
     defaults = data["defaults"]
-    role = data.get("roles", {}).get(args.role, data["roles"]["worker"])
-    provider_name, provider = resolve_worker_provider(data, args.provider, role, defaults)
+    role = data.get("roles", {}).get(args.role, data["roles"].get("dev-worker", {}))
+    provider_name, provider = resolve_runtime_provider(data, args.provider, role, defaults)
     transport = args.transport or provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
     model = args.model or provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
     base_url = args.base_url or provider.get("base_url")
     api_key_env = args.api_key_env or provider.get("api_key_env")
     effort = args.reasoning_effort or role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
-    task_text, task_path = resolve_worker_task(args)
+    task_text, task_path = resolve_runtime_task(args)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     slug_source = task_path.name if task_path else task_text
-    run_dir = dev_worker_log_root(framework) / f"{stamp}-{slug_from_text(slug_source)}"
+    run_dir = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug_from_text(slug_source)}"
 
     if transport == "codex_subagent":
         raise SystemExit("transport codex_subagent is executed by the current Codex session's subagent tool, not by the CLI runner")
@@ -608,7 +636,7 @@ def cmd_dev_worker_run(args: argparse.Namespace) -> int:
     if not api_key:
         raise SystemExit(f"missing API key environment variable: {api_key_env}")
 
-    system_prompt = worker_system_guardrails(args.role, provider_name, transport, model, base_url, api_key_env, effort)
+    system_prompt = runtime_system_guardrails(args.role, provider_name, transport, model, base_url, api_key_env, effort)
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": task_text},
@@ -633,12 +661,64 @@ def cmd_dev_worker_run(args: argparse.Namespace) -> int:
         "task_file": str(task_path) if task_path else "",
         "response_file": str(run_dir / "response.md"),
     }
-    write_worker_run_artifacts(run_dir, task_text, request_payload, choice_text or response_text, metadata)
+    write_runtime_run_artifacts(run_dir, task_text, request_payload, choice_text or response_text, metadata)
     print(f"run_dir: {run_dir}")
     print(f"provider: {provider_name}")
     print(f"model: {model}")
     print(f"response_file: {run_dir / 'response.md'}")
     return 0
+
+
+def cmd_dev_skills(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    installer = framework / "tools" / "install_aris_dev_skills.sh"
+    if not installer.exists():
+        raise SystemExit(f"missing dev skill installer: {installer}")
+    extra: list[str] = []
+    if getattr(args, "dry_run", False):
+        extra.append("--dry-run")
+    if getattr(args, "quiet", False):
+        extra.append("--quiet")
+    return run_relay(
+        [
+            "bash",
+            str(installer),
+            args.dev_skills_action,
+            "--aris-repo",
+            str(framework),
+            *extra,
+        ],
+        cwd=framework,
+    )
+
+
+def cmd_dev_user_surface_update(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    commands = [
+        [sys.executable, "tools/generate_skill_dag.py"],
+        [sys.executable, "tools/generate_skill_dag.py", "--mermaid"],
+        [sys.executable, "tools/generate_skill_catalog.py"],
+        [sys.executable, "tools/translate_skill_catalog.py"],
+    ]
+    for cmd in commands:
+        rc = run_relay(cmd, cwd=framework)
+        if rc != 0:
+            return rc
+    print("user_surface: updated")
+    return 0
+
+
+def cmd_dev_user_surface_check(args: argparse.Namespace) -> int:
+    framework = resolve_aris_repo(args)
+    rc = run_relay([sys.executable, "tools/generate_skill_dag.py", "--check-only"], cwd=framework)
+    if rc != 0:
+        return rc
+    for rel in ["docs/SKILL_DAG.yaml", "docs/SKILL_CATALOG.md", "docs/SKILL_CATALOG_CN.md"]:
+        path = framework / rel
+        print(f"{rel}: {'ok' if path.exists() else 'missing'}")
+        if not path.exists():
+            rc = 1
+    return rc
 
 
 def history_dir() -> Path:
@@ -946,55 +1026,81 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(dev)
     dev_sub = dev.add_subparsers(dest="dev_command", required=True)
 
-    worker = dev_sub.add_parser("worker")
-    add_common(worker)
-    worker_sub = worker.add_subparsers(dest="worker_command", required=True)
+    dev_skills = dev_sub.add_parser("skills")
+    add_common(dev_skills)
+    dev_skills_sub = dev_skills.add_subparsers(dest="dev_skills_action", required=True)
+    for action in ["install", "update", "doctor", "detach"]:
+        dev_skills_action = dev_skills_sub.add_parser(action)
+        add_common(dev_skills_action)
+        dev_skills_action.add_argument("--dry-run", action="store_true")
+        dev_skills_action.set_defaults(func=cmd_dev_skills, dev_skills_action=action)
 
-    worker_config = worker_sub.add_parser("config")
-    add_common(worker_config)
-    worker_config.add_argument("--init", action="store_true")
-    worker_config.set_defaults(func=cmd_dev_worker_config)
+    user_surface = dev_sub.add_parser("user-surface")
+    add_common(user_surface)
+    user_surface_sub = user_surface.add_subparsers(dest="user_surface_command", required=True)
+    user_surface_check = user_surface_sub.add_parser("check")
+    add_common(user_surface_check)
+    user_surface_check.set_defaults(func=cmd_dev_user_surface_check)
+    user_surface_update = user_surface_sub.add_parser("update")
+    add_common(user_surface_update)
+    user_surface_update.set_defaults(func=cmd_dev_user_surface_update)
 
-    worker_provider = worker_sub.add_parser("provider")
-    add_common(worker_provider)
-    worker_provider_sub = worker_provider.add_subparsers(dest="worker_provider_command", required=True)
+    for runtime_name in ["runtime", "rt"]:
+        runtime = dev_sub.add_parser(runtime_name)
+        add_common(runtime)
+        runtime_sub = runtime.add_subparsers(dest=f"{runtime_name}_command", required=True)
 
-    provider_set = worker_provider_sub.add_parser("set")
-    add_common(provider_set)
-    provider_set.add_argument("name")
-    provider_set.add_argument("--transport", required=True)
-    provider_set.add_argument("--model", required=True)
-    provider_set.add_argument("--base-url")
-    provider_set.add_argument("--api-key-env")
-    provider_set.add_argument("--set-default", action="store_true")
-    provider_set.set_defaults(func=cmd_dev_worker_provider_set)
+        runtime_config = runtime_sub.add_parser("config")
+        add_common(runtime_config)
+        runtime_config.add_argument("--init", action="store_true")
+        runtime_config.set_defaults(func=cmd_dev_runtime_config)
 
-    worker_prompt = worker_sub.add_parser("prompt")
-    add_common(worker_prompt)
-    worker_prompt.add_argument("task")
-    worker_prompt.add_argument("--file", action="append")
-    worker_prompt.add_argument("--role", default="worker")
-    worker_prompt.add_argument("--provider")
-    worker_prompt.add_argument("--transport")
-    worker_prompt.add_argument("--model")
-    worker_prompt.add_argument("--base-url")
-    worker_prompt.add_argument("--api-key-env")
-    worker_prompt.add_argument("--reasoning-effort")
-    worker_prompt.set_defaults(func=cmd_dev_worker_prompt)
+        runtime_provider = runtime_sub.add_parser("provider")
+        add_common(runtime_provider)
+        runtime_provider_sub = runtime_provider.add_subparsers(dest=f"{runtime_name}_provider_command", required=True)
 
-    worker_run = worker_sub.add_parser("run")
-    add_common(worker_run)
-    worker_run.add_argument("task", nargs="?")
-    worker_run.add_argument("--task-file")
-    worker_run.add_argument("--role", default="worker")
-    worker_run.add_argument("--provider")
-    worker_run.add_argument("--transport")
-    worker_run.add_argument("--model")
-    worker_run.add_argument("--base-url")
-    worker_run.add_argument("--api-key-env")
-    worker_run.add_argument("--reasoning-effort")
-    worker_run.add_argument("--timeout", type=int, default=120)
-    worker_run.set_defaults(func=cmd_dev_worker_run)
+        provider_set = runtime_provider_sub.add_parser("set")
+        add_common(provider_set)
+        provider_set.add_argument("name")
+        provider_set.add_argument("--transport", required=True)
+        provider_set.add_argument("--model", required=True)
+        provider_set.add_argument("--base-url")
+        provider_set.add_argument("--api-key-env")
+        provider_set.add_argument("--set-default", action="store_true")
+        provider_set.set_defaults(func=cmd_dev_runtime_provider_set)
+
+        runtime_use = runtime_sub.add_parser("use")
+        add_common(runtime_use)
+        runtime_use.add_argument("role")
+        runtime_use.add_argument("provider")
+        runtime_use.set_defaults(func=cmd_dev_runtime_use)
+
+        runtime_prompt = runtime_sub.add_parser("prompt")
+        add_common(runtime_prompt)
+        runtime_prompt.add_argument("role")
+        runtime_prompt.add_argument("task")
+        runtime_prompt.add_argument("--file", action="append")
+        runtime_prompt.add_argument("--provider")
+        runtime_prompt.add_argument("--transport")
+        runtime_prompt.add_argument("--model")
+        runtime_prompt.add_argument("--base-url")
+        runtime_prompt.add_argument("--api-key-env")
+        runtime_prompt.add_argument("--reasoning-effort")
+        runtime_prompt.set_defaults(func=cmd_dev_runtime_prompt)
+
+        runtime_run = runtime_sub.add_parser("run")
+        add_common(runtime_run)
+        runtime_run.add_argument("role")
+        runtime_run.add_argument("task", nargs="?")
+        runtime_run.add_argument("--task-file")
+        runtime_run.add_argument("--provider")
+        runtime_run.add_argument("--transport")
+        runtime_run.add_argument("--model")
+        runtime_run.add_argument("--base-url")
+        runtime_run.add_argument("--api-key-env")
+        runtime_run.add_argument("--reasoning-effort")
+        runtime_run.add_argument("--timeout", type=int, default=120)
+        runtime_run.set_defaults(func=cmd_dev_runtime_run)
 
     fw_update = framework_sub.add_parser("update")
     add_common(fw_update)

@@ -6,6 +6,20 @@
 
 本文定义开发侧默认分工。它不引入新的 ARIS Role；它只规定一种默认的 Role Transport / worker 运行方式，用于把低风险、可批量处理的工作从主控路径中剥离出来。
 
+`dev-worker` 的职责文档位于 `to-developer/skills/dev-worker/SKILL.md`。它是 Developer Skill，不是 User Skill，不进入用户项目 role graph。
+
+第一版 Developer Skill 安装面只支持 Codex：`to-developer/skills/dev-*` 链接到 dev checkout 的 `.agents/skills/dev-*`，不创建 `.claude/skills/dev-*`。
+
+第一批 Developer Skill Fork：
+
+- `dev-caveman` <- `skills/caveman`
+- `dev-tdd` <- `skills/tdd`
+- `dev-diagnose` <- `skills/diagnose`
+- `dev-review` <- `skills/review`
+- `dev-grill-docs` <- `skills/grill-with-docs`
+- `dev-handoff` <- `skills/handoff`
+- `dev-zoom-out` <- `skills/zoom-out`
+
 ## 默认控制面
 
 开发侧默认由 `Codex` / `leader` 负责最终判断和收口：
@@ -52,12 +66,15 @@ worker 不负责：
 - task file、日志和 stdout 都不能泄露真实密钥。
 - `base_url` 可以覆盖，但 provider 名称和 model 仍应保留明确含义，便于批量任务追踪。
 
+规范命令使用 `aris dev rt ...` 短命令；`aris dev runtime ...` 是等价长命令。不保留 `aris dev worker ...` 作为 canonical 入口。
+
 示例命令：
 
 ```bash
-aris dev worker provider set deepseek-v4-flash --transport openai_compatible --model deepseek-v4-flash --base-url https://api.deepseek.com/v1 --api-key-env DEEPSEEK_API_KEY
-aris dev worker prompt "批量扫文档并补链接" --provider deepseek-v4-flash --file docs/FEISHU_INTEGRATION.md
-aris dev worker run "批量扫文档并补链接" --provider deepseek-v4-flash --file docs/FEISHU_INTEGRATION.md
+aris dev rt provider set deepseek-v4-flash --transport openai_compatible --model deepseek-v4-flash --base-url https://api.deepseek.com/v1 --api-key-env DEEPSEEK_API_KEY
+aris dev rt use dev-worker deepseek-v4-flash
+aris dev rt prompt dev-worker "批量扫文档并补链接" --file docs/FEISHU_INTEGRATION.md
+aris dev rt run dev-worker "批量扫文档并补链接" --file docs/FEISHU_INTEGRATION.md
 ```
 
 ## prompt / run / 日志分工

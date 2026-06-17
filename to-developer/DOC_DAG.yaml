@@ -68,6 +68,26 @@ nodes:
     title: "开发者 ADR"
     layer: architecture
     kind: glob
+  to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md:
+    title: "Developer Skill 安装面 ADR"
+    layer: architecture
+    kind: adr
+  to-developer/DEV_SKILL_CATALOG.md:
+    title: "Developer Skill 目录"
+    layer: generated
+    kind: generated
+  to-developer/DEV_SKILL_DAG.yaml:
+    title: "Developer Skill DAG 源数据"
+    layer: generated
+    kind: generated
+  to-developer/DEV_SKILL_DAG.mmd:
+    title: "Developer Skill DAG Mermaid 图"
+    layer: generated
+    kind: generated
+  to-developer/skills/dev-*/SKILL.md:
+    title: "Developer Skill 源文件"
+    layer: architecture
+    kind: glob
   to-developer/docs/*.md:
     title: "开发者文档维护规则"
     layer: governance
@@ -239,6 +259,34 @@ edges:
     to: docs/FEISHU_INTEGRATION.md
     type: informs
     reason: "用户侧飞书文档只暴露结论，详细决策保留在开发者 ADR。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/20260615-FRAMEWORK_MODULES.md
+    type: constrains
+    reason: "Developer Skill 独立安装面约束开发者模块边界。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
+    type: constrains
+    reason: "Developer Skill 不应按用户能力 promote 到 stable。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/DEV_SKILL_CATALOG.md
+    type: constrains
+    reason: "Developer Skill 目录只收录 dev-only skill。"
+  - from: to-developer/skills/dev-*/SKILL.md
+    to: to-developer/DEV_SKILL_CATALOG.md
+    type: generates
+    reason: "Developer Skill 源文件生成 dev-only skill 目录。"
+  - from: to-developer/skills/dev-*/SKILL.md
+    to: to-developer/DEV_SKILL_DAG.yaml
+    type: generates
+    reason: "Developer Skill 源文件生成 dev-only DAG 源数据。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/DEV_SKILL_DAG.yaml
+    type: constrains
+    reason: "Developer Skill DAG 独立于用户 Skill DAG。"
+  - from: to-developer/DEV_SKILL_DAG.yaml
+    to: to-developer/DEV_SKILL_DAG.mmd
+    type: generates
+    reason: "Developer Skill DAG 源数据生成 Mermaid 图。"
 
   - from: to-developer/logs/*.md
     to: to-developer/20260613-DEVELOPMENT_LOG.md

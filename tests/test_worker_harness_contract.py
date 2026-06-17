@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
-import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 
@@ -43,36 +40,26 @@ def test_codex_shared_references_do_not_define_worker_user_role() -> None:
         assert "| Worker |" not in content
 
 
-def test_dev_worker_config_default_is_codex_harness_provider() -> None:
-    with tempfile.TemporaryDirectory(prefix="aris-worker-contract-") as tmp:
-        workspace = Path(tmp) / "workspace"
-        framework = Path(tmp) / "framework"
-        (framework / "tools").mkdir(parents=True)
-        (framework / "templates").mkdir()
-        env = os.environ.copy()
-        env["ARIS_WORKSPACE"] = str(workspace)
+def test_legacy_dev_worker_namespace_is_not_available() -> None:
+    result = subprocess.run(
+        [str(ARIS_CLI), "dev", "worker", "config", "--init"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+    )
 
-        result = subprocess.run(
-            [str(ARIS_CLI), "dev", "worker", "config", "--init", "--aris-repo", str(REPO_ROOT), "--quiet"],
-            cwd=tmp,
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-
-        assert result.returncode == 0, result.stderr
-        config = json.loads((workspace / ".aris" / "dev-workers.json").read_text(encoding="utf-8"))
-        assert config["defaults"]["provider"] == "codex_subagent"
-        assert config["providers"]["codex_subagent"]["transport"] == "codex_subagent"
-        assert config["roles"]["worker"]["provider"] == "codex_subagent"
+    assert result.returncode != 0
+    assert "invalid choice" in result.stderr
+    assert "'worker'" in result.stderr
 
 
-def test_dev_worker_runtime_is_documented_as_dev_only() -> None:
+def test_dev_runtime_is_documented_as_dev_only() -> None:
     plan = read("to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md")
 
     assert "状态: dev-only 草案" in plan
     assert "不引入新的 ARIS Role" in plan
-    assert "aris dev worker provider set" in plan
+    assert "aris dev rt use dev-worker deepseek-v4-flash" in plan
+    assert "aris dev runtime ..." in plan
 
 
 def test_user_docs_do_not_show_worker_as_project_role() -> None:

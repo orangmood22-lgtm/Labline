@@ -60,9 +60,21 @@ _Avoid_: putting maintainer-only module notes in `CHANGELOG.md`
 Maintainer-facing planning, discussion, handoff, validation, and ADR files kept in the dev checkout. They are not part of stable framework releases.
 _Avoid_: committing credentials, host secrets, API keys, or private SSH notes
 
+**User Skill**:
+A skill intended for research project users and project agents. User Skills may be installed into projects, included in the user-facing skill catalog, and promoted to the Stable Line when release gates pass.
+_Avoid_: putting framework-maintenance helpers in the user skill graph
+
+**Developer Skill**:
+A maintainer-facing skill used to develop, review, test, generate, or release ARIS itself. Developer Skills use a `dev-` name prefix, may live in the Development Line, are not installed into research projects, and are not promoted to the Stable Line as user capabilities.
+_Avoid_: treating every dev checkout skill as a future stable skill; reusing a User Skill name for a Developer Skill
+
 **Release Gate**:
 The checklist that must pass before tagging a framework release. Patch releases use a lightweight gate focused on the changed area; minor releases use a stricter gate covering changelog, development log, generated catalogs/DAGs, installer behavior, Codex mirror compatibility, and at least one install or dev-to-stable validation.
 _Avoid_: tagging first and checking later
+
+**Promote Candidate Type**:
+The classification that determines whether a dev checkout asset may move toward the Stable Line. Allowed candidate types are user-facing skills, tools, templates, docs, deploy assets, examples, compatibility assets, MCP servers, tests, and static assets; Developer Skills, Developer Material, dev runtime state, and private config are not promote candidates.
+_Avoid_: promoting by path alone without checking user/developer scope
 
 **Release Tag Automation**:
 The guarded scripts that check and create framework release tags. Tag automation defaults to dry-run, creates a local tag only with `--apply`, and pushes the tag only with the additional `--push-tag` flag.
@@ -224,6 +236,26 @@ _Avoid_: mixing model/provider configuration into skill topology
 The current mapping from roles to concrete transports, models, sessions, providers, and credentials. It can vary per deployment or project while the Logical Skill Graph stays stable.
 _Avoid_: hard-coding cheap worker or reviewer topology into prose mentions
 
+**Developer Skill Install Surface**:
+The development-only symlink and manifest surface that installs `dev-*` Developer Skills into an ARIS dev checkout for framework maintenance. It is controlled by the `aris dev skills ...` namespace and must not install skills into research projects.
+_Avoid_: reusing user project installers for developer-only skills; coupling developer skill updates to user-surface generation
+
+**Developer User Surface**:
+The development checkout surface that prepares user-facing assets for eventual stable release, such as User Skill mirrors, generated catalogs, DAGs, templates, and user docs. It is controlled by the `aris dev user-surface ...` namespace and must not include Developer Skills.
+_Avoid_: mixing dev-only tools into generated user catalogs or project install manifests; mutating developer skill symlinks as a side effect of user-surface updates
+
+**Developer Skill DAG**:
+The development-only dependency graph for `dev-*` Developer Skills. It is separate from the user Skill DAG and must not make Developer Skills appear in user catalogs, project install manifests, or stable user role graphs.
+_Avoid_: merging maintainer-only skill topology into the user Logical Skill Graph
+
+**Developer Skill Fork**:
+A Developer Skill derived from a User Skill so it can evolve for framework-maintenance work without changing the user-facing skill. Developer Skill Forks use `dev-` names and should preserve lineage to the source User Skill without sharing the same role in the user graph.
+_Avoid_: editing User Skills for maintainer-only needs; silently duplicating skills without lineage
+
+**Developer Runtime Surface**:
+The development-only provider, model, role-binding, prompt, and run surface for maintainer helper agents. It is controlled by `aris dev runtime ...` with `aris dev rt ...` as the short alias; legacy `aris dev worker ...` is not part of the canonical CLI.
+_Avoid_: creating one-off dev CLI namespaces for individual helper roles
+
 **Skill Invocation Edge**:
 A machine-readable edge saying one skill or workflow step may call, delegate to, or require another skill. It must come from structured metadata or an explicit governance file, not from casual prose mention.
 _Avoid_: inferring runtime dependencies from a skill name appearing in documentation
@@ -257,8 +289,8 @@ The fixed list of pending human checkpoint decisions in an experiment workflow. 
 _Avoid_: arbitrary hidden pauses, unbounded free-form intervention state
 
 **Cheap Worker**:
-A low-cost development or execution worker used for bounded, reviewable tasks such as batch documentation edits, reference sweeps, test drafts, and low-risk patch drafts. Cheap workers do not make final architecture, release, promote, rollback, or secret-handling decisions.
-_Avoid_: delegating ownership or final judgment to the cheapest model
+A low-cost Developer Skill or development runtime helper used for bounded, reviewable framework-maintenance tasks such as batch documentation edits, reference sweeps, test drafts, and low-risk patch drafts. Cheap Worker is not a User Skill and is not part of the research project role graph.
+_Avoid_: delegating ownership or final judgment to the cheapest model; exposing Cheap Worker as a project user role
 
 **OpenAI-Compatible Provider**:
 A worker provider configured with `base_url`, `model`, and `api_key_env` for chat-completions style APIs. ARIS stores the environment variable name, not the API key value.
