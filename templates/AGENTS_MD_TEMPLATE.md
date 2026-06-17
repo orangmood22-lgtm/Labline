@@ -40,6 +40,7 @@ last_updated: ""     # YYYY-MM-DD HH:mm — auto-updated by skills on every outp
 | **Coder**    | `codex exec -p coder`   | 代码实现、测试、修 bug、重构           |
 | **Deployer** | `codex exec -p deployer`| 同步、训练、监控、收集结果             |
 | **Writer**   | `codex exec -p writer`  | 论文、文档、rebuttal                  |
+| **Worker**   | Codex harness worker / cheap provider | 批量文档、引用清扫、测试草案、低风险 patch 草案 |
 | **Reviewer** | 独立 reviewer agent     | 独立代码审查、实验审计、claim 判定      |
 
 ## Project Constraints

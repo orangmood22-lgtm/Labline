@@ -2,7 +2,7 @@
 
 > Leader 派发 Executor 任务时，根据任务类型从本表选择推荐 skills 写入 prompt。
 > Executor 收到推荐后**必须使用**标记为"必用"的 skill。
-> Executor 有三种专用角色：Coder / Deployer / Writer，各有不同 skill 路由。
+> Executor 有三种主执行角色：Coder / Deployer / Writer，各有不同 skill 路由；Worker 是低风险辅助执行角色，只处理批量文档、引用清扫、测试草案和低风险 patch 草案。
 
 ## 角色→Skill 路由
 
@@ -33,6 +33,15 @@
 | **写数学证明** | `/proof-writer` | `/proof-checker`（验证时） | ❌ 关闭 |
 | **专利撰写** | 按阶段选用 | 见下方专利子表 | ❌ 关闭 |
 | **基金申请** | `/grant-proposal` | — | ❌ 关闭 |
+
+### Worker（低风险辅助执行）
+
+| 任务类型 | 必用 | 可选 | caveman |
+|----------|------|------|---------|
+| **批量文档整理** | `/caveman` | `/diagnose`（只限本地小问题定位） | ✅ 开启 |
+| **引用/路径/链接清扫** | `/caveman` | `/zoom-out`（需要全局视角时） | ✅ 开启 |
+| **测试草案/断言补全** | `/caveman` | `/tdd`（只写测试草案时） | ✅ 开启 |
+| **低风险 patch 草案** | `/caveman` | `/diagnose`（遇局部 bug 时） | ✅ 开启 |
 
 ### 专利任务细分
 
@@ -130,6 +139,38 @@ Agent:
     - 不做自审，写完交 Reviewer
     - 数据一致：数字必须与实验结果文件一致
     - 完成后列出所有产出文件路径
+```
+
+### Worker 派发
+
+```
+spawn_agent:
+  agent_type: worker
+  model: gpt-5.4-mini
+  message: |
+    你是 Worker，只做低风险辅助执行。
+    你不是一个人在代码库里，不要 revert 别人的改动。
+
+    ## 首先
+    Read .agents/skills/shared-references/agent-guide.md 了解可用 skills 和约束。
+    Read .agents/skills/worker/SKILL.md 了解 Worker 职责边界。
+
+    ## 你的任务
+    [具体任务描述]
+
+    ## 写入范围
+    - [明确文件或目录]
+
+    ## 推荐 Skills
+    本任务必用：/caveman
+    本任务可选：[根据路由表]
+
+    ## 约束
+    - 不碰密钥
+    - 不做最终架构、实验 claim、release、promote、rollback 决策
+    - 不自动 commit / push
+    - 如需越界，停止并报告
+    - 完成后列出所有产出文件路径和验证命令
 ```
 
 ## 更新本文件

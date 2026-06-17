@@ -1,6 +1,6 @@
 # ARIS Skill 目录（中文版）
 
-> 自动生成于 2026-06-13 15:39。共 94 个 skill，12 个分类。
+> 自动生成于 2026-06-17 10:37。共 96 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/translate_skill_catalog.py`
 
@@ -15,9 +15,9 @@
 - [图表/可视化](#图表可视化)（8）
 - [审查/质量](#审查质量)（6）
 - [专利/公文](#专利公文)（8）
-- [工具/同步](#工具同步)（7）
+- [工具/同步](#工具同步)（8）
 - [计算资源](#计算资源)（3）
-- [开发工具](#开发工具)（15）
+- [开发工具](#开发工具)（16）
 
 ---
 
@@ -773,6 +773,16 @@
 /feishu-notify [message-text]
 ```
 
+### `/feishu-session`
+
+**管理飞书/Lark 远程 Codex 或 Claude Code 会话；默认使用 lark-channel-bridge，ARIS 自研 runner 仅作审计/合并 fallback。**
+
+参数：`[start|mark-seen|report|merge]`
+
+```
+/feishu-session report leader-phone
+```
+
 ### `/framework-update`
 
 **一键更新 ARIS 框架：git pull + 重建 symlinks。**
@@ -973,6 +983,16 @@
 
 ```
 /to-prd
+```
+
+### `/worker`
+
+**低成本辅助执行角色：批量文档、引用清扫、测试草案和低风险 patch 草案。**
+
+参数：`辅助处理什么？（描述低风险批量任务）`
+
+```
+/worker
 ```
 
 ### `/write-a-skill`

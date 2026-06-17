@@ -1,6 +1,6 @@
 # ARIS Skill Catalog
 
-> 自动生成于 2026-06-14 12:57。共 95 个 skill，12 个分类。
+> 自动生成于 2026-06-17 10:37。共 96 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/generate_skill_catalog.py`
 
@@ -17,7 +17,7 @@
 - [专利/公文](#专利公文)（8）
 - [工具/同步](#工具同步)（8）
 - [计算资源](#计算资源)（3）
-- [开发工具](#开发工具)（15）
+- [开发工具](#开发工具)（16）
 
 ---
 
@@ -45,7 +45,7 @@
 
 ### `/leader`
 
-**三边架构总编排：自动用 Agent 工具派生 Executor、Codex MCP 调 Reviewer。一个窗口全流程。**
+**三边架构总编排：自动派生 Coder/Deployer/Writer/Worker，并调独立 Reviewer。一个窗口全流程。**
 
 参数：`[research-direction-or-plan-path]`
 
@@ -775,7 +775,7 @@
 
 ### `/feishu-session`
 
-**Manage Feishu-controlled Codex sessions, phone runners, and auditable phone-session merge reports. Use when user mentions Feishu control, phone con...**
+**Manage Feishu/Lark remote Codex or Claude Code access, with lark-channel-bridge as the default transport and ARIS phone-session reports as legacy/f...**
 
 参数：`[start|mark-seen|report|merge]`
 
@@ -983,6 +983,16 @@
 
 ```
 /to-prd
+```
+
+### `/worker`
+
+**低成本辅助执行角色 - 只做批量文档、引用清扫、测试草案和低风险 patch 草案；默认由 Codex harness subagent 执行，可绑定 cheap provider**
+
+参数：`辅助处理什么？（描述低风险批量任务）`
+
+```
+/worker
 ```
 
 ### `/write-a-skill`

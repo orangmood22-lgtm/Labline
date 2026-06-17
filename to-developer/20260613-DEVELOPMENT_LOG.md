@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### skills
+- Added `worker` as a first-class ARIS role skill and Codex mirror so Leader can dispatch low-risk auxiliary work through the Codex harness instead of treating cheap workers as an external CLI-only mechanism.
 - Added `skills/feishu-session/` for operating the Feishu-controlled Codex session bridge and runner.
 - Added Agent Status Stream protocol and wired Leader/Coder/Deployer/Writer role instructions to project-local status snapshots.
 - Updated reviewer-independence guidance so Reviewer status may carry transport/input-scope metadata without carrying review reasoning or executor summaries.
@@ -31,6 +32,7 @@
 - Updated idea candidate template paths to the current project file layout.
 
 ### docs
+- Updated tripartite architecture, operations guide, project agent template, skill catalog, and skill DAG so Worker appears as a low-risk auxiliary execution role with Codex harness transport and optional cheap provider binding.
 - 整理 `docs/` 用户侧入口，将开发者 ADR、迁移记录、LangGraph 评估和文档依赖维护规则迁入 `to-developer/`。
 - 新增 `to-developer/20260615-FRAMEWORK_MODULES.md`，明确开发者侧框架模块边界，并约束 `to-developer/20260613-DEVELOPMENT_LOG.md` 的模块记录方式。
 - 将 `to-developer/` 下的 `.md` / `.txt` 开发者文档统一改为 `YYYYMMDD-` 创建日期前缀，并同步 DAG、引用、release gate 和测试路径。
@@ -58,6 +60,7 @@
 - Made Codex review bridge portable across local paths.
 
 ### tests
+- Added Worker harness contract tests covering Leader dispatch, Codex mirror shared references, default `codex_subagent` provider config, user-facing docs, and negative checks against external CLI runner regressions.
 - 扩展 GPU 部署合约测试，覆盖 `.env` 示例、compose 环境变量、entrypoint proxy/git proxy 持久化。
 - 新增开发者文档 DAG 回归测试。
 - 新增实机测试容器 contract test，确保 dev-only realtest 资产保持独立路径、日志 mount 和默认 smoke 行为。

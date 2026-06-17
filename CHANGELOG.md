@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- Worker is now a first-class low-risk auxiliary execution role that Leader can dispatch through the Codex harness, with optional cheap provider binding kept as runtime configuration.
+
 ---
 
 ## [v0.3.3] - 2026-06-16

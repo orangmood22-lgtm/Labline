@@ -112,6 +112,7 @@ CN_DESC = {
     "deployer": "部署角色：只做 SSH 同步、启动训练、监控实验、收集结果。",
     "skill-dag-check": "修改 skill 前检查依赖影响，列出上游/下游关系。",
     "writer": "论文写作角色：只写论文、文档、Rebuttal，不写代码或部署。",
+    "worker": "低成本辅助执行角色：批量文档、引用清扫、测试草案和低风险 patch 草案。",
 }
 
 CN_ARG_HINT = {
