@@ -164,6 +164,71 @@ def dev_runtime_config_path() -> Path:
     return state_root() / "dev-runtime.json"
 
 
+def dev_runtime_env_path() -> Path:
+    return state_root() / "dev-runtime.env"
+
+
+def parse_dotenv(path: Path) -> dict[str, str]:
+    if not path.exists():
+        raise SystemExit(f"env file not found: {path}")
+    values: dict[str, str] = {}
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            raise SystemExit(f"invalid env line {path}:{lineno}: expected KEY=value")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            raise SystemExit(f"invalid env line {path}:{lineno}: empty key")
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        values[key] = value.replace("\\n", "\n").replace('\\"', '"').replace("\\\\", "\\")
+    return values
+
+
+def write_dotenv(path: Path, values: dict[str, str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    for key, value in sorted(values.items()):
+        escaped = value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+        lines.append(f'{key}="{escaped}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.chmod(0o600)
+
+
+def dotenv_get(values: dict[str, str], *keys: str) -> str:
+    lowered = {key.lower(): value for key, value in values.items()}
+    for key in keys:
+        if key in values and values[key]:
+            return values[key]
+        lower_key = key.lower()
+        if lower_key in lowered and lowered[lower_key]:
+            return lowered[lower_key]
+    return ""
+
+
+def runtime_provider_api_key_env(provider_name: str) -> str:
+    suffix = "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_name).strip("_")
+    while "__" in suffix:
+        suffix = suffix.replace("__", "_")
+    return f"ARIS_DEV_RT_{suffix or 'PROVIDER'}_API_KEY"
+
+
+def runtime_api_key(api_key_env: str) -> str:
+    value = os.environ.get(api_key_env)
+    if value:
+        return value
+    secrets = dev_runtime_env_path()
+    if secrets.exists():
+        return parse_dotenv(secrets).get(api_key_env, "")
+    return ""
+
+
 def default_dev_runtime_config() -> dict:
     return {
         "schema_version": 1,
@@ -475,6 +540,66 @@ def cmd_dev_runtime_use(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dev_runtime_load(args: argparse.Namespace) -> int:
+    env_file = Path(args.env_file).expanduser().resolve()
+    values = parse_dotenv(env_file)
+    role_name = dotenv_get(values, "agent", "agent_name", "ARIS_AGENT", "ARIS_AGENT_NAME")
+    provider_name = dotenv_get(values, "provider", "provider_name", "ARIS_PROVIDER", "ARIS_PROVIDER_NAME")
+    base_url = dotenv_get(values, "base_url", "ARIS_BASE_URL")
+    model = dotenv_get(values, "model_name", "model", "ARIS_MODEL_NAME", "ARIS_MODEL")
+    transport = dotenv_get(values, "transport", "ARIS_TRANSPORT") or "openai_compatible"
+    api_key = dotenv_get(values, "api_key", "ARIS_API_KEY")
+    api_key_env = dotenv_get(values, "api_key_env", "ARIS_API_KEY_ENV") or runtime_provider_api_key_env(provider_name)
+
+    missing = []
+    for key, value in [
+        ("agent", role_name),
+        ("provider", provider_name),
+        ("base_url", base_url),
+        ("model_name", model),
+    ]:
+        if not value:
+            missing.append(key)
+    if not api_key and not api_key_env:
+        missing.append("api_key or api_key_env")
+    if missing:
+        raise SystemExit(f"missing required env fields: {', '.join(missing)}")
+
+    data = load_dev_runtime_config(init=True)
+    provider = upsert_runtime_provider(
+        data,
+        provider_name,
+        {
+            "transport": transport,
+            "model": model,
+            "base_url": base_url,
+            "api_key_env": api_key_env,
+        },
+    )
+    role = data.setdefault("roles", {}).setdefault(role_name, {})
+    role["provider"] = provider_name
+    role["transport"] = provider.get("transport", transport)
+    role["model"] = provider.get("model", model)
+    save_dev_runtime_config(data)
+
+    secret_file = ""
+    if api_key:
+        secrets = parse_dotenv(dev_runtime_env_path()) if dev_runtime_env_path().exists() else {}
+        secrets[api_key_env] = api_key
+        write_dotenv(dev_runtime_env_path(), secrets)
+        secret_file = str(dev_runtime_env_path())
+
+    print(f"agent: {role_name}")
+    print(f"provider: {provider_name}")
+    print(f"transport: {transport}")
+    print(f"model: {model}")
+    print(f"base_url: {base_url}")
+    print(f"api_key_env: {api_key_env}")
+    if secret_file:
+        print(f"secret_file: {secret_file}")
+    return 0
+
+
 def resolve_runtime_task(args: argparse.Namespace) -> tuple[str, Path | None]:
     if args.task and args.task_file:
         raise SystemExit("choose either task or --task-file, not both")
@@ -632,7 +757,7 @@ def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
         raise SystemExit("missing base_url for openai_compatible provider")
     if not api_key_env:
         raise SystemExit("missing api_key_env for openai_compatible provider")
-    api_key = os.environ.get(api_key_env)
+    api_key = runtime_api_key(api_key_env)
     if not api_key:
         raise SystemExit(f"missing API key environment variable: {api_key_env}")
 
@@ -1074,6 +1199,11 @@ def build_parser() -> argparse.ArgumentParser:
         runtime_use.add_argument("role")
         runtime_use.add_argument("provider")
         runtime_use.set_defaults(func=cmd_dev_runtime_use)
+
+        runtime_load = runtime_sub.add_parser("load")
+        add_common(runtime_load)
+        runtime_load.add_argument("env_file")
+        runtime_load.set_defaults(func=cmd_dev_runtime_load)
 
         runtime_prompt = runtime_sub.add_parser("prompt")
         add_common(runtime_prompt)

@@ -50,6 +50,7 @@ patent/
 .aris/status/
 .aris/feishu-control/
 .aris/dev-runtime.json
+.aris/dev-runtime.env
 .aris/installed-dev-skills.txt
 to-developer/logs/dev-runtime/
 

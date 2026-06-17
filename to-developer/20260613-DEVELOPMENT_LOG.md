@@ -17,6 +17,7 @@
 
 ### tools
 - Added `aris dev rt/runtime ...` as the Developer Runtime Surface for provider registration, role binding, prompt generation, and OpenAI-compatible cheap worker runs; removed `aris dev worker ...` from the canonical CLI.
+- Added `aris dev rt load .env` for one-file Developer Runtime provider/agent injection, storing provider config separately from local API-key material.
 - Added `aris dev skills ...` and `tools/install_aris_dev_skills.sh` for Codex-only dev skill installation into the dev checkout `.agents/skills/dev-*` surface.
 - Added `aris dev user-surface ...` so user-facing catalog/DAG generation is explicit and separate from dev skill installation.
 - Added `tools/generate_dev_skill_catalog.py` and `tools/generate_dev_skill_dag.py` for dev-only skill catalog and DAG generation.

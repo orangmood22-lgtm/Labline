@@ -68,7 +68,25 @@ worker 不负责：
 
 规范命令使用 `aris dev rt ...` 短命令；`aris dev runtime ...` 是等价长命令。不保留 `aris dev worker ...` 作为 canonical 入口。
 
-示例命令：
+最小配置文件示例：
+
+```dotenv
+agent=dev-worker
+provider=deepseek-v4-flash
+base_url=https://api.deepseek.com/v1
+api_key=sk-...
+model_name=deepseek-v4-flash
+```
+
+注入配置：
+
+```bash
+aris dev rt load .env
+```
+
+`load` 会将 provider/agent 绑定写入 `~/.aris/dev-runtime.json`，将 API key 写入本机 `~/.aris/dev-runtime.env` 并设为 `0600`。运行时优先读取环境变量，其次读取该本机 secret 文件；stdout、task file、metadata 不打印真实 key。
+
+等价的手动配置命令：
 
 ```bash
 aris dev rt provider set deepseek-v4-flash --transport openai_compatible --model deepseek-v4-flash --base-url https://api.deepseek.com/v1 --api-key-env DEEPSEEK_API_KEY

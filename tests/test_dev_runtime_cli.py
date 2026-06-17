@@ -7,7 +7,9 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from threading import Thread
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +44,19 @@ class DevRuntimeCliTest(unittest.TestCase):
             text=True,
             env=env or self._env(),
         )
+
+    def _start_http_server(self, handler_factory):
+        server = HTTPServer(("127.0.0.1", 0), handler_factory)
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+
+        def cleanup():
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+        self.addCleanup(cleanup)
+        return server
 
     def test_dev_runtime_config_defaults_and_use_bind_dev_worker_to_deepseek_v4_flash(self) -> None:
         config = self._run("dev", "runtime", "config", "--init")
@@ -153,6 +168,71 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("Never log, print, or persist API key values; only record the environment variable name.", content)
         self.assertIn("- docs/FEISHU_INTEGRATION.md", content)
         self.assertNotIn("super-secret-value", content)
+
+    def test_dev_runtime_load_env_file_binds_provider_and_run_uses_saved_secret(self) -> None:
+        received = {}
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                received["path"] = self.path
+                received["auth"] = self.headers.get("Authorization")
+                length = int(self.headers.get("Content-Length", "0"))
+                received["body"] = json.loads(self.rfile.read(length).decode("utf-8"))
+                payload = {"choices": [{"message": {"content": "loaded env result"}}]}
+                encoded = json.dumps(payload).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(encoded)))
+                self.end_headers()
+                self.wfile.write(encoded)
+
+            def log_message(self, format, *args):
+                return
+
+        server = self._start_http_server(Handler)
+        env_file = self.tmp / ".env"
+        env_file.write_text(
+            "\n".join(
+                [
+                    "agent=dev-worker",
+                    "provider=deepseek-v4-flash",
+                    f"base_url=http://127.0.0.1:{server.server_port}",
+                    "api_key=super-secret-value",
+                    "model_name=deepseek-v4-flash",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        load = self._run("dev", "rt", "load", str(env_file))
+        self.assertEqual(load.returncode, 0, msg=load.stderr)
+        self.assertIn("agent: dev-worker", load.stdout)
+        self.assertIn("provider: deepseek-v4-flash", load.stdout)
+        self.assertIn("model: deepseek-v4-flash", load.stdout)
+        self.assertIn("api_key_env: ARIS_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY", load.stdout)
+        self.assertIn(f"secret_file: {self.home / '.aris' / 'dev-runtime.env'}", load.stdout)
+        self.assertNotIn("super-secret-value", load.stdout)
+
+        config = json.loads((self.home / ".aris" / "dev-runtime.json").read_text(encoding="utf-8"))
+        provider = config["providers"]["deepseek-v4-flash"]
+        self.assertEqual(provider["api_key_env"], "ARIS_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY")
+        self.assertEqual(config["roles"]["dev-worker"]["provider"], "deepseek-v4-flash")
+        self.assertNotIn("super-secret-value", json.dumps(config))
+
+        secret_file = self.home / ".aris" / "dev-runtime.env"
+        self.assertEqual(secret_file.stat().st_mode & 0o777, 0o600)
+
+        run = self._run("dev", "rt", "run", "dev-worker", "hello from env", "--timeout", "3")
+        self.assertEqual(run.returncode, 0, msg=run.stderr)
+        self.assertEqual(received["path"], "/chat/completions")
+        self.assertEqual(received["auth"], "Bearer super-secret-value")
+        self.assertEqual(received["body"]["model"], "deepseek-v4-flash")
+        self.assertNotIn("super-secret-value", run.stdout)
+        run_dir = Path(next(line for line in run.stdout.splitlines() if line.startswith("run_dir: ")).split(": ", 1)[1])
+        self.assertEqual((run_dir / "response.md").read_text(encoding="utf-8"), "loaded env result")
+        self.assertNotIn("super-secret-value", (run_dir / "request.json").read_text(encoding="utf-8"))
+        self.assertNotIn("super-secret-value", (run_dir / "metadata.json").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
