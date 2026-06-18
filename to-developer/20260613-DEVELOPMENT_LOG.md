@@ -1,6 +1,6 @@
-# ARIS Development Log
+# Labline Development Log
 
-开发者侧按模块记录的 ARIS 框架开发日志。模块边界见 `to-developer/20260615-FRAMEWORK_MODULES.md`；用户可见部分在发布前再蒸馏到 `CHANGELOG.md`。
+开发者侧按模块记录的 Labline 框架开发日志。模块边界见 `to-developer/20260615-FRAMEWORK_MODULES.md`；用户可见部分在发布前再蒸馏到 `CHANGELOG.md`。
 
 ## [Unreleased]
 
@@ -10,20 +10,25 @@
 - Added `skills/feishu-session/` for operating the Feishu-controlled Codex session bridge and runner.
 - Added Agent Status Stream protocol and wired Leader/Coder/Deployer/Writer role instructions to project-local status snapshots.
 - Updated reviewer-independence guidance so Reviewer status may carry transport/input-scope metadata without carrying review reasoning or executor summaries.
+- 固化用户侧默认 Runtime Binding：Leader=`gpt-5.5`，Planner/Reviewer/Writer=`gpt-5.4`，Coder/Deployer=`gpt-5.4-mini`；开发侧 Worker 默认 `gpt-5.4-mini`，且不进入用户 role graph。
+- 新增 `shared-references/role-contracts.md` 及 Codex mirror，固定 Leader/Planner/Coder/Deployer/Writer/Reviewer 的职责、默认模型绑定和 handoff 规则，避免 provider/model 覆盖改变用户侧 role graph。
 - Normalized skill DAG governance so formal edges come only from frontmatter `invokes`.
 - Added `platform`, `status`, and dependency metadata to key Codex/Claude dual-client skills.
 - Added Codex mirrors for the newly added skill set.
 - Enhanced `skills-codex-claude-review` overlays with reviewer bias guard, edit whitelist, reviewer memory, debate protocol, and broader venue support.
 
 ### tools
-- Added `aris dev rt/runtime ...` as the Developer Runtime Surface for provider registration, role binding, prompt generation, and OpenAI-compatible cheap worker runs; removed `aris dev worker ...` from the canonical CLI.
-- Added `aris dev rt load .env` for one-file Developer Runtime provider/agent injection, storing provider config separately from local API-key material.
-- Added `aris dev skills ...` and `tools/install_aris_dev_skills.sh` for Codex-only dev skill installation into the dev checkout `.agents/skills/dev-*` surface.
-- Added `aris dev user-surface ...` so user-facing catalog/DAG generation is explicit and separate from dev skill installation.
+- Renamed the framework from ARIS to Labline, with `lane` as the public CLI, `~/.labline` / `.labline` as runtime state, and `LABLINE_*` as the environment prefix. Legacy `.aris/manifest.json` remains migration input only.
+- Added `lane dev rt/runtime ...` as the Developer Runtime Surface for provider registration, role binding, prompt generation, and OpenAI-compatible cheap worker runs; removed `lane dev worker ...` from the canonical CLI.
+- Added `lane dev rt load .env` for one-file Developer Runtime provider/agent injection, storing provider config separately from local API-key material.
+- Added `lane dev rt config --json` for script-readable Developer Runtime config inspection without exposing API key values.
+- Added `lane dev skills ...` and `tools/install_labline_dev_skills.sh` for Codex-only dev skill installation into the dev checkout `.agents/skills/dev-*` surface.
+- Added `lane dev user-surface ...` so user-facing catalog/DAG generation is explicit and separate from dev skill installation.
 - Added `tools/generate_dev_skill_catalog.py` and `tools/generate_dev_skill_dag.py` for dev-only skill catalog and DAG generation.
+- Added optional `tools/generate_skill_dag.py --fail-on-inferred` gate so weak body mentions can be reported and eventually blocked without changing default DAG generation behavior.
 - 新增 `tools/update_developer_docs.py`，用于校验 dev-only 文档覆盖并重新生成 `to-developer/DOC_DAG.mmd`。
 - Added `tools/feishu_control.py` for session registration, inbox routing, control leases, approvals, `/interrupt`, and `/btw`.
-- Added `tools/aris_feishu_session.py` for managed `codex exec` sessions and live tmux injection with Feishu status-card updates.
+- Added `tools/labline_feishu_session.py` for managed `codex exec` sessions and live tmux injection with Feishu status-card updates.
 - Added `tools/agent_status.py` for schema-v1 per-agent status snapshots with `start`, `update`, `finish`, `list`, `summary`, and `validate`.
 - Made release tag tooling use `${PYTHON:-python3}` instead of assuming `python3.8`.
 - Added guarded release tooling under `tools/release/`.
@@ -42,11 +47,14 @@
 - Updated tripartite architecture, operations guide, project agent template, skill catalog, and skill DAG so user-facing roles stay limited to Leader, Coder, Deployer, Writer, and Reviewer; cheap worker/provider documentation stays under `to-developer/`.
 - 整理 `docs/` 用户侧入口，将开发者 ADR、迁移记录、LangGraph 评估和文档依赖维护规则迁入 `to-developer/`。
 - 新增 `to-developer/20260615-FRAMEWORK_MODULES.md`，明确开发者侧框架模块边界，并约束 `to-developer/20260613-DEVELOPMENT_LOG.md` 的模块记录方式。
+- 新增 `to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md`，作为人和 agent 共用的全局开发地图，统一说明 Labline 顶层分层、模块接口、重要性分级、当前缺口和开发路线图，并加入 `AGENTS.md` 必读列表。
 - 将 `to-developer/` 下的 `.md` / `.txt` 开发者文档统一改为 `YYYYMMDD-` 创建日期前缀，并同步 DAG、引用、release gate 和测试路径。
-- 新增 `to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md`，面向开发者详细说明 ARIS CLI、Project Registry、framework update/check/rollback、容器 shell hook 和部署拓扑的机制与测试契约。
+- 新增 `to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md`，面向开发者详细说明 Labline CLI、Project Registry、framework update/check/rollback、容器 shell hook 和部署拓扑的机制与测试契约。
 - 新增 `to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md`，说明开发侧默认由 Codex/leader 收口、gpt-5.4-mini 或命名 cheap worker provider 负责批量文档、扫引用、测试草案与低风险 patch 草案，并要求所有 worker 输出可追踪。
+- 新增 `to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md` 和 `to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md`，将 cheap worker 从 `dev rt` 远端 LLM 调用器重新定性为 dev-only 本地 coding agent surface；短期优先 OpenCode，Aider 作为 fallback，LangGraph/OpenClaw/Cline SDK/OpenHands SDK 进入中长期路线。
 - 新增 `to-developer/realtest/20260616-REALTEST_CONTAINER.md` 和 dev-only 实机测试容器资产，用于新功能在独立容器中做带日志的 smoke/integration 测试。
 - 新增 dev-only 开发者文档 DAG：`to-developer/DOC_DAG.yaml` / `to-developer/DOC_DAG.mmd`，用于统一维护开发计划、日志、讨论记录和 stable handoff 目标之间的更新关系。
+- 新增 `docs/EXPERIMENT_TRANSPARENCY_LEDGER.md`，将 Experiment Integrity 定性为贯穿 plan/execution/audit/claim 的 workflow module，并定义 dataset/split/metric/run/deviation/artifact/claim/checkpoint 最小 ledger record 类型；同步到 shared references 和 docs 索引。
 - Added Feishu integration docs and ADRs for opt-in remote control, live TUI takeover, and Feishu-priority control leases.
 - Added ADR-0002 and `to-developer/plans/20260613-AGENT_STATUS_STREAM.md` for the status-stream architecture and rollout plan.
 - Added local GPU validation report under `to-developer/logs/`.

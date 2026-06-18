@@ -145,7 +145,7 @@ For each section, specify:
 
 ### §4 Experiments / Main Results
 - **Figures planned**:
-  - Fig 1: [description, type: bar/line/table/architecture, WHAT COMPARISON it shows]
+  - Fig 1: [description, type: bar/line/table/architecture, WHAT COMPLablineON it shows]
   - Fig 2: [description]
   - Table 1: [what it shows, which methods/baselines compared]
 - **Data source**: [which JSON files / experiment results]

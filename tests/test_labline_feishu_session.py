@@ -12,7 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FEISHU_CONTROL = REPO_ROOT / "tools" / "feishu_control.py"
-ARIS_FEISHU_SESSION = REPO_ROOT / "tools" / "aris_feishu_session.py"
+LABLINE_FEISHU_SESSION = REPO_ROOT / "tools" / "labline_feishu_session.py"
 
 
 def run_control(args):
@@ -28,7 +28,7 @@ def run_control(args):
 
 def run_session(args, check=True):
     return subprocess.run(
-        [sys.executable, str(ARIS_FEISHU_SESSION), *args],
+        [sys.executable, str(LABLINE_FEISHU_SESSION), *args],
         cwd=str(REPO_ROOT),
         text=True,
         stdout=subprocess.PIPE,
@@ -354,7 +354,7 @@ def test_tmux_pane_mode_can_send_final_answer_from_codex_transcript():
 
 def test_wait_for_codex_task_complete_sends_heartbeat_status_cards():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -372,18 +372,18 @@ def test_wait_for_codex_task_complete_sends_heartbeat_status_cards():
         transcript = Path(tmp) / "rollout.jsonl"
         transcript.write_text("", encoding="utf-8")
 
-        with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
-            result, elapsed = aris_feishu_session.wait_for_codex_task_complete(Args(), transcript, transcript.stat().st_size)
+        with patch.object(labline_feishu_session, "post_json", return_value={"ok": True}) as post_json:
+            result, elapsed = labline_feishu_session.wait_for_codex_task_complete(Args(), transcript, transcript.stat().st_size)
 
     assert result is None
     assert elapsed >= 0
     status_payloads = [call.args[1] for call in post_json.call_args_list]
-    assert any(payload["title"] == "ARIS 状态" and "`leader-1` · 已收到信息 · 0s" in payload["body"] for payload in status_payloads)
+    assert any(payload["title"] == "Labline 状态" and "`leader-1` · 已收到信息 · 0s" in payload["body"] for payload in status_payloads)
 
 
 def test_send_status_updates_existing_status_card():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -395,12 +395,12 @@ def test_send_status_updates_existing_status_card():
 
     args = Args()
     with patch.object(
-        aris_feishu_session,
+        labline_feishu_session,
         "post_json",
         side_effect=[{"ok": True, "message_id": "om_status"}, {"ok": True, "message_id": "om_status"}],
     ) as post_json:
-        aris_feishu_session.send_status(args, "`leader-phone` · 已收到信息 · 0s")
-        aris_feishu_session.send_status(args, "`leader-phone` · 处理中 · 30s")
+        labline_feishu_session.send_status(args, "`leader-phone` · 已收到信息 · 0s")
+        labline_feishu_session.send_status(args, "`leader-phone` · 处理中 · 30s")
 
     assert post_json.call_args_list[0].args[0] == "http://bridge/send"
     assert post_json.call_args_list[1].args[0] == "http://bridge/update"
@@ -410,33 +410,33 @@ def test_send_status_updates_existing_status_card():
 
 def test_status_line_can_use_plain_or_warm_style():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         session_id = "leader-1"
         feishu_status_style = "plain"
 
-    assert aris_feishu_session.processing_status_text(Args(), 15) == "`leader-1` · 思考中 · 15s"
+    assert labline_feishu_session.processing_status_text(Args(), 15) == "`leader-1` · 思考中 · 15s"
 
     Args.feishu_status_style = "warm"
-    assert aris_feishu_session.processing_status_text(Args(), 15) == "`leader-1` · 思考中 · 15s"
+    assert labline_feishu_session.processing_status_text(Args(), 15) == "`leader-1` · 思考中 · 15s"
 
 
 def test_warm_status_without_hint_stays_minimal():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         session_id = "leader-1"
         feishu_status_style = "warm"
 
-    assert aris_feishu_session.processing_status_text(Args(), 30) == "`leader-1` · 处理中 · 30s"
-    assert aris_feishu_session.processing_status_text(Args(), 45) == "`leader-1` · 处理中 · 45s"
+    assert labline_feishu_session.processing_status_text(Args(), 30) == "`leader-1` · 处理中 · 30s"
+    assert labline_feishu_session.processing_status_text(Args(), 45) == "`leader-1` · 处理中 · 45s"
 
 
 def test_send_status_does_not_send_new_card_when_update_fails():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -447,8 +447,8 @@ def test_send_status_does_not_send_new_card_when_update_fails():
         http_timeout_seconds = 10
         _feishu_status_message_id_main = "om_status"
 
-    with patch.object(aris_feishu_session, "post_json", return_value={"error": "update failed"}) as post_json:
-        aris_feishu_session.send_status(Args(), "`leader-phone` · 处理中 · 30s")
+    with patch.object(labline_feishu_session, "post_json", return_value={"error": "update failed"}) as post_json:
+        labline_feishu_session.send_status(Args(), "`leader-phone` · 处理中 · 30s")
 
     assert len(post_json.call_args_list) == 1
     assert post_json.call_args_list[0].args[0] == "http://bridge/update"
@@ -456,7 +456,7 @@ def test_send_status_does_not_send_new_card_when_update_fails():
 
 def test_btw_status_uses_separate_card_from_main_status():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -468,8 +468,8 @@ def test_btw_status_uses_separate_card_from_main_status():
         _feishu_status_message_id_main = "om_main"
 
     args = Args()
-    with patch.object(aris_feishu_session, "post_json", return_value={"ok": True, "message_id": "om_btw"}) as post_json:
-        aris_feishu_session.send_status(args, "`leader-phone` · 已收到 BTW · 0s", channel="btw")
+    with patch.object(labline_feishu_session, "post_json", return_value={"ok": True, "message_id": "om_btw"}) as post_json:
+        labline_feishu_session.send_status(args, "`leader-phone` · 已收到 BTW · 0s", channel="btw")
 
     assert post_json.call_args_list[0].args[0] == "http://bridge/send"
     assert args._feishu_status_message_id_main == "om_main"
@@ -478,7 +478,7 @@ def test_btw_status_uses_separate_card_from_main_status():
 
 def test_run_live_tui_updates_status_to_completed_before_returning_answer():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -491,12 +491,12 @@ def test_run_live_tui_updates_status_to_completed_before_returning_answer():
         session_id = "leader-phone"
 
     args = Args()
-    with patch.object(aris_feishu_session, "latest_codex_transcript", return_value=Path("/tmp/rollout.jsonl")):
-        with patch.object(aris_feishu_session, "transcript_offset", return_value=0):
-            with patch.object(aris_feishu_session, "inject_message_to_tmux", return_value="Injected"):
-                with patch.object(aris_feishu_session, "wait_for_codex_task_complete", return_value=("done", 42)):
-                    with patch.object(aris_feishu_session, "send_status") as send_status:
-                        result = aris_feishu_session.run_live_tui_for_message(args, Path("/tmp/state"), {"processed_count": 0}, {"text": "hello"}, 0)
+    with patch.object(labline_feishu_session, "latest_codex_transcript", return_value=Path("/tmp/rollout.jsonl")):
+        with patch.object(labline_feishu_session, "transcript_offset", return_value=0):
+            with patch.object(labline_feishu_session, "inject_message_to_tmux", return_value="Injected"):
+                with patch.object(labline_feishu_session, "wait_for_codex_task_complete", return_value=("done", 42)):
+                    with patch.object(labline_feishu_session, "send_status") as send_status:
+                        result = labline_feishu_session.run_live_tui_for_message(args, Path("/tmp/state"), {"processed_count": 0}, {"text": "hello"}, 0)
 
     assert result == "done"
     assert send_status.call_args_list[-1].args[1] == "`leader-phone` · 已完成 · 42s"
@@ -505,7 +505,7 @@ def test_run_live_tui_updates_status_to_completed_before_returning_answer():
 
 def test_run_live_tui_does_not_overwrite_interrupt_status_with_completed():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -518,12 +518,12 @@ def test_run_live_tui_does_not_overwrite_interrupt_status_with_completed():
         session_id = "leader-phone"
 
     args = Args()
-    with patch.object(aris_feishu_session, "latest_codex_transcript", return_value=Path("/tmp/rollout.jsonl")):
-        with patch.object(aris_feishu_session, "transcript_offset", return_value=0):
-            with patch.object(aris_feishu_session, "inject_message_to_tmux", return_value="Injected"):
-                with patch.object(aris_feishu_session, "wait_for_codex_task_complete", return_value=("已中断", 3)):
-                    with patch.object(aris_feishu_session, "send_status") as send_status:
-                        result = aris_feishu_session.run_live_tui_for_message(args, Path("/tmp/state"), {"processed_count": 0}, {"text": "hello"}, 0)
+    with patch.object(labline_feishu_session, "latest_codex_transcript", return_value=Path("/tmp/rollout.jsonl")):
+        with patch.object(labline_feishu_session, "transcript_offset", return_value=0):
+            with patch.object(labline_feishu_session, "inject_message_to_tmux", return_value="Injected"):
+                with patch.object(labline_feishu_session, "wait_for_codex_task_complete", return_value=("已中断", 3)):
+                    with patch.object(labline_feishu_session, "send_status") as send_status:
+                        result = labline_feishu_session.run_live_tui_for_message(args, Path("/tmp/state"), {"processed_count": 0}, {"text": "hello"}, 0)
 
     assert result == "已中断"
     assert not any("已完成" in call.args[1] for call in send_status.call_args_list)
@@ -531,7 +531,7 @@ def test_run_live_tui_does_not_overwrite_interrupt_status_with_completed():
 
 def test_live_wait_interrupts_tmux_when_interrupt_message_arrives():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -561,9 +561,9 @@ def test_live_wait_interrupts_tmux_when_interrupt_message_arrives():
         transcript.write_text("", encoding="utf-8")
         runner = {"processed_count": 0}
 
-        with patch.object(aris_feishu_session, "send_tmux_key", return_value=None) as send_tmux_key:
-            with patch.object(aris_feishu_session, "send_status") as send_status:
-                result, elapsed = aris_feishu_session.wait_for_codex_task_complete(Args(), transcript, 0, root, runner, 1)
+        with patch.object(labline_feishu_session, "send_tmux_key", return_value=None) as send_tmux_key:
+            with patch.object(labline_feishu_session, "send_status") as send_status:
+                result, elapsed = labline_feishu_session.wait_for_codex_task_complete(Args(), transcript, 0, root, runner, 1)
 
     assert result == "已中断"
     assert elapsed >= 0
@@ -575,7 +575,7 @@ def test_live_wait_interrupts_tmux_when_interrupt_message_arrives():
 
 def test_live_wait_answers_btw_as_side_channel_without_injecting_main_thread():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -610,13 +610,13 @@ def test_live_wait_answers_btw_as_side_channel_without_injecting_main_thread():
         runner = {"processed_count": 0}
 
         args = Args()
-        with patch.object(aris_feishu_session, "send_status") as send_status:
-            with patch.object(aris_feishu_session, "run_btw_for_message", return_value="side answer") as run_btw:
-                with patch.object(aris_feishu_session, "send_response") as send_response:
-                    with patch.object(aris_feishu_session, "inject_message_to_tmux") as inject:
+        with patch.object(labline_feishu_session, "send_status") as send_status:
+            with patch.object(labline_feishu_session, "run_btw_for_message", return_value="side answer") as run_btw:
+                with patch.object(labline_feishu_session, "send_response") as send_response:
+                    with patch.object(labline_feishu_session, "inject_message_to_tmux") as inject:
                         inject.return_value = "Injected"
-                        result, _ = aris_feishu_session.wait_for_codex_task_complete(args, transcript, 0, root, runner, 1)
-                        aris_feishu_session.flush_pending_btw(args)
+                        result, _ = labline_feishu_session.wait_for_codex_task_complete(args, transcript, 0, root, runner, 1)
+                        labline_feishu_session.flush_pending_btw(args)
 
     assert result == "done"
     assert runner["processed_count"] == 2
@@ -681,15 +681,15 @@ def test_top_level_btw_message_runs_side_query_not_live_tmux():
 
 def test_legacy_flush_pending_btw_is_noop():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         pass
 
     args = Args()
     args._pending_btw = ["old"]
-    with patch.object(aris_feishu_session, "inject_message_to_tmux") as inject:
-        aris_feishu_session.flush_pending_btw(args)
+    with patch.object(labline_feishu_session, "inject_message_to_tmux") as inject:
+        labline_feishu_session.flush_pending_btw(args)
 
     inject.assert_not_called()
     assert args._pending_btw == []
@@ -758,7 +758,7 @@ def test_merge_prompt_writes_report_and_references_it():
 
 def test_send_response_defaults_to_feishu_card_payload():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -770,12 +770,12 @@ def test_send_response_defaults_to_feishu_card_payload():
         project_root = "/repo/a"
         _feishu_current_sender_open_id = ""
 
-    with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
-        aris_feishu_session.send_response(Args(), "**done**")
+    with patch.object(labline_feishu_session, "post_json", return_value={"ok": True}) as post_json:
+        labline_feishu_session.send_response(Args(), "**done**")
 
     assert post_json.call_args_list[0].args[0] == "http://bridge/control/respond"
     send_payload = post_json.call_args_list[1].args[1]
-    assert send_payload["title"] == "ARIS"
+    assert send_payload["title"] == "Labline"
     assert send_payload["body"] == "**done**"
     assert send_payload["color"] == "blue"
     assert "type" not in send_payload
@@ -783,7 +783,7 @@ def test_send_response_defaults_to_feishu_card_payload():
 
 def test_send_response_targets_current_feishu_sender_when_available():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -795,8 +795,8 @@ def test_send_response_targets_current_feishu_sender_when_available():
         project_root = "/repo/a"
         _feishu_current_sender_open_id = "ou_current"
 
-    with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
-        aris_feishu_session.send_response(Args(), "**done**")
+    with patch.object(labline_feishu_session, "post_json", return_value={"ok": True}) as post_json:
+        labline_feishu_session.send_response(Args(), "**done**")
 
     send_payload = post_json.call_args_list[1].args[1]
     assert send_payload["user_id"] == "ou_current"
@@ -804,7 +804,7 @@ def test_send_response_targets_current_feishu_sender_when_available():
 
 def test_send_response_can_use_plain_text_payload():
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    import aris_feishu_session
+    import labline_feishu_session
 
     class Args:
         bridge_url = "http://bridge"
@@ -816,8 +816,8 @@ def test_send_response_can_use_plain_text_payload():
         project_root = "/repo/a"
         _feishu_current_sender_open_id = ""
 
-    with patch.object(aris_feishu_session, "post_json", return_value={"ok": True}) as post_json:
-        aris_feishu_session.send_response(Args(), "**done**")
+    with patch.object(labline_feishu_session, "post_json", return_value={"ok": True}) as post_json:
+        labline_feishu_session.send_response(Args(), "**done**")
 
     send_payload = post_json.call_args_list[1].args[1]
     assert send_payload == {"type": "text", "content": "**done**"}

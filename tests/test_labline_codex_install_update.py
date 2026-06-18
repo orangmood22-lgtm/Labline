@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_aris_codex.sh"
+INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_labline_codex.sh"
 UPDATE_SCRIPT = REPO_ROOT / "tools" / "smart_update_codex.sh"
 
 
@@ -27,8 +27,8 @@ def make_skill(path: Path, body: str) -> None:
     (path / "SKILL.md").write_text(body)
 
 
-def make_minimal_aris_repo(root: Path) -> Path:
-    repo = root / "aris"
+def make_minimal_labline_repo(root: Path) -> Path:
+    repo = root / "labline"
     make_skill(repo / "skills" / "skills-codex" / "alpha", "# alpha\n")
     make_skill(repo / "skills" / "skills-codex" / "beta", "# beta-base\n")
     (repo / "skills" / "skills-codex" / "shared-references").mkdir(parents=True, exist_ok=True)
@@ -38,8 +38,8 @@ def make_minimal_aris_repo(root: Path) -> Path:
     return repo
 
 
-def test_install_aris_codex_dry_run_has_no_project_writes(tmp_path: Path) -> None:
-    repo = make_minimal_aris_repo(tmp_path)
+def test_install_labline_codex_dry_run_has_no_project_writes(tmp_path: Path) -> None:
+    repo = make_minimal_labline_repo(tmp_path)
     project = tmp_path / "project"
     project.mkdir()
 
@@ -48,25 +48,25 @@ def test_install_aris_codex_dry_run_has_no_project_writes(tmp_path: Path) -> Non
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(repo),
             "--dry-run",
         ]
     )
 
     assert "(dry-run) no changes made" in dry_run.stdout
-    assert not (project / ".aris").exists()
+    assert not (project / ".labline").exists()
     assert not (project / ".agents").exists()
     assert not (project / "AGENTS.md").exists()
 
 
-def test_install_aris_codex_avoids_bash4_associative_arrays() -> None:
+def test_install_labline_codex_avoids_bash4_associative_arrays() -> None:
     text = INSTALL_SCRIPT.read_text()
     assert "declare -A" not in text
 
 
-def test_install_aris_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
-    repo = make_minimal_aris_repo(tmp_path)
+def test_install_labline_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
+    repo = make_minimal_labline_repo(tmp_path)
     project = tmp_path / "project"
     project.mkdir()
 
@@ -75,18 +75,18 @@ def test_install_aris_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(repo),
             "--quiet",
         ]
     )
 
-    manifest = project / ".aris" / "installed-skills-codex.txt"
+    manifest = project / ".labline" / "installed-skills-codex.txt"
     assert manifest.exists()
     assert (project / "AGENTS.md").exists()
     agents_text = (project / "AGENTS.md").read_text()
-    assert "ARIS Codex Skill Scope" in agents_text
-    assert f"ARIS repo root: `{repo}`" in agents_text
+    assert "Labline Codex Skill Scope" in agents_text
+    assert f"Labline repo root: `{repo}`" in agents_text
     assert "repo_root" in agents_text
     assert '$1=="repo_root"{print $2; exit}' in agents_text
     assert "$1==repo_root" not in agents_text
@@ -98,7 +98,7 @@ def test_install_aris_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(repo),
             "--reconcile",
             "--with-claude-review-overlay",
@@ -116,7 +116,7 @@ def test_install_aris_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(repo),
             "--reconcile",
             "--with-claude-review-overlay",
@@ -132,7 +132,7 @@ def test_install_aris_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(repo),
             "--uninstall",
             "--quiet",
@@ -140,13 +140,13 @@ def test_install_aris_codex_reconcile_and_uninstall(tmp_path: Path) -> None:
     )
     assert (project / ".agents" / "skills" / "local-only").exists()
     assert not (project / ".agents" / "skills" / "beta").exists()
-    assert (project / ".aris" / "installed-skills-codex.txt.prev").exists()
-    assert "ARIS Codex Skill Scope" not in (project / "AGENTS.md").read_text()
+    assert (project / ".labline" / "installed-skills-codex.txt.prev").exists()
+    assert "Labline Codex Skill Scope" not in (project / "AGENTS.md").read_text()
 
 
-def test_install_aris_codex_uninstall_uses_manifest_repo_root(tmp_path: Path) -> None:
-    original_repo = make_minimal_aris_repo(tmp_path / "original")
-    other_repo = make_minimal_aris_repo(tmp_path / "other")
+def test_install_labline_codex_uninstall_uses_manifest_repo_root(tmp_path: Path) -> None:
+    original_repo = make_minimal_labline_repo(tmp_path / "original")
+    other_repo = make_minimal_labline_repo(tmp_path / "other")
     project = tmp_path / "project"
     project.mkdir()
 
@@ -155,7 +155,7 @@ def test_install_aris_codex_uninstall_uses_manifest_repo_root(tmp_path: Path) ->
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(original_repo),
             "--quiet",
         ]
@@ -170,7 +170,7 @@ def test_install_aris_codex_uninstall_uses_manifest_repo_root(tmp_path: Path) ->
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(other_repo),
             "--uninstall",
             "--quiet",
@@ -180,13 +180,13 @@ def test_install_aris_codex_uninstall_uses_manifest_repo_root(tmp_path: Path) ->
     assert not alpha_link.exists()
     assert not (project / ".agents" / "skills" / "beta").exists()
     assert not (project / ".agents" / "skills" / "shared-references").exists()
-    assert not (project / ".aris" / "installed-skills-codex.txt").exists()
-    assert (project / ".aris" / "installed-skills-codex.txt.prev").exists()
+    assert not (project / ".labline" / "installed-skills-codex.txt").exists()
+    assert (project / ".labline" / "installed-skills-codex.txt.prev").exists()
 
 
-def test_install_aris_codex_reconcile_removes_stale_links_from_manifest_repo(tmp_path: Path) -> None:
-    original_repo = make_minimal_aris_repo(tmp_path / "original")
-    new_repo = make_minimal_aris_repo(tmp_path / "new")
+def test_install_labline_codex_reconcile_removes_stale_links_from_manifest_repo(tmp_path: Path) -> None:
+    original_repo = make_minimal_labline_repo(tmp_path / "original")
+    new_repo = make_minimal_labline_repo(tmp_path / "new")
     (new_repo / "skills" / "skills-codex" / "alpha").rename(
         new_repo / "skills" / "skills-codex" / "alpha-removed"
     )
@@ -199,7 +199,7 @@ def test_install_aris_codex_reconcile_removes_stale_links_from_manifest_repo(tmp
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(original_repo),
             "--quiet",
         ]
@@ -215,7 +215,7 @@ def test_install_aris_codex_reconcile_removes_stale_links_from_manifest_repo(tmp
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(new_repo),
             "--reconcile",
             "--quiet",
@@ -227,14 +227,14 @@ def test_install_aris_codex_reconcile_removes_stale_links_from_manifest_repo(tmp
     assert (project / ".agents" / "skills" / "gamma").resolve() == (
         new_repo / "skills" / "skills-codex" / "gamma"
     )
-    manifest = (project / ".aris" / "installed-skills-codex.txt").read_text()
+    manifest = (project / ".labline" / "installed-skills-codex.txt").read_text()
     assert "\talpha\t" not in manifest
     assert f"repo_root\t{new_repo}" in manifest
 
 
-def test_install_aris_codex_reconcile_accepts_already_deleted_stale_link(tmp_path: Path) -> None:
-    original_repo = make_minimal_aris_repo(tmp_path / "original")
-    new_repo = make_minimal_aris_repo(tmp_path / "new")
+def test_install_labline_codex_reconcile_accepts_already_deleted_stale_link(tmp_path: Path) -> None:
+    original_repo = make_minimal_labline_repo(tmp_path / "original")
+    new_repo = make_minimal_labline_repo(tmp_path / "new")
     (new_repo / "skills" / "skills-codex" / "alpha").rename(
         new_repo / "skills" / "skills-codex" / "alpha-removed"
     )
@@ -246,7 +246,7 @@ def test_install_aris_codex_reconcile_accepts_already_deleted_stale_link(tmp_pat
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(original_repo),
             "--quiet",
         ]
@@ -261,14 +261,14 @@ def test_install_aris_codex_reconcile_accepts_already_deleted_stale_link(tmp_pat
             "bash",
             str(INSTALL_SCRIPT),
             str(project),
-            "--aris-repo",
+            "--labline-repo",
             str(new_repo),
             "--reconcile",
             "--quiet",
         ]
     )
 
-    manifest = (project / ".aris" / "installed-skills-codex.txt").read_text()
+    manifest = (project / ".labline" / "installed-skills-codex.txt").read_text()
     assert "\talpha\t" not in manifest
 
 
@@ -333,7 +333,7 @@ def test_smart_update_codex_copy_install_and_symlink_refusal(tmp_path: Path) -> 
         check=False,
     )
     assert refused.returncode != 0
-    assert "install_aris_codex.sh" in refused.stderr
+    assert "install_labline_codex.sh" in refused.stderr
 
 
 def test_smart_update_codex_local_uses_default_upstream(tmp_path: Path) -> None:
@@ -360,7 +360,7 @@ def test_smart_update_codex_allows_unrelated_symlinked_skills(tmp_path: Path) ->
     assert "third-party" in dry_run.stdout
 
 
-def test_smart_update_codex_refuses_aris_symlinked_skills(tmp_path: Path) -> None:
+def test_smart_update_codex_refuses_labline_symlinked_skills(tmp_path: Path) -> None:
     local = tmp_path / "local"
     local.mkdir()
     (local / "auto-review-loop").symlink_to(
@@ -370,7 +370,7 @@ def test_smart_update_codex_refuses_aris_symlinked_skills(tmp_path: Path) -> Non
     refused = run(["bash", str(UPDATE_SCRIPT), "--local", str(local)], check=False)
 
     assert refused.returncode != 0
-    assert "symlink-managed ARIS entry 'auto-review-loop'" in refused.stderr
+    assert "symlink-managed Labline entry 'auto-review-loop'" in refused.stderr
 
 
 def test_smart_update_codex_ignores_local_only_shared_reference_failures(tmp_path: Path) -> None:

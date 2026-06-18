@@ -4,6 +4,37 @@
 
 **The model that writes experiment code must NOT be the model that judges experiment integrity.** This is the same principle as reviewer-independence, applied to experiments.
 
+## Workflow Module Scope
+
+Experiment Integrity is a workflow module, not a single skill.
+
+It spans plan, execution, audit, and claim translation. The shared transparency contract lives in [`docs/EXPERIMENT_TRANSPARENCY_LEDGER.md`](../../docs/EXPERIMENT_TRANSPARENCY_LEDGER.md).
+
+The module is filesystem-first and does not require LangGraph. Project-local paths are the contract surface.
+
+## Transparency Ledger
+
+The ledger must support these record types at minimum:
+
+- `dataset`
+- `split`
+- `metric`
+- `run`
+- `deviation`
+- `artifact`
+- `claim`
+- `checkpoint`
+
+Recommended project-local paths:
+
+- `refine-logs/EXPERIMENT_TRANSPARENCY_LEDGER.md`
+- `refine-logs/EXPERIMENT_TRANSPARENCY_LEDGER.json`
+- `refine-logs/IMPLEMENTATION_DEVIATIONS.json`
+- `refine-logs/EXPERIMENT_RESULTS/`
+- `refine-logs/checkpoints/`
+
+Store all paths relative to the project root.
+
 ## Prohibited Patterns
 
 ### 1. Fake Ground Truth

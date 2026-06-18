@@ -13,12 +13,12 @@ from threading import Thread
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ARIS_CLI = REPO_ROOT / "tools" / "aris"
+LANE_CLI = REPO_ROOT / "tools" / "lane"
 
 
 class DevRuntimeCliTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-dev-runtime-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="labline-dev-runtime-"))
         self.home = self.tmp / "home"
         self.home.mkdir()
         self.framework = self.tmp / "framework"
@@ -32,13 +32,13 @@ class DevRuntimeCliTest(unittest.TestCase):
     def _env(self, **extra: str) -> dict:
         env = os.environ.copy()
         env["HOME"] = str(self.home)
-        env.pop("ARIS_WORKSPACE", None)
+        env.pop("LABLINE_WORKSPACE", None)
         env.update(extra)
         return env
 
     def _run(self, *args: str, env: dict | None = None) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [str(ARIS_CLI), *args, "--aris-repo", str(self.framework), "--quiet"],
+            [str(LANE_CLI), *args, "--labline-repo", str(self.framework), "--quiet"],
             cwd=str(self.tmp),
             capture_output=True,
             text=True,
@@ -61,13 +61,13 @@ class DevRuntimeCliTest(unittest.TestCase):
     def test_dev_runtime_config_defaults_and_use_bind_dev_worker_to_deepseek_v4_flash(self) -> None:
         config = self._run("dev", "runtime", "config", "--init")
         self.assertEqual(config.returncode, 0, msg=config.stderr)
-        self.assertIn(f"config: {self.home / '.aris' / 'dev-runtime.json'}", config.stdout)
+        self.assertIn(f"config: {self.home / '.labline' / 'dev-runtime.json'}", config.stdout)
         self.assertIn("default_provider: codex_subagent", config.stdout)
         self.assertIn("default_transport: codex_subagent", config.stdout)
         self.assertIn("default_model: gpt-5.4-mini", config.stdout)
         self.assertIn("role.dev-worker: provider=codex_subagent codex_subagent/gpt-5.4-mini", config.stdout)
 
-        config_path = self.home / ".aris" / "dev-runtime.json"
+        config_path = self.home / ".labline" / "dev-runtime.json"
         payload = json.loads(config_path.read_text(encoding="utf-8"))
         self.assertEqual(payload["defaults"]["provider"], "codex_subagent")
         self.assertEqual(payload["defaults"]["transport"], "codex_subagent")
@@ -111,6 +111,33 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertEqual(payload["roles"]["dev-worker"]["provider"], "deepseek-v4-flash")
         self.assertEqual(payload["roles"]["dev-worker"]["transport"], "openai_compatible")
         self.assertEqual(payload["roles"]["dev-worker"]["model"], "deepseek-v4-flash")
+
+    def test_dev_runtime_config_json_output_is_parseable_and_secret_safe(self) -> None:
+        env_file = self.tmp / ".env"
+        env_file.write_text(
+            "\n".join(
+                [
+                    "agent=dev-worker",
+                    "provider=deepseek-v4-flash",
+                    "base_url=https://api.deepseek.com/v1",
+                    "api_key=super-secret-value",
+                    "model_name=deepseek-v4-flash",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        load = self._run("dev", "rt", "load", str(env_file))
+        self.assertEqual(load.returncode, 0, msg=load.stderr)
+
+        result = self._run("dev", "rt", "config", "--json")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["config"], str(self.home / ".labline" / "dev-runtime.json"))
+        self.assertEqual(payload["providers"]["deepseek-v4-flash"]["model"], "deepseek-v4-flash")
+        self.assertEqual(payload["providers"]["deepseek-v4-flash"]["api_key_env"], "LABLINE_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY")
+        self.assertEqual(payload["roles"]["dev-worker"]["provider"], "deepseek-v4-flash")
+        self.assertNotIn("super-secret-value", result.stdout)
 
     def test_dev_runtime_prompt_writes_guardrailed_task_file_and_never_leaks_api_key(self) -> None:
         self._run(
@@ -156,7 +183,7 @@ class DevRuntimeCliTest(unittest.TestCase):
         task_file = Path(task_line.split(": ", 1)[1])
         self.assertTrue(task_file.exists())
         content = task_file.read_text(encoding="utf-8")
-        self.assertIn("# ARIS Dev Worker Task", content)
+        self.assertIn("# Labline Dev Worker Task", content)
         self.assertIn("role: dev-worker", content)
         self.assertIn("provider: deepseek-v4-flash", content)
         self.assertIn("transport: openai_compatible", content)
@@ -210,17 +237,17 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("agent: dev-worker", load.stdout)
         self.assertIn("provider: deepseek-v4-flash", load.stdout)
         self.assertIn("model: deepseek-v4-flash", load.stdout)
-        self.assertIn("api_key_env: ARIS_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY", load.stdout)
-        self.assertIn(f"secret_file: {self.home / '.aris' / 'dev-runtime.env'}", load.stdout)
+        self.assertIn("api_key_env: LABLINE_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY", load.stdout)
+        self.assertIn(f"secret_file: {self.home / '.labline' / 'dev-runtime.env'}", load.stdout)
         self.assertNotIn("super-secret-value", load.stdout)
 
-        config = json.loads((self.home / ".aris" / "dev-runtime.json").read_text(encoding="utf-8"))
+        config = json.loads((self.home / ".labline" / "dev-runtime.json").read_text(encoding="utf-8"))
         provider = config["providers"]["deepseek-v4-flash"]
-        self.assertEqual(provider["api_key_env"], "ARIS_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY")
+        self.assertEqual(provider["api_key_env"], "LABLINE_DEV_RT_DEEPSEEK_V4_FLASH_API_KEY")
         self.assertEqual(config["roles"]["dev-worker"]["provider"], "deepseek-v4-flash")
         self.assertNotIn("super-secret-value", json.dumps(config))
 
-        secret_file = self.home / ".aris" / "dev-runtime.env"
+        secret_file = self.home / ".labline" / "dev-runtime.env"
         self.assertEqual(secret_file.stat().st_mode & 0o777, 0o600)
 
         run = self._run("dev", "rt", "run", "dev-worker", "hello from env", "--timeout", "3")

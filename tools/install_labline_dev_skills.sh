@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# install_aris_dev_skills.sh -- Dev-only skill installer for the ARIS checkout.
+# install_labline_dev_skills.sh -- Dev-only skill installer for the LABLINE checkout.
 #
 # Scans to-developer/skills/dev-*/SKILL.md and links each dev skill directory
 # into the current checkout's .agents/skills/dev-* surface. Managed entries are
-# recorded in .aris/installed-dev-skills.txt. This script never touches .claude.
+# recorded in .labline/installed-dev-skills.txt. This script never touches .claude.
 
 set -euo pipefail
 
@@ -11,7 +11,7 @@ MANIFEST_VERSION="1"
 MANIFEST_NAME="installed-dev-skills.txt"
 SOURCE_SKILLS_REL="to-developer/skills"
 TARGET_SKILLS_REL=".agents/skills"
-ARIS_DIR_NAME=".aris"
+LABLINE_DIR_NAME=".labline"
 SAFE_NAME_REGEX='^dev-[A-Za-z0-9][A-Za-z0-9._-]*$'
 
 ACTION="auto" # auto | reconcile | detach | doctor
@@ -55,14 +55,14 @@ resolve_repo_root() {
     fi
     SOURCE_SKILLS_DIR="$REPO_ROOT/$SOURCE_SKILLS_REL"
     TARGET_SKILLS_DIR="$REPO_ROOT/$TARGET_SKILLS_REL"
-    ARIS_DIR="$REPO_ROOT/$ARIS_DIR_NAME"
-    MANIFEST_PATH="$ARIS_DIR/$MANIFEST_NAME"
+    LABLINE_DIR="$REPO_ROOT/$LABLINE_DIR_NAME"
+    MANIFEST_PATH="$LABLINE_DIR/$MANIFEST_NAME"
 }
 
 SOURCE_SKILLS_DIR="$REPO_ROOT/$SOURCE_SKILLS_REL"
 TARGET_SKILLS_DIR="$REPO_ROOT/$TARGET_SKILLS_REL"
-ARIS_DIR="$REPO_ROOT/$ARIS_DIR_NAME"
-MANIFEST_PATH="$ARIS_DIR/$MANIFEST_NAME"
+LABLINE_DIR="$REPO_ROOT/$LABLINE_DIR_NAME"
+MANIFEST_PATH="$LABLINE_DIR/$MANIFEST_NAME"
 
 cleanup() {
     rm -f "$UPSTREAM_TMP" "$MANIFEST_DATA_TMP" "$MANIFEST_TMP"
@@ -70,7 +70,7 @@ cleanup() {
 
 check_parent_surface() {
     local p
-    for p in "$ARIS_DIR" "$REPO_ROOT/.agents" "$TARGET_SKILLS_DIR"; do
+    for p in "$LABLINE_DIR" "$REPO_ROOT/.agents" "$TARGET_SKILLS_DIR"; do
         if [[ -L "$p" ]]; then
             die "$p is a symlink; refusing to mutate symlinked parent directories"
         fi
@@ -133,8 +133,8 @@ install_or_reconcile() {
     if $DRY_RUN; then
         MANIFEST_TMP="$(mktemp)"
     else
-        mkdir -p "$ARIS_DIR" "$TARGET_SKILLS_DIR"
-        MANIFEST_TMP="$(mktemp "$ARIS_DIR/.installed-dev-skills.XXXXXX")"
+        mkdir -p "$LABLINE_DIR" "$TARGET_SKILLS_DIR"
+        MANIFEST_TMP="$(mktemp "$LABLINE_DIR/.installed-dev-skills.XXXXXX")"
     fi
     write_manifest "$UPSTREAM_TMP" "$MANIFEST_TMP"
 
@@ -284,7 +284,7 @@ while [[ $# -gt 0 ]]; do
         update|--reconcile) ACTION="reconcile"; shift ;;
         detach|--detach) ACTION="detach"; shift ;;
         doctor|--doctor) ACTION="doctor"; shift ;;
-        --aris-repo) REPO_OVERRIDE="${2:?missing value for --aris-repo}"; shift 2 ;;
+        --labline-repo) REPO_OVERRIDE="${2:?missing value for --labline-repo}"; shift 2 ;;
         --dry-run) DRY_RUN=true; shift ;;
         --quiet) QUIET=true; shift ;;
         -h|--help) usage; exit 0 ;;

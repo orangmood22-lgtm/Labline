@@ -48,7 +48,7 @@ Only when `— style-ref: <source>` appears in `$ARGUMENTS`, run the helper FIRS
 
 ```bash
 if [ ! -f tools/extract_paper_style.py ]; then
-  echo "error: tools/extract_paper_style.py not found — re-run 'bash tools/install_aris.sh' to refresh the '.aris/tools' symlink (added in #174), or copy the helper manually from the ARIS repo" >&2
+  echo "error: tools/extract_paper_style.py not found — re-run 'bash tools/install_labline.sh' to refresh the '.labline/tools' symlink (added in #174), or copy the helper manually from the Labline repo" >&2
   exit 1
 fi
 CACHE=$(python3 tools/extract_paper_style.py --source "<source>")
@@ -187,7 +187,7 @@ For each section, specify:
 
 ### §4 Experiments / Main Results
 - **Figures planned**:
-  - Fig 1: [description, type: bar/line/table/architecture, WHAT COMPARISON it shows]
+  - Fig 1: [description, type: bar/line/table/architecture, WHAT COMPLablineON it shows]
   - Fig 2: [description]
   - Table 1: [what it shows, which methods/baselines compared]
 - **Data source**: [which JSON files / experiment results]

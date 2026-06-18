@@ -1,6 +1,6 @@
 ---
 name: framework-update
-description: "一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。"
+description: "一键更新 Labline 框架：git pull + 重建 symlinks。用户不需要懂 git。"
 argument-hint: "[--force] [--dry-run]"
 allowed-tools: Bash(*), Read
 caller: leader
@@ -9,10 +9,10 @@ status: needs-safety-confirmation
 examples:
   - "/framework-update"
   - "更新框架"
-  - "update ARIS to latest"
+  - "update Labline to latest"
 ---
 
-# /framework-update — 更新 ARIS 框架
+# /framework-update — 更新 Labline 框架
 
 ## 安全约束
 
@@ -32,14 +32,14 @@ with open('project.yaml') as f:
     print(yaml.safe_load(f).get('framework',{}).get('path',''))
 " 2>/dev/null)
 
-# 回退: 找 .aris/tools symlink 指向
+# 回退: 找 .labline/tools symlink 指向
 if [ -z "$FRAMEWORK_DIR" ] || [ ! -d "$FRAMEWORK_DIR" ]; then
-    FRAMEWORK_DIR=$(readlink -f .aris/tools/.. 2>/dev/null)
+    FRAMEWORK_DIR=$(readlink -f .labline/tools/.. 2>/dev/null)
 fi
 
 # 再回退: 容器默认路径
 if [ -z "$FRAMEWORK_DIR" ]; then
-    FRAMEWORK_DIR="/aris/framework"
+    FRAMEWORK_DIR="/labline/framework"
 fi
 ```
 
@@ -87,12 +87,12 @@ fi
 
 ```bash
 cd $PROJECT_DIR
-bash $FRAMEWORK_DIR/tools/install_aris.sh $PROJECT_DIR --aris-repo $FRAMEWORK_DIR --reconcile
+bash $FRAMEWORK_DIR/tools/install_labline.sh $PROJECT_DIR --labline-repo $FRAMEWORK_DIR --reconcile
 ```
 
 如果 Codex 安装器也存在:
 ```bash
-bash $FRAMEWORK_DIR/tools/install_aris_codex.sh $PROJECT_DIR --aris-repo $FRAMEWORK_DIR 2>/dev/null || true
+bash $FRAMEWORK_DIR/tools/install_labline_codex.sh $PROJECT_DIR --labline-repo $FRAMEWORK_DIR 2>/dev/null || true
 ```
 
 ### Step 4.5: 重新生成 Skill Catalog
@@ -104,7 +104,7 @@ python3 $FRAMEWORK_DIR/tools/generate_skill_catalog.py
 ### Step 5: 输出摘要
 
 ```
-✅ ARIS 框架已更新
+✅ Labline 框架已更新
 
   版本: abc1234 → def5678
   新增 skills: paper-illustration-image2, kill-argument

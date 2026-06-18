@@ -1,17 +1,17 @@
 ---
 name: meta-optimize
-description: "Analyze ARIS usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired by Meta-Harness (Lee et al., 2026). Use when user says \"优化技能\", \"meta optimize\", \"improve skills\", \"分析使用记录\", or wants to optimize ARIS's own harness components based on accumulated experience."
+description: "Analyze Labline usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired by Meta-Harness (Lee et al., 2026). Use when user says \"优化技能\", \"meta optimize\", \"improve skills\", \"分析使用记录\", or wants to optimize Labline's own harness components based on accumulated experience."
 argument-hint: [target-skill-or-all]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
 
-# Meta-Optimize: Outer-Loop Harness Optimization for ARIS
+# Meta-Optimize: Outer-Loop Harness Optimization for Labline
 
 Analyze accumulated usage logs and propose optimizations for: **$ARGUMENTS**
 
 ## Context
 
-ARIS is a **research harness** — a system of skills, bridges, workflows, and artifact contracts that wraps around LLMs to orchestrate research. This skill implements a prototype **outer loop** that observes how the harness is used and proposes improvements to the harness itself (not to the research artifacts it produces).
+Labline is a **research harness** — a system of skills, bridges, workflows, and artifact contracts that wraps around LLMs to orchestrate research. This skill implements a prototype **outer loop** that observes how the harness is used and proposes improvements to the harness itself (not to the research artifacts it produces).
 
 Inspired by Meta-Harness (Lee et al., 2026): the key insight is that harness design matters as much as model weights, and harness engineering can be partially automated by logging execution traces and using them to guide improvements.
 
@@ -30,18 +30,18 @@ Inspired by Meta-Harness (Lee et al., 2026): the key insight is that harness des
 
 ## Prerequisites
 
-1. **Logging must be active.** Codex mirror installs do not create Claude Code hooks. Provide `.aris/meta/events.jsonl` from a Codex-compatible event logger, an external wrapper, or a manually exported trace log before running this skill.
-2. **Sufficient data.** At least 5 complete workflow runs logged in `.aris/meta/events.jsonl`. The skill will check and warn if insufficient.
+1. **Logging must be active.** Codex mirror installs do not create Claude Code hooks. Provide `.labline/meta/events.jsonl` from a Codex-compatible event logger, an external wrapper, or a manually exported trace log before running this skill.
+2. **Sufficient data.** At least 5 complete workflow runs logged in `.labline/meta/events.jsonl`. The skill will check and warn if insufficient.
 
 ## Workflow
 
 ### Step 0: Check Data Availability
 
 ```bash
-EVENTS_FILE=".aris/meta/events.jsonl"
+EVENTS_FILE=".labline/meta/events.jsonl"
 if [ ! -f "$EVENTS_FILE" ]; then
     echo "ERROR: No event log found at $EVENTS_FILE"
-    echo "Enable Codex-compatible logging first: create .aris/meta/events.jsonl from your Codex wrapper, external event logger, or exported trace log."
+    echo "Enable Codex-compatible logging first: create .labline/meta/events.jsonl from your Codex wrapper, external event logger, or exported trace log."
     exit 1
 fi
 
@@ -52,14 +52,14 @@ SESSIONS=$(grep -c '"session_start"' "$EVENTS_FILE" || echo 0)
 echo "📊 Event log: $EVENT_COUNT events, $SKILL_INVOCATIONS skill invocations, $SESSIONS sessions"
 
 if [ "$SKILL_INVOCATIONS" -lt 5 ]; then
-    echo "⚠️  Insufficient data (<5 skill invocations). Continue using ARIS normally and re-run later."
+    echo "⚠️  Insufficient data (<5 skill invocations). Continue using Labline normally and re-run later."
     exit 0
 fi
 ```
 
 ### Step 1: Analyze Usage Patterns
 
-Read `.aris/meta/events.jsonl` and compute:
+Read `.labline/meta/events.jsonl` and compute:
 
 **Frequency analysis:**
 - Which skills are invoked most often?
@@ -130,7 +130,7 @@ spawn_agent:
   model: gpt-5.4
   reasoning_effort: xhigh
   message: |
-    You are reviewing a proposed optimization to an ARIS SKILL.md file.
+    You are reviewing a proposed optimization to an Labline SKILL.md file.
     
     ## Original Skill (relevant section)
     [paste original]
@@ -155,7 +155,7 @@ spawn_agent:
 Output a structured report:
 
 ```markdown
-# ARIS Meta-Optimization Report
+# Labline Meta-Optimization Report
 
 **Date**: [today]
 **Data**: [N] events, [M] skill invocations, [K] sessions
@@ -189,9 +189,9 @@ Run `/meta-optimize apply 1` to apply a specific change, or
 ### Step 6: Apply Changes (if user approves)
 
 If user runs `/meta-optimize apply [N]`:
-1. Back up original SKILL.md to `.aris/meta/backups/`
+1. Back up original SKILL.md to `.labline/meta/backups/`
 2. Apply the patch
-3. Log the change to `.aris/meta/optimizations.jsonl`
+3. Log the change to `.labline/meta/optimizations.jsonl`
 4. Remind user to test the changed skill on their next run
 
 **Never auto-apply without user approval.**
@@ -208,7 +208,7 @@ If user runs `/meta-optimize apply [N]`:
 
 ## Event Schema Reference
 
-The log at `.aris/meta/events.jsonl` contains JSONL records with these shapes:
+The log at `.labline/meta/events.jsonl` contains JSONL records with these shapes:
 
 ```jsonl
 {"ts":"...","session":"...","event":"skill_invoke","skill":"auto-review-loop","args":"difficulty: hard"}
@@ -225,17 +225,17 @@ The log at `.aris/meta/events.jsonl` contains JSONL records with these shapes:
 
 This skill is NOT part of the standard W1→W1.5→W2→W3→W4 pipeline. It is a **maintenance workflow** with three trigger mechanisms:
 
-1. **Passive logging** (always on): Claude Code hooks record events to `.aris/meta/events.jsonl` automatically during normal usage. Zero user effort.
+1. **Passive logging** (always on): Claude Code hooks record events to `.labline/meta/events.jsonl` automatically during normal usage. Zero user effort.
 
 2. **Automatic readiness check** (SessionEnd hook): When a Claude Code session ends, `check_ready.sh` counts skill invocations since the last `/meta-optimize` run. If ≥5 new invocations have accumulated, it prints a reminder:
    ```
-   📊 ARIS has logged 8 skill runs since last optimization. Run /meta-optimize to check for improvement opportunities.
+   📊 Labline has logged 8 skill runs since last optimization. Run /meta-optimize to check for improvement opportunities.
    ```
    This is a **suggestion only** — it does not auto-run optimization.
 
 3. **Manual trigger**: User runs `/meta-optimize` when they see the reminder or whenever they want.
 
-**After each `/meta-optimize` run**, the skill writes the current timestamp to `.aris/meta/.last_optimize` so the readiness check only counts new invocations.
+**After each `/meta-optimize` run**, the skill writes the current timestamp to `.labline/meta/.last_optimize` so the readiness check only counts new invocations.
 
 ## Acknowledgements
 
@@ -250,4 +250,4 @@ Inspired by [Meta-Harness](https://arxiv.org/abs/2603.28052) (Lee et al., 2026) 
 
 ## Review Tracing
 
-After each reviewer agent call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.aris/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
+After each reviewer agent call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.labline/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).

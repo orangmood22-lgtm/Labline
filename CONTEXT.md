@@ -1,11 +1,11 @@
-# ARIS Framework Governance
+# Labline Framework Governance
 
-Language for ARIS framework versioning, release, and branch governance.
+Language for Labline framework versioning, release, and branch governance.
 
 ## Language
 
 **Version Management**:
-The release governance for ARIS framework versions: release tags, changelog entries, and project-level framework pins. Branches support this process, but branch naming alone is not version management.
+The release governance for Labline framework versions: release tags, changelog entries, and project-level framework pins. Branches support this process, but branch naming alone is not version management.
 _Avoid_: using "version management" to mean only Git branch cleanup.
 
 **Feature Branch**:
@@ -17,15 +17,15 @@ A short-lived branch for correcting an existing broken behavior, documentation e
 _Avoid_: hotfix unless the change must go directly to a released stable line.
 
 **Stable Line**:
-The `main` branch, containing released or release-ready ARIS framework state.
+The `main` branch, containing released or release-ready Labline framework state.
 _Avoid_: orangmood edition branch, production branch
 
 **Development Line**:
-The `dev` branch, containing integrated but not-yet-released ARIS framework changes.
+The `dev` branch, containing integrated but not-yet-released Labline framework changes.
 _Avoid_: scratch branch, personal branch
 
 **Semantic Version**:
-A framework release tag using `vMAJOR.MINOR.PATCH`. Before ARIS reaches `v1.0.0`, minor versions carry user-visible capability changes and patch versions carry fixes that do not change normal usage.
+A framework release tag using `vMAJOR.MINOR.PATCH`. Before Labline reaches `v1.0.0`, minor versions carry user-visible capability changes and patch versions carry fixes that do not change normal usage.
 _Avoid_: date-only version, branch name as version
 
 **Patch Release**:
@@ -65,7 +65,7 @@ A skill intended for research project users and project agents. User Skills may 
 _Avoid_: putting framework-maintenance helpers in the user skill graph
 
 **Developer Skill**:
-A maintainer-facing skill used to develop, review, test, generate, or release ARIS itself. Developer Skills use a `dev-` name prefix, may live in the Development Line, are not installed into research projects, and are not promoted to the Stable Line as user capabilities.
+A maintainer-facing skill used to develop, review, test, generate, or release Labline itself. Developer Skills use a `dev-` name prefix, may live in the Development Line, are not installed into research projects, and are not promoted to the Stable Line as user capabilities.
 _Avoid_: treating every dev checkout skill as a future stable skill; reusing a User Skill name for a Developer Skill
 
 **Release Gate**:
@@ -85,23 +85,23 @@ An explicit request to compute the next semantic version from the latest formal 
 _Avoid_: implicit version inference from arbitrary commit messages
 
 **Initial Stable Release**:
-The first formal ARIS framework release from the current `main` line, tagged `v0.1.0`. It establishes the baseline that research projects can pin before later patch and minor releases.
+The first formal Labline framework release from the current `main` line, tagged `v0.1.0`. It establishes the baseline that research projects can pin before later patch and minor releases.
 _Avoid_: treating pre-`v0.1.0` branch names as framework versions
 
 **In-Place Project Initialization**:
-Preparing the current directory as an ARIS research project by passing `.` as the project path to the project initialization command. This is the beginner-facing path when the user has already created an empty or existing project folder.
-_Avoid_: assuming an empty folder already has ARIS commands installed
+Preparing the current directory as an Labline research project by passing `.` as the project path to the project initialization command. This is the beginner-facing path when the user has already created an empty or existing project folder.
+_Avoid_: assuming an empty folder already has Labline commands installed
 
 **New Project Creation**:
-Creating or selecting an ARIS research project directory by passing a non-`.` path to the project initialization command, then preparing that directory as an ARIS research project.
+Creating or selecting an Labline research project directory by passing a non-`.` path to the project initialization command, then preparing that directory as an Labline research project.
 _Avoid_: using "init project" ambiguously for both directory creation and current-directory setup
 
-**ARIS CLI**:
-The beginner-facing command entrypoint for installing, initializing, updating, and inspecting ARIS from a normal shell. It separates project-scoped commands under `aris project ...` from framework-scoped commands under `aris framework ...`.
+**Labline CLI**:
+The beginner-facing command entrypoint for installing, initializing, updating, and inspecting Labline from a normal shell. It separates project-scoped commands under `lane project ...` from framework-scoped commands under `lane framework ...`.
 _Avoid_: exposing script names as the primary beginner workflow
 
 **Runnable Project Baseline**:
-The minimum state in which a directory is recognizably an ARIS research project and can be opened by supported agent clients without additional manual scaffolding. It includes project metadata, agent instructions, standard project folders, local framework installation records, and an initial version-control baseline.
+The minimum state in which a directory is recognizably an Labline research project and can be opened by supported agent clients without additional manual scaffolding. It includes project metadata, agent instructions, standard project folders, local framework installation records, and an initial version-control baseline.
 _Avoid_: treating skill symlink installation alone as a complete project initialization
 
 **Experiment Transparency Ledger**:
@@ -113,11 +113,11 @@ A predefined human decision point in a workflow, such as before launching experi
 _Avoid_: arbitrary runtime interruption as a first implementation requirement
 
 **Workflow Runtime**:
-An optional execution backend for stateful, resumable, interruptible ARIS workflows. It may consume project artifacts and ledgers, but it must not replace the static skill protocol or make ordinary ARIS project initialization depend on a runtime engine.
+An optional execution backend for stateful, resumable, interruptible Labline workflows. It may consume project artifacts and ledgers, but it must not replace the static skill protocol or make ordinary Labline project initialization depend on a runtime engine.
 _Avoid_: making LangGraph or another runtime a core project format requirement
 
 **Project Detach**:
-Removing ARIS integration from an existing project while leaving project-owned content intact. It removes framework-managed links, manifests, and managed metadata, but it does not delete the research project itself.
+Removing Labline integration from an existing project while leaving project-owned content intact. It removes framework-managed links, manifests, and managed metadata, but it does not delete the research project itself.
 _Avoid_: uninstall, delete project, remove project directory
 
 **Agent Status Stream**:
@@ -145,15 +145,15 @@ A non-mutating check that the Leader may perform when an Expected Update Time ar
 _Avoid_: recovery action, automatic intervention
 
 **Reviewer Role**:
-The independent review role in ARIS that audits plans, code, results, claims, citations, or paper artifacts from original inputs. The role may be implemented through an MCP-backed model call, a spawned agent, or a separate CLI session depending on platform, but its independence contract is the same.
+The independent review role in Labline that audits plans, code, results, claims, citations, or paper artifacts from original inputs. The role may be implemented through an MCP-backed model call, a spawned agent, or a separate CLI session depending on platform, but its independence contract is the same.
 _Avoid_: equating Reviewer with Codex MCP only, executor self-review
 
 **Project Runtime State**:
-Local, non-versioned state written inside a research project while ARIS workflows run, such as agent status snapshots and transient coordination metadata. The ARIS framework repository provides tools and protocols for this state but must not contain real project runtime state.
+Local, non-versioned state written inside a research project while Labline workflows run, such as agent status snapshots and transient coordination metadata. The Labline framework repository provides tools and protocols for this state but must not contain real project runtime state.
 _Avoid_: framework-owned runtime status, committed agent snapshots
 
 **Project Registry**:
-A non-versioned registry in a User Workspace that records ARIS project paths initialized for that user. Framework updates use it to keep registered projects in sync with the user's framework copy, and project detach removes projects from it.
+A non-versioned registry in a User Workspace that records Labline project paths initialized for that user. Framework updates use it to keep registered projects in sync with the user's framework copy, and project detach removes projects from it.
 _Avoid_: framework repo state, global project database, manually maintained project list
 
 **Codex Session**:
@@ -185,7 +185,7 @@ A mergeable record of work performed through a Feishu-Controlled Session while t
 _Avoid_: transcript merge, hidden context merge, memory graft
 
 **User Workspace**:
-The administrator-assigned research workspace for one ARIS user in a managed deployment. A User Workspace owns that user's framework copy and project area while sharing group-level research assets.
+The administrator-assigned research workspace for one Labline user in a managed deployment. A User Workspace owns that user's framework copy and project area while sharing group-level research assets.
 _Avoid_: shared project folder, everyone in one container, framework shared by all users
 
 **User-Owned Framework Copy**:
@@ -205,7 +205,7 @@ Group-level assets reused across User Workspaces, such as datasets, pretrained m
 _Avoid_: per-user dataset copy, project-owned pretrained cache
 
 **Semantic Root**:
-The top-level glossary and language reference for ARIS framework governance. `CONTEXT.md` is the Semantic Root: it does not replace implementation docs, but it defines the shared meaning that lower-level plans, ADRs, skills, and archives should stay consistent with.
+The top-level glossary and language reference for Labline framework governance. `CONTEXT.md` is the Semantic Root: it does not replace implementation docs, but it defines the shared meaning that lower-level plans, ADRs, skills, and archives should stay consistent with.
 _Avoid_: treating the glossary as a throwaway note, duplicating root semantics in every other document
 
 **Feature Decision Lineage**:
@@ -220,7 +220,7 @@ _Avoid_: replacing the active glossary with scattered historical notes, losing t
 The mandatory breadth check at the start of Design Grilling. It keeps the discussion connected to the project goal, active workflow, role boundaries, skill graph, experiment integrity, human checkpoints, and user-facing or developer-facing documentation impact before narrowing into a local decision. It is an internal grilling obligation by default, not a required standalone artifact, and it must not override the one-question-at-a-time interaction rule.
 _Avoid_: resolving a local term while ignoring adjacent workflow, role, evidence, or documentation consequences; treating grilling as a whole-library skill-audit tool
 
-**ARIS Role**:
+**Labline Role**:
 A stable responsibility boundary such as Leader, Planner, Coder, Deployer, Writer, or Reviewer. A role describes what work is allowed and what independence or handoff contract applies; it does not imply a specific model, process, MCP server, or CLI session.
 _Avoid_: defining responsibilities by whichever transport happens to run them today
 
@@ -237,11 +237,11 @@ The current mapping from roles to concrete transports, models, sessions, provide
 _Avoid_: hard-coding cheap worker or reviewer topology into prose mentions
 
 **Developer Skill Install Surface**:
-The development-only symlink and manifest surface that installs `dev-*` Developer Skills into an ARIS dev checkout for framework maintenance. It is controlled by the `aris dev skills ...` namespace and must not install skills into research projects.
+The development-only symlink and manifest surface that installs `dev-*` Developer Skills into an Labline dev checkout for framework maintenance. It is controlled by the `lane dev skills ...` namespace and must not install skills into research projects.
 _Avoid_: reusing user project installers for developer-only skills; coupling developer skill updates to user-surface generation
 
 **Developer User Surface**:
-The development checkout surface that prepares user-facing assets for eventual stable release, such as User Skill mirrors, generated catalogs, DAGs, templates, and user docs. It is controlled by the `aris dev user-surface ...` namespace and must not include Developer Skills.
+The development checkout surface that prepares user-facing assets for eventual stable release, such as User Skill mirrors, generated catalogs, DAGs, templates, and user docs. It is controlled by the `lane dev user-surface ...` namespace and must not include Developer Skills.
 _Avoid_: mixing dev-only tools into generated user catalogs or project install manifests; mutating developer skill symlinks as a side effect of user-surface updates
 
 **Developer Skill DAG**:
@@ -253,7 +253,7 @@ A Developer Skill derived from a User Skill so it can evolve for framework-maint
 _Avoid_: editing User Skills for maintainer-only needs; silently duplicating skills without lineage
 
 **Developer Runtime Surface**:
-The development-only provider, model, role-binding, prompt, and run surface for maintainer helper agents. It is controlled by `aris dev runtime ...` with `aris dev rt ...` as the short alias; legacy `aris dev worker ...` is not part of the canonical CLI.
+The development-only provider, model, role-binding, prompt, and run surface for maintainer helper agents. It is controlled by `lane dev runtime ...` with `lane dev rt ...` as the short alias; legacy `lane dev worker ...` is not part of the canonical CLI.
 _Avoid_: creating one-off dev CLI namespaces for individual helper roles
 
 **Skill Invocation Edge**:
@@ -293,7 +293,7 @@ A low-cost Developer Skill or development runtime helper used for bounded, revie
 _Avoid_: delegating ownership or final judgment to the cheapest model; exposing Cheap Worker as a project user role
 
 **OpenAI-Compatible Provider**:
-A worker provider configured with `base_url`, `model`, and `api_key_env` for chat-completions style APIs. ARIS stores the environment variable name, not the API key value.
+A worker provider configured with `base_url`, `model`, and `api_key_env` for chat-completions style APIs. Labline stores the environment variable name, not the API key value.
 _Avoid_: writing API keys into config, logs, task files, or recovered artifacts
 
 **DeepSeek V4 Flash Worker**:

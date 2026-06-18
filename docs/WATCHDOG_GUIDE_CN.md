@@ -2,11 +2,11 @@
 
 [English](WATCHDOG_GUIDE.md) | 中文版
 
-> 服务器端持续监控 ARIS 实验 — 自动检测死掉的 session、停滞的下载和空闲的 GPU，无需手动轮询。
+> 服务器端持续监控 Labline 实验 — 自动检测死掉的 session、停滞的下载和空闲的 GPU，无需手动轮询。
 
 ## 问题
 
-ARIS 实验在远程 screen/tmux session 中运行。当前的监控（`/monitor-experiment`）是**按需的** — 你必须主动问"实验怎么样了"。在两次检查之间：
+Labline 实验在远程 screen/tmux session 中运行。当前的监控（`/monitor-experiment`）是**按需的** — 你必须主动问"实验怎么样了"。在两次检查之间：
 
 - 训练 session 可能静默崩溃（screen 死了、OOM kill）
 - 下载可能卡住（网络超时、认证失败）
@@ -28,7 +28,7 @@ ARIS 实验在远程 screen/tmux session 中运行。当前的监控（`/monitor
 **输出结构：**
 
 ```
-/tmp/aris-watchdog/
+/tmp/labline-watchdog/
 ├── watchdog.pid              # 守护进程 PID
 ├── tasks.json                # 注册的任务
 ├── alerts.log                # 异常日志（跨 session 恢复时读取）
@@ -102,7 +102,7 @@ python3 tools/watchdog.py --register '{
 ```bash
 ssh your-server "python3 /path/to/tools/watchdog.py --status"
 # 或
-ssh your-server "cat /tmp/aris-watchdog/status/summary.txt"
+ssh your-server "cat /tmp/labline-watchdog/status/summary.txt"
 ```
 
 **示例输出：**
@@ -115,7 +115,7 @@ dl01(download): SLOW speed=0.45MB/s
 **使用 CronCreate 自动轮询（Claude Code）：**
 ```
 CronCreate: 每 15 分钟
-  ssh your-server "cat /tmp/aris-watchdog/status/summary.txt"
+  ssh your-server "cat /tmp/labline-watchdog/status/summary.txt"
   → 全部 OK → 不做任何事
   → 有 DEAD/STALLED/SLOW/IDLE → 调查处理
 ```
@@ -139,7 +139,7 @@ python3 tools/watchdog.py --unregister exp01
 | `SLOW` | 下载速度 <1 MB/s | 可能被限速，检查网络或下载源 |
 | `ERROR` | Watchdog 检查任务时出错 | 检查 watchdog 日志 |
 
-## 与 ARIS 工作流集成
+## 与 Labline 工作流集成
 
 ### 配合 `/run-experiment`
 
@@ -163,7 +163,7 @@ python3 tools/watchdog.py --register '{"name":"exp01","type":"training","session
 开新 session 时，检查 `alerts.log` 查看你不在时发生的异常：
 
 ```bash
-ssh your-server "tail -20 /tmp/aris-watchdog/alerts.log"
+ssh your-server "tail -20 /tmp/labline-watchdog/alerts.log"
 ```
 
 配合 [会话恢复指南](SESSION_RECOVERY_GUIDE_CN.md) 使用效果更佳 — 在恢复流程中加入 watchdog 告警检查。
@@ -172,7 +172,7 @@ ssh your-server "tail -20 /tmp/aris-watchdog/alerts.log"
 
 | 参数 | 默认值 | 修改方式 |
 |------|--------|----------|
-| 工作目录 | `/tmp/aris-watchdog` | `--base-dir /your/path` |
+| 工作目录 | `/tmp/labline-watchdog` | `--base-dir /your/path` |
 | 检查间隔 | 60 秒 | `--interval 30` |
 | GPU 空闲阈值 | 5% | 修改脚本中 `GPU_IDLE_THRESHOLD` |
 | 下载慢速阈值 | 1 MB/s | 修改脚本中 `SLOW_SPEED_THRESHOLD` |

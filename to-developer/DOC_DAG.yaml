@@ -1,5 +1,5 @@
 version: 1
-description: "ARIS 开发者文档 DAG。边方向为：源材料 -> 需要同步更新的计划、日志、规范或索引。"
+description: "Labline 开发者文档 DAG。边方向为：源材料 -> 需要同步更新的计划、日志、规范或索引。"
 
 nodes:
   to-developer/DOC_DAG.yaml:
@@ -16,6 +16,10 @@ nodes:
     kind: log
   to-developer/20260615-FRAMEWORK_MODULES.md:
     title: "开发者侧框架模块说明"
+    layer: architecture
+    kind: guide
+  to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md:
+    title: "Labline 顶层设计与开发地图"
     layer: architecture
     kind: guide
   to-developer/20260613-HANDOFF_CLAUDE_TO_CODEX.md:
@@ -57,6 +61,14 @@ nodes:
     kind: plan
   to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md:
     title: "cheap worker 默认分工"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md:
+    title: "多 Provider 本地 Coding Agent 框架 Spike"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md:
+    title: "Developer Agent Surface PRD"
     layer: architecture
     kind: plan
   to-developer/plans/20260610-codex-migration.md:
@@ -197,6 +209,26 @@ edges:
     to: docs/README.md
     type: constrains
     reason: "用户侧 docs 索引只保留用户安装、配置和使用文档。"
+  - from: CONTEXT.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: constrains
+    reason: "顶层设计必须使用 CONTEXT.md 中定义的治理术语和角色/运行时边界。"
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "顶层设计按已有开发者模块边界组织模块和接口。"
+  - from: docs/FRAMEWORK_STRUCTURE.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "顶层设计需要和 framework/project/dev 三层结构保持一致。"
+  - from: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "顶层设计的模块优先级和路线图需要进入开发日志便于交接。"
+  - from: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "顶层模块地图会影响后续仓库演进和分层策略。"
   - from: to-developer/docs/*.md
     to: to-developer/DOC_DAG.yaml
     type: constrains
@@ -231,10 +263,18 @@ edges:
     to: to-developer/logs/20260613-AGENT_STATUS_STREAM_VALIDATION_20260613.md
     type: validated_by
     reason: "计划由本地验证日志支撑。"
+  - from: to-developer/plans/20260613-AGENT_STATUS_STREAM.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "Agent Status Stream 是顶层设计中的 P1 runtime visibility 模块。"
   - from: to-developer/plans/20260613-LANGGRAPH_EVALUATION.md
     to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
     type: informs
     reason: "LangGraph 是否引入影响仓库演进和运行时边界。"
+  - from: to-developer/plans/20260613-LANGGRAPH_EVALUATION.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "LangGraph 在顶层设计中被定性为后置 workflow runtime。"
   - from: to-developer/plans/20260610-codex-migration.md
     to: to-developer/20260615-FRAMEWORK_MODULES.md
     type: informs
@@ -251,10 +291,38 @@ edges:
     to: to-developer/20260615-FRAMEWORK_MODULES.md
     type: informs
     reason: "CLI/deploy runtime 横跨 tools、deploy、templates、tests，需要反映到模块边界理解。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "CLI 和部署运行时是顶层设计中的 P0/P1 主干模块。"
   - from: to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md
     to: to-developer/20260613-DEVELOPMENT_LOG.md
     type: summarized_by
     reason: "开发侧 cheap worker 默认分工需要进入开发日志，便于恢复和交接。"
+  - from: to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md
+    to: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    type: informs
+    reason: "cheap worker 从远端 LLM 调用器升级为本地 coding agent backend 的需求来源。"
+  - from: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "多 provider 本地 agent backend 影响后续仓库演进和 runtime 拓扑。"
+  - from: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    to: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    type: informs
+    reason: "调研结论收敛为 Developer Agent Surface 的短期实现路线和中长期计划。"
+  - from: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "Developer Agent Surface 会新增 dev-only agent backend/runtime 层。"
+  - from: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "Developer Agent Surface 的阶段计划和边界需要进入开发日志便于恢复和交接。"
+  - from: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "Developer Agent Surface 是顶层设计中的开发降本主线。"
   - from: to-developer/adr/*.md
     to: docs/FEISHU_INTEGRATION.md
     type: informs

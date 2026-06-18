@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression test for install_aris.sh --reconcile behavior.
+"""Regression test for install_labline.sh --reconcile behavior.
 
 Covers:
   reconcile: adds new skills that appeared upstream
@@ -16,12 +16,12 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_aris.sh"
+INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_labline.sh"
 
 
 class ReconcileTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-reconcile-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="labline-reconcile-"))
         self.project = self.tmp / "project"
         self.project.mkdir()
         # Create a fake upstream with one skill
@@ -40,7 +40,7 @@ class ReconcileTest(unittest.TestCase):
                 "bash",
                 str(INSTALL_SCRIPT),
                 str(self.project),
-                "--aris-repo",
+                "--labline-repo",
                 str(self.fake_repo),
                 "--quiet",
                 "--no-doc",
@@ -105,7 +105,7 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Manifest should still be valid
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        manifest = self.project / ".labline" / "installed-skills.txt"
         self.assertTrue(manifest.exists(), "manifest must exist after idempotent reconcile")
 
 

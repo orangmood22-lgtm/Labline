@@ -262,7 +262,7 @@ writing-level, queue for next /auto-paper-improvement-loop round.
 ```
 
 Compose the machine-readable `<paper-dir>/KILL_ARGUMENT.json` per the
-ARIS Audit Artifact Schema (`shared-references/assurance-contract.md`):
+Labline Audit Artifact Schema (`shared-references/assurance-contract.md`):
 
 ```json
 {
@@ -277,7 +277,7 @@ ARIS Audit Artifact Schema (`shared-references/assurance-contract.md`):
     "references.bib":                    "sha256:<...>",
     "main.pdf":                          "sha256:<...>"
   },
-  "trace_path": ".aris/traces/kill-argument/<date>_run<NN>/",
+  "trace_path": ".labline/traces/kill-argument/<date>_run<NN>/",
   "thread_id": "<defense threadId — primary; attack threadId in details>",
   "reviewer_model": "gpt-5.5",
   "reviewer_reasoning": "xhigh",
@@ -367,7 +367,7 @@ To the user:
 
 - `<paper-dir>/KILL_ARGUMENT.md` — human-readable report
 - `<paper-dir>/KILL_ARGUMENT.json` — machine-readable ledger
-- `.aris/traces/kill-argument/<date>_runNN/` — per-thread codex traces (Attack memo + Adjudication memo)
+- `.labline/traces/kill-argument/<date>_runNN/` — per-thread codex traces (Attack memo + Adjudication memo)
 - Optional: applied fixes if user explicitly requests; default is **detect-only, do not auto-modify**.
 
 ## Key Rules
@@ -389,7 +389,7 @@ To the user:
 
 ## Review Tracing
 
-After each `mcp__codex__codex` reviewer call, save the trace following `shared-references/review-tracing.md`.  Use `tools/save_trace.sh` or write files directly to `.aris/traces/kill-argument/<date>_run<NN>/`.  Both threads' raw responses should be preserved.
+After each `mcp__codex__codex` reviewer call, save the trace following `shared-references/review-tracing.md`.  Use `tools/save_trace.sh` or write files directly to `.labline/traces/kill-argument/<date>_run<NN>/`.  Both threads' raw responses should be preserved.
 
 ## Notes
 

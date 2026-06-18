@@ -40,7 +40,7 @@ Use OpenAlex when you want:
 
 - **MAX_RESULTS = 10** — Default number of results. Override with `— max: 20`.
 - **DEFAULT_SORT = relevance** — Sort by relevance. Override with `— sort: citations` or `— sort: date`.
-- **FETCH_SCRIPT** — `$ARIS_REPO/tools/openalex_fetch.py` from the ARIS repo recorded by the Codex install manifest.
+- **FETCH_SCRIPT** — `$LABLINE_REPO/tools/openalex_fetch.py` from the Labline repo recorded by the Codex install manifest.
 
 > Overrides (append to arguments):
 > - `/openalex "topic" — max: 20` — return up to 20 results
@@ -82,8 +82,8 @@ Use OpenAlex when you want:
 ### Verify Setup
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-python3 "$ARIS_REPO/tools/openalex_fetch.py" search "machine learning" --max 3
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+python3 "$LABLINE_REPO/tools/openalex_fetch.py" search "machine learning" --max 3
 ```
 
 ## Workflow
@@ -102,13 +102,13 @@ Parse `$ARGUMENTS` for:
 ### Step 2: Locate Script
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-SCRIPT="${ARIS_REPO}/tools/openalex_fetch.py"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+SCRIPT="${LABLINE_REPO}/tools/openalex_fetch.py"
 ```
 
 If not found, tell the user:
 ```
-openalex_fetch.py not found. Make sure ARIS is installed and requests is installed:
+openalex_fetch.py not found. Make sure Labline is installed and requests is installed:
   pip install requests
 ```
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARIS Skill DAG</title>
+<title>Labline Skill DAG</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
@@ -77,10 +77,10 @@ body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; backgrou
 </head>
 <body>
 <div id="nav">
-  <h1>ARIS <span>Skill DAG</span></h1>
+  <h1>Labline <span>Skill DAG</span></h1>
   <div id="stats">
     <span><b>95</b> skills</span>
-    <span><b>26</b> edges</span>
+    <span><b>29</b> edges</span>
     <span><b>22</b> leader</span>
     <span><b>11</b> reviewer</span>
     <span><b>37</b> executor</span>
@@ -293,7 +293,9 @@ const DAG_NODES = [
       "写代码实现 FreqProtoNet",
       "refactor the training loop"
     ],
-    "invoked_by": [],
+    "invoked_by": [
+      "leader"
+    ],
     "layer": "executor-meta"
   },
   {
@@ -334,7 +336,9 @@ const DAG_NODES = [
       "部署实验到远程服务器",
       "monitor the running job"
     ],
-    "invoked_by": [],
+    "invoked_by": [
+      "leader"
+    ],
     "layer": "executor-meta"
   },
   {
@@ -478,14 +482,14 @@ const DAG_NODES = [
   {
     "name": "feishu-session",
     "caller": "any",
-    "description": "Manage Feishu-controlled Codex sessions, phone runners, and auditable phone-session merge reports. Use when user mentions Feishu control, phone control, mobile takeover, session merge, or wants to start/stop/report a Feishu Codex runner.",
+    "description": "Manage Feishu/Lark remote Codex or Claude Code access, with lark-channel-bridge as the default transport and Labline phone-session reports as legacy/fallback audit support. Use when user mentions Feishu/Lark control, phone control, mobile takeover, session merge, or wants to start/stop/report a Feishu-controlled coding session.",
     "platform": "both",
     "status": "needs-runtime-adaptation",
     "produces": [
-      ".aris/feishu-control/reports/<session_id>.md"
+      ".labline/feishu-control/reports/<session_id>.md"
     ],
     "consumes": [
-      ".aris/feishu-control/"
+      ".labline/feishu-control/"
     ],
     "examples": [
       "/feishu-session start leader-phone",
@@ -536,13 +540,13 @@ const DAG_NODES = [
   {
     "name": "framework-update",
     "caller": "leader",
-    "description": "一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。",
+    "description": "一键更新 Labline 框架：git pull + 重建 symlinks。用户不需要懂 git。",
     "platform": "both",
     "status": "needs-safety-confirmation",
     "examples": [
       "/framework-update",
       "更新框架",
-      "update ARIS to latest"
+      "update Labline to latest"
     ],
     "invoked_by": [],
     "layer": "orchestration"
@@ -777,8 +781,10 @@ const DAG_NODES = [
   {
     "name": "leader",
     "caller": "leader",
-    "description": "三边架构总编排：自动用 Agent 工具派生 Executor、Codex MCP 调 Reviewer。一个窗口全流程。",
+    "description": "三边架构总编排：自动派生 Coder/Deployer/Writer，并调独立 Reviewer。一个窗口全流程。",
     "invokes": [
+      "coder",
+      "deployer",
       "diagnose",
       "experiment-plan",
       "experiment-queue",
@@ -787,7 +793,8 @@ const DAG_NODES = [
       "run-experiment",
       "sync",
       "tdd",
-      "training-check"
+      "training-check",
+      "writer"
     ],
     "platform": "both",
     "status": "active",
@@ -814,7 +821,7 @@ const DAG_NODES = [
   {
     "name": "meta-optimize",
     "caller": "leader",
-    "description": "Analyze ARIS usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired by Meta-Harness (Lee et al., 2026). Use when user says \"优化技能\", \"meta optimize\", \"improve skills\", \"分析使用记录\", or wants to optimize ARIS's own harness components based on accumulated experience.",
+    "description": "Analyze Labline usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired by Meta-Harness (Lee et al., 2026). Use when user says \"优化技能\", \"meta optimize\", \"improve skills\", \"分析使用记录\", or wants to optimize Labline's own harness components based on accumulated experience.",
     "inferred_mentions": [
       "arxiv",
       "auto-review-loop"
@@ -877,7 +884,7 @@ const DAG_NODES = [
   {
     "name": "overleaf-sync",
     "caller": "executor",
-    "description": "Two-way sync between a local paper directory and an Overleaf project via the Overleaf Git bridge (Premium feature). Lets you keep ARIS audit/edit workflows on the local copy while collaborators edit in the Overleaf web UI. Token never touches the agent — user does the one-time auth via macOS Keychain. Use when user says \"同步 overleaf\", \"overleaf sync\", \"推送到 overleaf\", \"connect overleaf\", \"Overleaf 桥接\", \"pull overleaf\", \"push overleaf\", or wants to bridge their ARIS paper directory with an Overleaf project.",
+    "description": "Two-way sync between a local paper directory and an Overleaf project via the Overleaf Git bridge (Premium feature). Lets you keep Labline audit/edit workflows on the local copy while collaborators edit in the Overleaf web UI. Token never touches the agent — user does the one-time auth via macOS Keychain. Use when user says \"同步 overleaf\", \"overleaf sync\", \"推送到 overleaf\", \"connect overleaf\", \"Overleaf 桥接\", \"pull overleaf\", \"push overleaf\", or wants to bridge their Labline paper directory with an Overleaf project.",
     "examples": [
       "/overleaf-sync push",
       "同步 overleaf with local",
@@ -946,7 +953,7 @@ const DAG_NODES = [
   {
     "name": "paper-illustration-image2",
     "caller": "executor",
-    "description": "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for ARIS users who want a GPT-image-style renderer without modifying the original skill.",
+    "description": "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for Labline users who want a GPT-image-style renderer without modifying the original skill.",
     "invokes": [
       "figure-spec",
       "paper-figure"
@@ -1579,7 +1586,9 @@ const DAG_NODES = [
       "写论文 introduction",
       "write the rebuttal letter"
     ],
-    "invoked_by": [],
+    "invoked_by": [
+      "leader"
+    ],
     "layer": "executor-meta"
   },
   {
@@ -1625,6 +1634,14 @@ const DAG_EDGES = [
   },
   {
     "source": "leader",
+    "target": "coder"
+  },
+  {
+    "source": "leader",
+    "target": "deployer"
+  },
+  {
+    "source": "leader",
     "target": "diagnose"
   },
   {
@@ -1658,6 +1675,10 @@ const DAG_EDGES = [
   {
     "source": "leader",
     "target": "training-check"
+  },
+  {
+    "source": "leader",
+    "target": "writer"
   },
   {
     "source": "paper-illustration-image2",
@@ -1737,7 +1758,7 @@ let currentLang = 'en';
 // Bilingual translations
 const I18N = {
   en: {
-    title: 'ARIS Skill DAG',
+    title: 'Labline Skill DAG',
     skills: 'skills', edges: 'edges', leader: 'leader', reviewer: 'reviewer', executor: 'executor', any: 'any',
     searchPlaceholder: 'Search skills...',
     all: 'All', orchestration: 'Orchestration', coder: 'Coder', deployer: 'Deployer', writer: 'Writer', tools: 'Tools',
@@ -1750,7 +1771,7 @@ const I18N = {
     invokes: 'Invokes', invokedBy: 'Invoked by', produces: 'Produces', consumes: 'Consumes'
   },
   zh: {
-    title: 'ARIS 技能依赖图',
+    title: 'Labline 技能依赖图',
     skills: '技能', edges: '边', leader: '编排', reviewer: '审查', executor: '执行', any: '通用',
     searchPlaceholder: '搜索技能...',
     all: '全部', orchestration: '编排层', coder: '编码', deployer: '部署', writer: '写作', tools: '工具',
@@ -1767,7 +1788,7 @@ const I18N = {
 function updateLang(lang) {
   currentLang = lang;
   const t = I18N[lang];
-  document.querySelector('#nav h1').innerHTML = `ARIS <span>${t.title.split(' ').slice(1).join(' ')}</span>`;
+  document.querySelector('#nav h1').innerHTML = `Labline <span>${t.title.split(' ').slice(1).join(' ')}</span>`;
   document.querySelector('#search').placeholder = t.searchPlaceholder;
   document.querySelectorAll('.btn-group .btn')[0].textContent = t.all;
   document.querySelector('#legend h4').textContent = t.layers;

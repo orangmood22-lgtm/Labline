@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Health check for ARIS GPU container deployments.
+# Health check for LABLINE GPU container deployments.
 
 set -euo pipefail
 
-FRAMEWORK="/aris/framework"
-PROJECTS_ROOT="/aris/projects"
-DATASETS="/aris/shared/datasets"
+FRAMEWORK="/labline/framework"
+PROJECTS_ROOT="/labline/projects"
+DATASETS="/labline/shared/datasets"
 PROJECTS=()
 
 usage() {
     cat <<'EOF'
-Usage: deploy/aris_gpu_doctor.sh [options]
+Usage: deploy/labline_gpu_doctor.sh [options]
 
 Options:
   --framework PATH       Framework path inside the checked environment
@@ -41,7 +41,7 @@ fail() {
 
 repair_install_cmd() {
     local project_name="$1"
-    echo "  repair: bash $FRAMEWORK/tools/install_aris.sh $PROJECTS_ROOT/$project_name --aris-repo $FRAMEWORK --quiet --no-doc"
+    echo "  repair: bash $FRAMEWORK/tools/install_labline.sh $PROJECTS_ROOT/$project_name --labline-repo $FRAMEWORK --quiet --no-doc"
 }
 
 check_project_skills() {
@@ -71,7 +71,7 @@ check_project_skills() {
 
     while IFS= read -r -d '' link; do
         target="$(readlink "$link")"
-        if [[ "$target" != "$FRAMEWORK"/skills/* && "$target" != /aris/framework/skills/* ]]; then
+        if [[ "$target" != "$FRAMEWORK"/skills/* && "$target" != /labline/framework/skills/* ]]; then
             fail "$project_name skills: stale target outside framework"
             echo "  link: $link -> $target"
             repair_install_cmd "$project_name"
@@ -96,7 +96,7 @@ check_project_dataset() {
         return
     fi
     if [[ -L "$dataset_path" ]]; then
-        if [[ "$(readlink "$dataset_path")" != "$DATASETS/VOCdevkit" && "$(readlink "$dataset_path")" != "/aris/shared/datasets/VOCdevkit" ]]; then
+        if [[ "$(readlink "$dataset_path")" != "$DATASETS/VOCdevkit" && "$(readlink "$dataset_path")" != "/labline/shared/datasets/VOCdevkit" ]]; then
             fail "$project_name dataset: symlink target is not container shared dataset"
             echo "  link: $dataset_path -> $(readlink "$dataset_path")"
             echo "  repair: rm $project_path/data/VOCdevkit && ln -s $DATASETS/VOCdevkit $project_path/data/VOCdevkit"

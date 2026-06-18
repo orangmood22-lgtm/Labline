@@ -11,7 +11,7 @@ Subcommand: **$ARGUMENTS**
 
 ## Overview
 
-The research wiki is a persistent, per-project knowledge base that accumulates structured knowledge across the entire ARIS research lifecycle. Unlike one-off literature surveys that are used and forgotten, the wiki **compounds** — every paper read, idea tested, experiment run, and review received makes the wiki smarter.
+The research wiki is a persistent, per-project knowledge base that accumulates structured knowledge across the entire Labline research lifecycle. Unlike one-off literature surveys that are used and forgotten, the wiki **compounds** — every paper read, idea tested, experiment run, and review received makes the wiki smarter.
 
 Inspired by [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): compile knowledge once, keep it current, don't re-derive on every query.
 
@@ -75,8 +75,8 @@ Initialize the wiki for the current project:
 ### `/research-wiki ingest "<paper title>" — arxiv: <id>`
 
 Add a paper to the wiki. This subcommand is thin wrapping around the
-canonical helper `python3 "$ARIS_REPO/tools/research_wiki.py" ingest_paper …`, which
-is the single implementation of paper ingest in ARIS (per
+canonical helper `python3 "$LABLINE_REPO/tools/research_wiki.py" ingest_paper …`, which
+is the single implementation of paper ingest in Labline (per
 [`shared-references/integration-contract.md`](../shared-references/integration-contract.md)
 — one helper, no copies). The helper does all of:
 
@@ -92,9 +92,9 @@ Edge extraction (step 5/8 in the old manual flow) is **not** in
 identified:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 WIKI_SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"
 [ -z "$WIKI_SCRIPT" ] && [ -f tools/research_wiki.py ] && WIKI_SCRIPT="tools/research_wiki.py"
 [ -z "$WIKI_SCRIPT" ] && [ -f ~/.codex/skills/research-wiki/research_wiki.py ] && WIKI_SCRIPT="$HOME/.codex/skills/research-wiki/research_wiki.py"
 
@@ -265,19 +265,19 @@ All paper-reading skills follow the same **integration contract** (see
 [`shared-references/integration-contract.md`](../shared-references/integration-contract.md)):
 
 - single predicate — `[ -d research-wiki/ ]`
-- single canonical helper — `python3 "$ARIS_REPO/tools/research_wiki.py" ingest_paper …`
+- single canonical helper — `python3 "$LABLINE_REPO/tools/research_wiki.py" ingest_paper …`
 - concrete artifact — `papers/<slug>.md` + `log.md` entry
 - backfill — `sync --arxiv-ids …`
-- diagnostic — `$ARIS_REPO/tools/verify_wiki_coverage.sh`
+- diagnostic — `$LABLINE_REPO/tools/verify_wiki_coverage.sh`
 
 ### Hook 1: After `/research-lit` finds papers
 
 ```
 # At end of research-lit, after synthesis:
 if research-wiki/ exists:
-    ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+    LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
     WIKI_SCRIPT=""
-    [ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"
+    [ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"
     [ -z "$WIKI_SCRIPT" ] && [ -f tools/research_wiki.py ] && WIKI_SCRIPT="tools/research_wiki.py"
     [ -z "$WIKI_SCRIPT" ] && [ -f ~/.codex/skills/research-wiki/research_wiki.py ] && WIKI_SCRIPT="$HOME/.codex/skills/research-wiki/research_wiki.py"
     for paper in top_relevant_papers (limit 8-12):

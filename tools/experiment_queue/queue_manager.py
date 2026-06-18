@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""queue_manager.py — ARIS experiment-queue scheduler.
+"""queue_manager.py — Labline experiment-queue scheduler.
 
 Runs on the SSH remote host (or locally for Modal/Vast.ai future support).
 Reads a manifest, launches jobs across free GPUs via `screen`, retries on OOM,
@@ -9,7 +9,7 @@ Recovery contract:
 - `queue_state.json` is the canonical latest recovery receipt for scheduler resumability.
 - State writes should remain atomic.
 - Retry/backoff behavior should be explainable from manifest settings plus persisted state.
-- See `skills/shared-references/recovery-state-contract.md` for the shared resumability vocabulary used across ARIS.
+- See `skills/shared-references/recovery-state-contract.md` for the shared resumability vocabulary used across Labline.
 
 Usage (on remote):
     nohup python3 queue_manager.py \\
@@ -82,7 +82,7 @@ def resolve_conda_hook(manifest_hook=None):
     if manifest_hook:
         return wrap(manifest_hook)
     # 2. Env var override
-    env_hook = os.environ.get("ARIS_CONDA_HOOK")
+    env_hook = os.environ.get("LABLINE_CONDA_HOOK")
     if env_hook:
         return wrap(env_hook)
     # 3. Auto-detect common install paths

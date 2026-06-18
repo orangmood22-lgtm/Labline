@@ -21,7 +21,7 @@ Use DeepXiv when you want to inspect papers incrementally instead of loading the
 
 ## Constants
 
-- **FETCH_SCRIPT** — `$ARIS_REPO/tools/deepxiv_fetch.py` from the ARIS repo recorded by the Codex install manifest. If unavailable, fall back to the raw `deepxiv` CLI.
+- **FETCH_SCRIPT** — `$LABLINE_REPO/tools/deepxiv_fetch.py` from the Labline repo recorded by the Codex install manifest. If unavailable, fall back to the raw `deepxiv` CLI.
 - **MAX_RESULTS = 10** — Default number of search results.
 
 > Overrides (append to arguments):
@@ -66,9 +66,9 @@ If the input looks like an arXiv ID and no explicit mode is provided, default to
 Locate the adapter. Prefer the Codex managed install manifest when present, then fall back to the same project/global copy-install lookup style as the Claude skill:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/deepxiv_fetch.py" ] && SCRIPT="$ARIS_REPO/tools/deepxiv_fetch.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/deepxiv_fetch.py" ] && SCRIPT="$LABLINE_REPO/tools/deepxiv_fetch.py"
 [ -z "$SCRIPT" ] && [ -f tools/deepxiv_fetch.py ] && SCRIPT="tools/deepxiv_fetch.py"
 [ -z "$SCRIPT" ] && [ -f ~/.codex/skills/deepxiv/deepxiv_fetch.py ] && SCRIPT="$HOME/.codex/skills/deepxiv/deepxiv_fetch.py"
 [ -n "$SCRIPT" ] && python3 "$SCRIPT" --help
@@ -125,5 +125,5 @@ Follow [`shared-references/integration-contract.md`](../shared-references/integr
 
 - Prefer the adapter script over raw `deepxiv` commands when available.
 - If DeepXiv is missing, give the install command and suggest `/arxiv` or `/research-lit "topic" - sources: web`.
-- Use DeepXiv as an additive source, not a replacement for existing ARIS literature tooling.
+- Use DeepXiv as an additive source, not a replacement for existing Labline literature tooling.
 - If the result overlaps with a published venue paper from Semantic Scholar, keep the richer venue metadata in the final summary.

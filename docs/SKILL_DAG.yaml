@@ -289,15 +289,16 @@ nodes:
 - name: feishu-session
   caller: any
   description: Manage Feishu/Lark remote Codex or Claude Code access, with lark-channel-bridge
-    as the default transport and ARIS phone-session reports as legacy/fallback audit
-    support. Use when user mentions Feishu/Lark control, phone control, mobile takeover,
-    session merge, or wants to start/stop/report a Feishu-controlled coding session.
+    as the default transport and Labline phone-session reports as legacy/fallback
+    audit support. Use when user mentions Feishu/Lark control, phone control, mobile
+    takeover, session merge, or wants to start/stop/report a Feishu-controlled coding
+    session.
   platform: both
   status: needs-runtime-adaptation
   produces:
-  - .aris/feishu-control/reports/<session_id>.md
+  - .labline/feishu-control/reports/<session_id>.md
   consumes:
-  - .aris/feishu-control/
+  - .labline/feishu-control/
   examples:
   - /feishu-session start leader-phone
   - /feishu-session report leader-phone
@@ -336,13 +337,13 @@ nodes:
   - organize equations into derivation
 - name: framework-update
   caller: leader
-  description: 一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。
+  description: 一键更新 Labline 框架：git pull + 重建 symlinks。用户不需要懂 git。
   platform: both
   status: needs-safety-confirmation
   examples:
   - /framework-update
   - 更新框架
-  - update ARIS to latest
+  - update Labline to latest
 - name: gemini-search
   caller: any
   description: Search research papers via Gemini for broad literature discovery. Use
@@ -561,10 +562,10 @@ nodes:
   - create ER diagram for database
 - name: meta-optimize
   caller: leader
-  description: Analyze ARIS usage logs and propose optimizations to SKILL.md files,
+  description: Analyze Labline usage logs and propose optimizations to SKILL.md files,
     reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired
     by Meta-Harness (Lee et al., 2026). Use when user says "优化技能", "meta optimize",
-    "improve skills", "分析使用记录", or wants to optimize ARIS's own harness components
+    "improve skills", "分析使用记录", or wants to optimize Labline's own harness components
     based on accumulated experience.
   inferred_mentions:
   - arxiv
@@ -610,12 +611,12 @@ nodes:
 - name: overleaf-sync
   caller: executor
   description: Two-way sync between a local paper directory and an Overleaf project
-    via the Overleaf Git bridge (Premium feature). Lets you keep ARIS audit/edit workflows
-    on the local copy while collaborators edit in the Overleaf web UI. Token never
-    touches the agent — user does the one-time auth via macOS Keychain. Use when user
-    says "同步 overleaf", "overleaf sync", "推送到 overleaf", "connect overleaf", "Overleaf
-    桥接", "pull overleaf", "push overleaf", or wants to bridge their ARIS paper directory
-    with an Overleaf project.
+    via the Overleaf Git bridge (Premium feature). Lets you keep Labline audit/edit
+    workflows on the local copy while collaborators edit in the Overleaf web UI. Token
+    never touches the agent — user does the one-time auth via macOS Keychain. Use
+    when user says "同步 overleaf", "overleaf sync", "推送到 overleaf", "connect overleaf",
+    "Overleaf 桥接", "pull overleaf", "push overleaf", or wants to bridge their Labline
+    paper directory with an Overleaf project.
   examples:
   - /overleaf-sync push
   - 同步 overleaf with local
@@ -664,7 +665,7 @@ nodes:
   caller: executor
   description: Generate publication-quality academic illustrations through a local
     Codex app-server bridge that uses Codex native image generation. This is a separate
-    experimental alternative to `paper-illustration`, intended for ARIS users who
+    experimental alternative to `paper-illustration`, intended for Labline users who
     want a GPT-image-style renderer without modifying the original skill.
   invokes:
   - figure-spec

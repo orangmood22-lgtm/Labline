@@ -55,7 +55,7 @@ Leader 派发专用角色时，prompt 应包含以下结构：
 
 ```
 Agent:
-  model: "sonnet"
+  model: "gpt-5.4-mini"
   description: "[任务简述] (Coder)"
   prompt: |
     你是 Coder，只负责写代码。
@@ -82,7 +82,7 @@ Agent:
 
 ```
 Agent:
-  model: "sonnet"
+  model: "gpt-5.4-mini"
   description: "[任务简述] (Deployer)"
   prompt: |
     你是 Deployer，只负责部署和监控。
@@ -109,7 +109,7 @@ Agent:
 
 ```
 Agent:
-  model: "sonnet"
+  model: "gpt-5.4"
   description: "[任务简述] (Writer)"
   prompt: |
     你是 Writer，只负责写作。

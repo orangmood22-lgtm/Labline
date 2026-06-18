@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression test for install_aris.sh --codex flag (target platform switching).
+"""Regression test for install_labline.sh --codex flag (target platform switching).
 
 Covers:
   install --codex: creates .agents/skills/ symlinks (not .claude/skills/)
@@ -16,12 +16,12 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_aris.sh"
+INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_labline.sh"
 
 
 class CodexFlagTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-codex-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="labline-codex-"))
         self.project = self.tmp / "project"
         self.project.mkdir()
 
@@ -34,7 +34,7 @@ class CodexFlagTest(unittest.TestCase):
                 "bash",
                 str(INSTALL_SCRIPT),
                 str(self.project),
-                "--aris-repo",
+                "--labline-repo",
                 str(REPO_ROOT),
                 "--quiet",
                 "--no-doc",
@@ -90,7 +90,7 @@ class CodexFlagTest(unittest.TestCase):
                 "bash",
                 str(INSTALL_SCRIPT),
                 str(self.project),
-                "--aris-repo",
+                "--labline-repo",
                 str(REPO_ROOT),
                 "--no-doc",
                 "--dry-run",

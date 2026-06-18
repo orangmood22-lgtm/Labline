@@ -18,9 +18,9 @@ class GpuDeployContractTest(unittest.TestCase):
         content = GPU_COMPOSE.read_text()
 
         self.assertIn("FRAMEWORK_PATH", content)
-        self.assertIn(":/aris/framework", content)
+        self.assertIn(":/labline/framework", content)
         self.assertIn("DEV_FRAMEWORK_PATH", content)
-        self.assertIn(":/aris/aris-dev", content)
+        self.assertIn(":/labline/labline-dev", content)
         self.assertIn("BUILD_HTTP_PROXY", content)
         self.assertIn("BUILD_HTTPS_PROXY", content)
 
@@ -44,11 +44,11 @@ class GpuDeployContractTest(unittest.TestCase):
     def test_gpu_compose_requires_explicit_host_paths(self):
         content = GPU_COMPOSE.read_text()
 
-        self.assertIn("${FRAMEWORK_PATH:?set FRAMEWORK_PATH in .env}:/aris/framework", content)
-        self.assertIn("${DEV_FRAMEWORK_PATH:?set DEV_FRAMEWORK_PATH in .env}:/aris/aris-dev", content)
-        self.assertIn("${PROJECT_PATH:?set PROJECT_PATH in .env}:/aris/projects", content)
-        self.assertIn("${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro", content)
-        self.assertIn("${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained", content)
+        self.assertIn("${FRAMEWORK_PATH:?set FRAMEWORK_PATH in .env}:/labline/framework", content)
+        self.assertIn("${DEV_FRAMEWORK_PATH:?set DEV_FRAMEWORK_PATH in .env}:/labline/labline-dev", content)
+        self.assertIn("${PROJECT_PATH:?set PROJECT_PATH in .env}:/labline/projects", content)
+        self.assertIn("${DATASETS_PATH:?set DATASETS_PATH in .env}:/labline/shared/datasets:ro", content)
+        self.assertIn("${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/labline/shared/pretrained", content)
         self.assertIn("${SSH_PATH:?set SSH_PATH in .env}:/run/secrets/ssh:ro", content)
         self.assertNotIn(":-/data/", content)
         self.assertNotIn("/workspace", content)
@@ -56,39 +56,39 @@ class GpuDeployContractTest(unittest.TestCase):
     def test_multi_user_compose_uses_per_user_framework_and_project_paths(self):
         content = MULTI_COMPOSE.read_text()
 
-        self.assertIn("${USER1_FRAMEWORK_PATH:?set USER1_FRAMEWORK_PATH in .env}:/aris/framework", content)
-        self.assertIn("${USER1_PROJECTS_PATH:?set USER1_PROJECTS_PATH in .env}:/aris/projects", content)
-        self.assertIn("${USER1_STATE_PATH:?set USER1_STATE_PATH in .env}:/home/${USER1_NAME:-researcher1}/.aris", content)
-        self.assertIn("${USER2_FRAMEWORK_PATH:?set USER2_FRAMEWORK_PATH in .env}:/aris/framework", content)
-        self.assertIn("${USER2_PROJECTS_PATH:?set USER2_PROJECTS_PATH in .env}:/aris/projects", content)
-        self.assertIn("${USER2_STATE_PATH:?set USER2_STATE_PATH in .env}:/home/${USER2_NAME:-researcher2}/.aris", content)
-        self.assertNotIn("ARIS_WORKSPACE=/aris", content)
-        self.assertIn("${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro", content)
-        self.assertIn("${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained", content)
-        self.assertIn("${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/aris/shared/downloads", content)
-        self.assertNotIn("aris-framework:/aris/framework", content)
-        self.assertNotIn("user1-projects:/aris/projects", content)
+        self.assertIn("${USER1_FRAMEWORK_PATH:?set USER1_FRAMEWORK_PATH in .env}:/labline/framework", content)
+        self.assertIn("${USER1_PROJECTS_PATH:?set USER1_PROJECTS_PATH in .env}:/labline/projects", content)
+        self.assertIn("${USER1_STATE_PATH:?set USER1_STATE_PATH in .env}:/home/${USER1_NAME:-researcher1}/.labline", content)
+        self.assertIn("${USER2_FRAMEWORK_PATH:?set USER2_FRAMEWORK_PATH in .env}:/labline/framework", content)
+        self.assertIn("${USER2_PROJECTS_PATH:?set USER2_PROJECTS_PATH in .env}:/labline/projects", content)
+        self.assertIn("${USER2_STATE_PATH:?set USER2_STATE_PATH in .env}:/home/${USER2_NAME:-researcher2}/.labline", content)
+        self.assertNotIn("LABLINE_WORKSPACE=/labline", content)
+        self.assertIn("${DATASETS_PATH:?set DATASETS_PATH in .env}:/labline/shared/datasets:ro", content)
+        self.assertIn("${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/labline/shared/pretrained", content)
+        self.assertIn("${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/labline/shared/downloads", content)
+        self.assertNotIn("labline-framework:/labline/framework", content)
+        self.assertNotIn("user1-projects:/labline/projects", content)
 
-    def test_gpu_compose_persists_aris_state_under_user_home(self):
+    def test_gpu_compose_persists_labline_state_under_user_home(self):
         content = GPU_COMPOSE.read_text()
 
-        self.assertIn("aris-state:/home/${USERNAME:-researcher}/.aris", content)
-        self.assertIn("aris-state:", content)
+        self.assertIn("labline-state:/home/${USERNAME:-researcher}/.labline", content)
+        self.assertIn("labline-state:", content)
 
     def test_multi_user_env_example_declares_workspace_paths(self):
         content = MULTI_ENV_EXAMPLE.read_text()
 
         for item in [
-            "ARIS_ROOT=[你的ARIS总目录]",
-            "USER1_FRAMEWORK_PATH=[你的ARIS总目录]/users/zhangsan/framework",
-            "USER1_PROJECTS_PATH=[你的ARIS总目录]/users/zhangsan/projects",
-            "USER1_STATE_PATH=[你的ARIS总目录]/users/zhangsan/.aris",
-            "USER2_FRAMEWORK_PATH=[你的ARIS总目录]/users/lisi/framework",
-            "USER2_PROJECTS_PATH=[你的ARIS总目录]/users/lisi/projects",
-            "USER2_STATE_PATH=[你的ARIS总目录]/users/lisi/.aris",
-            "DATASETS_PATH=[你的ARIS总目录]/shared/datasets",
-            "PRETRAINED_PATH=[你的ARIS总目录]/shared/pretrained",
-            "DOWNLOADS_PATH=[你的ARIS总目录]/shared/downloads",
+            "LABLINE_ROOT=[你的LABLINE总目录]",
+            "USER1_FRAMEWORK_PATH=[你的LABLINE总目录]/users/zhangsan/framework",
+            "USER1_PROJECTS_PATH=[你的LABLINE总目录]/users/zhangsan/projects",
+            "USER1_STATE_PATH=[你的LABLINE总目录]/users/zhangsan/.labline",
+            "USER2_FRAMEWORK_PATH=[你的LABLINE总目录]/users/lisi/framework",
+            "USER2_PROJECTS_PATH=[你的LABLINE总目录]/users/lisi/projects",
+            "USER2_STATE_PATH=[你的LABLINE总目录]/users/lisi/.labline",
+            "DATASETS_PATH=[你的LABLINE总目录]/shared/datasets",
+            "PRETRAINED_PATH=[你的LABLINE总目录]/shared/pretrained",
+            "DOWNLOADS_PATH=[你的LABLINE总目录]/shared/downloads",
         ]:
             self.assertIn(item, content)
 
@@ -102,17 +102,17 @@ class GpuDeployContractTest(unittest.TestCase):
             "no_proxy=",
             "GIT_HTTP_PROXY=",
             "GIT_HTTPS_PROXY=",
-            "ARIS_AUTO_CHECK_UPDATE=1",
-            "ARIS_UPDATE_CHECK_INTERVAL=1d",
-            "ARIS_UPDATE_CHECK_TIMEOUT=10s",
+            "LABLINE_AUTO_CHECK_UPDATE=1",
+            "LABLINE_UPDATE_CHECK_INTERVAL=1d",
+            "LABLINE_UPDATE_CHECK_TIMEOUT=10s",
             "FEISHU_APP_ID=",
             "FEISHU_APP_SECRET=",
             "FEISHU_USER_ID=",
             "FEISHU_RECEIVE_ID_TYPE=open_id",
             "FEISHU_ENABLE_WS=0",
             "BRIDGE_PORT=5000",
-            "ARIS_PROJECT_ROOT=",
-            "ARIS_FEISHU_CONTROL_ROOT=",
+            "LABLINE_PROJECT_ROOT=",
+            "LABLINE_FEISHU_CONTROL_ROOT=",
         ]
         for path in [GPU_ENV_EXAMPLE, MULTI_ENV_EXAMPLE]:
             content = path.read_text()
@@ -130,17 +130,17 @@ class GpuDeployContractTest(unittest.TestCase):
             "no_proxy=${no_proxy:-}",
             "GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}",
             "GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}",
-            "ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-1}",
-            "ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}",
-            "ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}",
+            "LABLINE_AUTO_CHECK_UPDATE=${LABLINE_AUTO_CHECK_UPDATE:-1}",
+            "LABLINE_UPDATE_CHECK_INTERVAL=${LABLINE_UPDATE_CHECK_INTERVAL:-1d}",
+            "LABLINE_UPDATE_CHECK_TIMEOUT=${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}",
             "FEISHU_APP_ID=${FEISHU_APP_ID:-}",
             "FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}",
             "FEISHU_USER_ID=${FEISHU_USER_ID:-}",
             "FEISHU_RECEIVE_ID_TYPE=${FEISHU_RECEIVE_ID_TYPE:-open_id}",
             "FEISHU_ENABLE_WS=${FEISHU_ENABLE_WS:-0}",
             "BRIDGE_PORT=${BRIDGE_PORT:-5000}",
-            "ARIS_PROJECT_ROOT=${ARIS_PROJECT_ROOT:-/aris/framework}",
-            "ARIS_FEISHU_CONTROL_ROOT=${ARIS_FEISHU_CONTROL_ROOT:-}",
+            "LABLINE_PROJECT_ROOT=${LABLINE_PROJECT_ROOT:-/labline/framework}",
+            "LABLINE_FEISHU_CONTROL_ROOT=${LABLINE_FEISHU_CONTROL_ROOT:-}",
         ]
         for path in [GPU_COMPOSE, MULTI_COMPOSE]:
             content = path.read_text()
@@ -162,9 +162,9 @@ class GpuDeployContractTest(unittest.TestCase):
     def test_entrypoint_checks_framework_updates_without_auto_pull(self):
         content = ENTRYPOINT.read_text()
 
-        self.assertIn("ARIS_AUTO_CHECK_UPDATE", content)
+        self.assertIn("LABLINE_AUTO_CHECK_UPDATE", content)
         self.assertIn("framework check-update", content)
-        self.assertIn("ARIS_UPDATE_CHECK_INTERVAL", content)
+        self.assertIn("LABLINE_UPDATE_CHECK_INTERVAL", content)
         self.assertIn("--if-stale", content)
         self.assertIn("--notify", content)
         self.assertIn(".bashrc", content)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check whether ARIS is ready to create a framework release tag."""
+"""Check whether Labline is ready to create a framework release tag."""
 
 from __future__ import annotations
 

@@ -54,7 +54,7 @@ conda: my_env
 # Optional: override conda hook path if conda is not at a standard location.
 # Can be a bare path (wrapped automatically) or a full `eval "$(... shell.bash hook)"` string.
 # Falls back to auto-detect of ~/anaconda3, ~/miniconda3, /opt/anaconda3, etc.,
-# or the ARIS_CONDA_HOOK environment variable.
+# or the LABLINE_CONDA_HOOK environment variable.
 # conda_hook: /custom/path/to/conda
 ssh: gpu-server
 default_cmd: >
@@ -132,36 +132,36 @@ If any precondition fails, show user which jobs are blocked and why.
 
 The scheduler implementation lives in `tools/experiment_queue/queue_manager.py`. Three preliminaries before launch.
 
-**3a. Resolve the local helper directory.** The two helpers (`queue_manager.py`, `build_manifest.py`) sit under `tools/experiment_queue/` in the ARIS repo. Use this fallback chain so the skill works from any project layout:
+**3a. Resolve the local helper directory.** The two helpers (`queue_manager.py`, `build_manifest.py`) sit under `tools/experiment_queue/` in the Labline repo. Use this fallback chain so the skill works from any project layout:
 
 ```bash
-QUEUE_TOOLS=".aris/tools/experiment_queue"
+QUEUE_TOOLS=".labline/tools/experiment_queue"
 [ -f "$QUEUE_TOOLS/queue_manager.py" ] || QUEUE_TOOLS="tools/experiment_queue"
-[ -f "$QUEUE_TOOLS/queue_manager.py" ] || QUEUE_TOOLS="${ARIS_REPO:-}/tools/experiment_queue"
-[ -f "$QUEUE_TOOLS/queue_manager.py" ] || { echo "ERROR: experiment_queue helpers not found; rerun install_aris.sh or set ARIS_REPO" >&2; exit 1; }
+[ -f "$QUEUE_TOOLS/queue_manager.py" ] || QUEUE_TOOLS="${LABLINE_REPO:-}/tools/experiment_queue"
+[ -f "$QUEUE_TOOLS/queue_manager.py" ] || { echo "ERROR: experiment_queue helpers not found; rerun install_labline.sh or set LABLINE_REPO" >&2; exit 1; }
 ```
 
-The `.aris/tools` symlink is set up by `install_aris.sh` (#174). Older installs without that symlink fall through to `tools/experiment_queue` (works if invoked from inside the ARIS repo) or `$ARIS_REPO/tools/experiment_queue`.
+The `.labline/tools` symlink is set up by `install_labline.sh` (#174). Older installs without that symlink fall through to `tools/experiment_queue` (works if invoked from inside the Labline repo) or `$LABLINE_REPO/tools/experiment_queue`.
 
 **3b. Compute remote paths.** Use both a remote-relative form (for `scp` destinations — modern `scp` runs in SFTP mode and does NOT reliably expand `$HOME` in destination paths) and a `$HOME`-prefixed form (for `ssh ... command` strings, where remote bash WILL expand `$HOME`):
 
 ```bash
-REMOTE_RUN_REL=".aris_queue/runs/$RUN_TS"          # for scp destinations (relative to remote home)
+REMOTE_RUN_REL=".labline_queue/runs/$RUN_TS"          # for scp destinations (relative to remote home)
 REMOTE_RUN_DIR="\$HOME/$REMOTE_RUN_REL"            # for ssh command strings (literal $HOME, expanded on remote)
 ```
 
 **3c. Bootstrap the remote run directory and copy helpers + manifest.** Per-invocation and idempotent. Use a unique run directory rather than `/tmp` so concurrent queues do not collide and so resume-after-crash is reproducible.
 
 ```bash
-ssh <server> "mkdir -p \"$REMOTE_RUN_DIR/logs\" \"\$HOME/.aris_queue\""
-scp "$QUEUE_TOOLS/queue_manager.py" "$QUEUE_TOOLS/build_manifest.py" <server>:.aris_queue/
+ssh <server> "mkdir -p \"$REMOTE_RUN_DIR/logs\" \"\$HOME/.labline_queue\""
+scp "$QUEUE_TOOLS/queue_manager.py" "$QUEUE_TOOLS/build_manifest.py" <server>:.labline_queue/
 scp "$LOCAL_RUN_DIR/manifest.json" <server>:"$REMOTE_RUN_REL/manifest.json"
 ```
 
 **3d. Launch the scheduler as a detached `nohup` process on the SSH host:**
 
 ```bash
-ssh <server> "nohup python3 \"\$HOME/.aris_queue/queue_manager.py\" \\
+ssh <server> "nohup python3 \"\$HOME/.labline_queue/queue_manager.py\" \\
   --manifest \"$REMOTE_RUN_DIR/manifest.json\" \\
   --state    \"$REMOTE_RUN_DIR/queue_state.json\" \\
   --log-dir  \"$REMOTE_RUN_DIR/logs\" \\

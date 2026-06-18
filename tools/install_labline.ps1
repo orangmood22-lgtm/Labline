@@ -1,25 +1,25 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Project-local ARIS skill installation via junction (Windows symlink equivalent).
+    Project-local Labline skill installation via junction (Windows symlink equivalent).
 
 .DESCRIPTION
     [DEPRECATED behavior — see warning below]
-    Recommended over global install for projects that mix ARIS with other skill packs.
-    Creates a junction in <project>/.claude/skills/aris (or .agents/skills/aris) pointing
-    to the cloned ARIS repository's skills directory.
+    Recommended over global install for projects that mix Labline with other skill packs.
+    Creates a junction in <project>/.claude/skills/labline (or .agents/skills/labline) pointing
+    to the cloned Labline repository's skills directory.
 
 .NOTES
-    ⚠️  KNOWN BUG: this script creates a NESTED junction at .claude/skills/aris/, which
+    ⚠️  KNOWN BUG: this script creates a NESTED junction at .claude/skills/labline/, which
     Claude Code's slash-command discovery does NOT find (CC only scans one directory level).
-    The Bash version (install_aris.sh) was rewritten in v0.4.4 to use flat per-skill
+    The Bash version (install_labline.sh) was rewritten in v0.4.4 to use flat per-skill
     symlinks + a manifest-tracked re-runnable installer. PowerShell parity is pending.
 
     Recommended for Windows users:
       Option A (best):    Use WSL2 with the Bash installer:
-                            wsl bash ~/aris_repo/tools/install_aris.sh
+                            wsl bash ~/labline_repo/tools/install_labline.sh
       Option B (manual):  Create flat junctions yourself, one per skill:
-                            $repo = "C:\path\to\aris_repo"
+                            $repo = "C:\path\to\labline_repo"
                             $proj = "C:\path\to\your-project"
                             New-Item -ItemType Directory -Force "$proj\.claude\skills" | Out-Null
                             Get-ChildItem "$repo\skills" -Directory |
@@ -40,11 +40,11 @@
 .PARAMETER Platform
     auto (default), claude, or codex. Auto-detects from project markers.
 
-.PARAMETER ArisRepo
-    Override path to ARIS repo. Defaults to auto-detect.
+.PARAMETER LablineRepo
+    Override path to Labline repo. Defaults to auto-detect.
 
 .PARAMETER Force
-    Replace existing target. Existing target is backed up to aris.backup.<timestamp>.
+    Replace existing target. Existing target is backed up to labline.backup.<timestamp>.
 
 .PARAMETER NoDoc
     Skip updating CLAUDE.md / AGENTS.md.
@@ -53,9 +53,9 @@
     Print plan without making changes.
 
 .EXAMPLE
-    .\tools\install_aris.ps1
-    .\tools\install_aris.ps1 C:\projects\my-paper -Platform codex
-    .\tools\install_aris.ps1 -ArisRepo C:\Users\PC\.codex\Auto-research-in-sleep -Force
+    .\tools\install_labline.ps1
+    .\tools\install_labline.ps1 C:\projects\my-paper -Platform codex
+    .\tools\install_labline.ps1 -LablineRepo C:\Users\PC\.codex\Auto-research-in-sleep -Force
 #>
 
 [CmdletBinding()]
@@ -66,7 +66,7 @@ param(
     [ValidateSet('auto', 'claude', 'codex')]
     [string]$Platform = 'auto',
 
-    [string]$ArisRepo = '',
+    [string]$LablineRepo = '',
 
     [switch]$Force,
     [switch]$NoDoc,
@@ -81,32 +81,32 @@ if (-not (Test-Path $ProjectPath -PathType Container)) {
 }
 $ProjectPath = (Resolve-Path $ProjectPath).Path
 
-# ─── Resolve ARIS repo location ───────────────────────────────────────────────
-function Resolve-ArisRepo {
-    if ($ArisRepo) {
-        if (Test-Path (Join-Path $ArisRepo 'skills')) { return (Resolve-Path $ArisRepo).Path }
-        Write-Host "Error: -ArisRepo path has no skills/ subdir: $ArisRepo" -ForegroundColor Red; throw
+# ─── Resolve Labline repo location ───────────────────────────────────────────────
+function Resolve-LablineRepo {
+    if ($LablineRepo) {
+        if (Test-Path (Join-Path $LablineRepo 'skills')) { return (Resolve-Path $LablineRepo).Path }
+        Write-Host "Error: -LablineRepo path has no skills/ subdir: $LablineRepo" -ForegroundColor Red; throw
     }
     $parent = Split-Path $PSScriptRoot -Parent
     if (Test-Path (Join-Path $parent 'skills')) { return $parent }
-    if ($env:ARIS_REPO -and (Test-Path (Join-Path $env:ARIS_REPO 'skills'))) {
-        return (Resolve-Path $env:ARIS_REPO).Path
+    if ($env:LABLINE_REPO -and (Test-Path (Join-Path $env:LABLINE_REPO 'skills'))) {
+        return (Resolve-Path $env:LABLINE_REPO).Path
     }
     foreach ($p in @(
-        (Join-Path $env:USERPROFILE 'aris_repo'),
-        (Join-Path $env:USERPROFILE 'Desktop\aris_repo'),
-        (Join-Path $env:USERPROFILE '.aris'),
+        (Join-Path $env:USERPROFILE 'labline_repo'),
+        (Join-Path $env:USERPROFILE 'Desktop\labline_repo'),
+        (Join-Path $env:USERPROFILE '.labline'),
         (Join-Path $env:USERPROFILE 'Desktop\Auto-research-in-sleep'),
         (Join-Path $env:USERPROFILE '.codex\Auto-research-in-sleep'),
         (Join-Path $env:USERPROFILE '.claude\Auto-research-in-sleep')
     )) {
         if (Test-Path (Join-Path $p 'skills')) { return $p }
     }
-    Write-Host "Error: cannot find ARIS repo. Use -ArisRepo PATH or set `$env:ARIS_REPO." -ForegroundColor Red
+    Write-Host "Error: cannot find Labline repo. Use -LablineRepo PATH or set `$env:LABLINE_REPO." -ForegroundColor Red
     throw
 }
 
-$ArisRepoResolved = Resolve-ArisRepo
+$LablineRepoResolved = Resolve-LablineRepo
 
 # ─── Resolve platform ─────────────────────────────────────────────────────────
 function Detect-Platform {
@@ -149,16 +149,16 @@ if ($Platform -eq 'auto') {
 # ─── Compute paths ────────────────────────────────────────────────────────────
 switch ($Platform) {
     'claude' {
-        $SourceDir = Join-Path $ArisRepoResolved 'skills'
-        $TargetRelative = '.claude\skills\aris'
+        $SourceDir = Join-Path $LablineRepoResolved 'skills'
+        $TargetRelative = '.claude\skills\labline'
         $DocFile = Join-Path $ProjectPath 'CLAUDE.md'
-        $TargetRelDisplay = '.claude/skills/aris'
+        $TargetRelDisplay = '.claude/skills/labline'
     }
     'codex' {
-        $SourceDir = Join-Path $ArisRepoResolved 'skills\skills-codex'
-        $TargetRelative = '.agents\skills\aris'
+        $SourceDir = Join-Path $LablineRepoResolved 'skills\skills-codex'
+        $TargetRelative = '.agents\skills\labline'
         $DocFile = Join-Path $ProjectPath 'AGENTS.md'
-        $TargetRelDisplay = '.agents/skills/aris'
+        $TargetRelDisplay = '.agents/skills/labline'
     }
 }
 $TargetDir = Join-Path $ProjectPath $TargetRelative
@@ -170,10 +170,10 @@ if (-not (Test-Path $SourceDir -PathType Container)) {
 
 # ─── Print plan ───────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "ARIS Project Install Plan"
+Write-Host "Labline Project Install Plan"
 Write-Host "  Project:        $ProjectPath"
 Write-Host "  Platform:       $Platform"
-Write-Host "  ARIS repo:      $ArisRepoResolved"
+Write-Host "  Labline repo:      $LablineRepoResolved"
 Write-Host "  Source:         $SourceDir"
 Write-Host "  Target:         $TargetDir  (relative: $TargetRelDisplay)"
 Write-Host "  Doc file:       $DocFile"
@@ -200,7 +200,7 @@ if (Test-Path $TargetDir) {
         }
     } elseif (-not $Force) {
         Write-Host "Error: target exists and is not a junction: $TargetDir" -ForegroundColor Red
-        Write-Host "  Use -Force to backup (as aris.backup.<timestamp>) and replace." -ForegroundColor Yellow
+        Write-Host "  Use -Force to backup (as labline.backup.<timestamp>) and replace." -ForegroundColor Yellow
         exit 1
     }
 }
@@ -209,7 +209,7 @@ if (Test-Path $TargetDir) {
 if ($DryRun) {
     Write-Host "(dry-run) would create junction: $TargetDir -> $SourceDir"
     if (-not $NoDoc) { Write-Host "(dry-run) would update doc:  $DocFile" }
-    Write-Host "(dry-run) would record metadata: $ProjectPath\.aris\skill-source.txt"
+    Write-Host "(dry-run) would record metadata: $ProjectPath\.labline\skill-source.txt"
     exit 0
 }
 
@@ -226,33 +226,33 @@ New-Item -ItemType Junction -Path $TargetDir -Target $SourceDir | Out-Null
 Write-Host "✓ Created junction: $TargetDir -> $SourceDir" -ForegroundColor Green
 
 # Record metadata
-$arisDir = Join-Path $ProjectPath '.aris'
-New-Item -ItemType Directory -Force -Path $arisDir | Out-Null
-$arisCommit = try { (git -C $ArisRepoResolved rev-parse HEAD 2>$null).Trim() } catch { 'unknown' }
-if (-not $arisCommit) { $arisCommit = 'unknown' }
+$lablineDir = Join-Path $ProjectPath '.labline'
+New-Item -ItemType Directory -Force -Path $lablineDir | Out-Null
+$lablineCommit = try { (git -C $LablineRepoResolved rev-parse HEAD 2>$null).Trim() } catch { 'unknown' }
+if (-not $lablineCommit) { $lablineCommit = 'unknown' }
 $installedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $metaContent = @"
 platform=$Platform
 link_mode=junction
 project_path=$ProjectPath
 link_path=$TargetDir
-aris_repo=$ArisRepoResolved
+labline_repo=$LablineRepoResolved
 skill_source=$SourceDir
-aris_commit=$arisCommit
+labline_commit=$lablineCommit
 installed_at=$installedAt
 "@
-Set-Content -Path (Join-Path $arisDir 'skill-source.txt') -Value $metaContent -NoNewline
-Write-Host "✓ Recorded metadata: $arisDir\skill-source.txt" -ForegroundColor Green
+Set-Content -Path (Join-Path $lablineDir 'skill-source.txt') -Value $metaContent -NoNewline
+Write-Host "✓ Recorded metadata: $lablineDir\skill-source.txt" -ForegroundColor Green
 
 # Update managed block in CLAUDE.md / AGENTS.md
 if (-not $NoDoc) {
-    $blockBegin = '<!-- ARIS:BEGIN -->'
-    $blockEnd   = '<!-- ARIS:END -->'
+    $blockBegin = '<!-- Labline:BEGIN -->'
+    $blockEnd   = '<!-- Labline:END -->'
     $blockBody = @"
 $blockBegin
-## ARIS Skill Scope
-For ARIS workflows in this project, use only the project-local ARIS skills under ``$TargetRelDisplay``.
-Do not use global skills or non-ARIS project skills unless the user explicitly asks to mix them.
+## Labline Skill Scope
+For Labline workflows in this project, use only the project-local Labline skills under ``$TargetRelDisplay``.
+Do not use global skills or non-Labline project skills unless the user explicitly asks to mix them.
 $blockEnd
 "@
 
@@ -261,15 +261,15 @@ $blockEnd
         $pattern = [regex]::Escape($blockBegin) + '.*?' + [regex]::Escape($blockEnd)
         $new = [regex]::Replace($text, $pattern, $blockBody, [System.Text.RegularExpressions.RegexOptions]::Singleline)
         Set-Content -Path $DocFile -Value $new -NoNewline
-        Write-Host "✓ Updated managed ARIS block in: $DocFile" -ForegroundColor Green
+        Write-Host "✓ Updated managed Labline block in: $DocFile" -ForegroundColor Green
     } else {
         if ((Test-Path $DocFile) -and ((Get-Item $DocFile).Length -gt 0)) {
             Add-Content -Path $DocFile -Value ""
         }
         Add-Content -Path $DocFile -Value $blockBody
-        Write-Host "✓ Appended managed ARIS block to: $DocFile" -ForegroundColor Green
+        Write-Host "✓ Appended managed Labline block to: $DocFile" -ForegroundColor Green
     }
 }
 
 Write-Host ""
-Write-Host "Install complete. Update with: cd $ArisRepoResolved; git pull" -ForegroundColor Cyan
+Write-Host "Install complete. Update with: cd $LablineRepoResolved; git pull" -ForegroundColor Cyan

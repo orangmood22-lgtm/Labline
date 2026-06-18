@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""更新 ARIS dev-only 开发者文档派生产物。
+"""更新 Labline dev-only 开发者文档派生产物。
 
 当前职责：
 - 校验 `to-developer/DOC_DAG.yaml`
@@ -138,9 +138,14 @@ def validate(data: dict[str, Any]) -> list[str]:
         errors.append("cycle detected: " + " -> ".join(cycle))
 
     node_names = set(nodes)
+    ignored_roots = [
+        REPO_ROOT / "to-developer" / "logs" / "dev-runtime",
+    ]
     for path in sorted((REPO_ROOT / "to-developer").glob("**/*")):
         if path.is_file() and path.suffix in {".md", ".txt"}:
             if path.name == "DOC_DAG.mmd":
+                continue
+            if any(root in path.parents for root in ignored_roots):
                 continue
             if not path_is_covered(path, node_names):
                 errors.append(f"to-developer file not covered by DAG: {path.relative_to(REPO_ROOT)}")

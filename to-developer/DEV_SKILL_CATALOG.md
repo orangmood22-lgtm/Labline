@@ -1,6 +1,6 @@
-# ARIS Dev Skill Catalog
+# Labline Dev Skill Catalog
 
-> 自动生成于 2026-06-17 12:08。共 8 个 dev skill。
+> 自动生成于 2026-06-18 17:23。共 8 个 dev skill。
 >
 > 生成命令：`python3 tools/generate_dev_skill_catalog.py`
 

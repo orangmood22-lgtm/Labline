@@ -57,7 +57,7 @@ When `— style-ref: <source>` is in `$ARGUMENTS`, run the helper FIRST, before 
 
 ```bash
 if [ ! -f tools/extract_paper_style.py ]; then
-  echo "error: tools/extract_paper_style.py not found — re-run 'bash tools/install_aris.sh' to refresh the '.aris/tools' symlink (added in #174), or copy the helper manually from the ARIS repo" >&2
+  echo "error: tools/extract_paper_style.py not found — re-run 'bash tools/install_labline.sh' to refresh the '.labline/tools' symlink (added in #174), or copy the helper manually from the Labline repo" >&2
   exit 1
 fi
 CACHE=$(python3 tools/extract_paper_style.py --source "<source>")
@@ -100,8 +100,8 @@ verifier reads the same value. **Run once at pipeline start, before Phase 1.**
 **Action:**
 
 ```bash
-mkdir -p paper/.aris
-echo "<resolved-level>" > paper/.aris/assurance.txt   # draft or submission
+mkdir -p paper/.labline
+echo "<resolved-level>" > paper/.labline/assurance.txt   # draft or submission
 ```
 
 **What each level does downstream:**
@@ -225,7 +225,7 @@ If `— style-ref: <source>` was passed and the helper succeeded above, append `
 - Claude plans → Codex native image generation renders → Claude reviews (same multi-stage workflow as `gemini`, different renderer)
 - Best for: users who want a GPT-image-style renderer without needing `GEMINI_API_KEY`; uses your existing Codex / ChatGPT Plus/Pro quota
 - Output: `figures/ai_generated/figure_final.png` + `latex_include.tex` + `review_log.json` (emitted via `tools/paper_illustration_image2.py finalize`)
-- **Prerequisites** (beyond ARIS's standard Claude Code + Codex coexistence): the local Codex app-server must be signed in (`codex debug app-server send-message-v2 "ping"` succeeds), and the dedicated MCP bridge must be registered — see `mcp-servers/codex-image2/README.md` for the one-time `claude mcp add` command. Run `python3 tools/paper_illustration_image2.py preflight --workspace .` to confirm before relying on this path.
+- **Prerequisites** (beyond Labline's standard Claude Code + Codex coexistence): the local Codex app-server must be signed in (`codex debug app-server send-message-v2 "ping"` succeeds), and the dedicated MCP bridge must be registered — see `mcp-servers/codex-image2/README.md` for the one-time `claude mcp add` command. Run `python3 tools/paper_illustration_image2.py preflight --workspace .` to confirm before relying on this path.
 - **Experimental**: this renderer shells through the Codex debug app-server, which Codex documents as an unstable surface. Prefer `figurespec` or `gemini` for production submission flows until `codex-image2` stabilizes.
 
 **When `illustration: false`** — skip entirely. All non-data figures must be created manually (draw.io, Figma, TikZ) and placed in `figures/` before Phase 3.
@@ -482,7 +482,7 @@ uses the **same derivation rule as Phase 0** so a run where Phase 0 was
 skipped or its write failed cannot silently downgrade a `beast` / `max` /
 `— assurance: submission` invocation back to draft.
 
-**Resolution at the gate** (re-derive; do not trust `.aris/assurance.txt`
+**Resolution at the gate** (re-derive; do not trust `.labline/assurance.txt`
 alone):
 
 1. Parse `$ARGUMENTS` for an explicit `— assurance: draft | submission` or
@@ -491,19 +491,19 @@ alone):
    - explicit `assurance:` wins
    - else `lite` / `balanced` → `draft`, `max` / `beast` → `submission`
    - else `draft`
-3. Read `paper/.aris/assurance.txt`. If the file is missing, write it now
+3. Read `paper/.labline/assurance.txt`. If the file is missing, write it now
    with the derived level.
 4. If the file's value **disagrees** with the derived level (e.g. file
    says `draft` but `$ARGUMENTS` says `beast`), **overwrite** the file
    with the derived level and surface a one-line warning in-chat:
-   `⚠️ .aris/assurance.txt was draft but $ARGUMENTS says submission; overriding.`
+   `⚠️ .labline/assurance.txt was draft but $ARGUMENTS says submission; overriding.`
 5. Use the re-derived level as authoritative for the rest of Phase 6.
 
 ```bash
 # Final authoritative value, written and read from the same source
 ASSURANCE=<derived-from-$ARGUMENTS>        # draft | submission
-mkdir -p paper/.aris
-echo "$ASSURANCE" > paper/.aris/assurance.txt
+mkdir -p paper/.labline
+echo "$ASSURANCE" > paper/.labline/assurance.txt
 ```
 
 If `ASSURANCE=draft`, skip directly to the Final Report template below —
@@ -524,15 +524,15 @@ skipping audits while claiming to have run them.
    [ ] 1. /proof-checker        → paper/PROOF_AUDIT.json
    [ ] 2. /paper-claim-audit    → paper/PAPER_CLAIM_AUDIT.json
    [ ] 3. /citation-audit       → paper/CITATION_AUDIT.json
-   [ ] 4. bash <ARIS_REPO>/tools/verify_paper_audits.sh paper/ --assurance submission
+   [ ] 4. bash <LABLINE_REPO>/tools/verify_paper_audits.sh paper/ --assurance submission
    [ ] 5. Block Final Report iff verifier exit code != 0
 ```
 
-> `<ARIS_REPO>` placeholder — replace with the absolute path to your ARIS
+> `<LABLINE_REPO>` placeholder — replace with the absolute path to your Labline
 > clone (e.g. `~/Desktop/Auto-claude-code-research-in-sleep` or the path
 > returned by `dirname $(readlink ~/.claude/skills/paper-writing/SKILL.md)/../..`).
 > The path is stable across runs; store it in a shell variable if you
-> prefer (`export ARIS_REPO=~/…` and use `"$ARIS_REPO"` in the command).
+> prefer (`export LABLINE_REPO=~/…` and use `"$LABLINE_REPO"` in the command).
 
 #### Invoking the three audits
 
@@ -558,12 +558,12 @@ Order:
 #### Running the verifier
 
 ```bash
-bash <ARIS_REPO>/tools/verify_paper_audits.sh paper/ --assurance submission
+bash <LABLINE_REPO>/tools/verify_paper_audits.sh paper/ --assurance submission
 ```
 
 - **Exit 0** — All mandatory audits present, JSON schema-valid, hashes fresh,
   no blocking verdicts. Proceed to the Final Report below.
-- **Exit 1** — Surface `paper/.aris/audit-verifier-report.json` to the user
+- **Exit 1** — Surface `paper/.labline/audit-verifier-report.json` to the user
   verbatim, **refuse to generate the Final Report**, and list the specific
   remediation for each failing row:
   - `MISSING` → rerun that audit
@@ -585,7 +585,7 @@ in `~/.claude/settings.json`:
 {
   "hooks": {
     "Stop": [
-      {"command": "bash <ARIS_REPO>/tools/verify_paper_audits.sh paper/ --assurance submission"}
+      {"command": "bash <LABLINE_REPO>/tools/verify_paper_audits.sh paper/ --assurance submission"}
     ]
   }
 }
@@ -612,7 +612,7 @@ or directly if `assurance=draft`)
 
 | Phase | Status | Output |
 |-------|--------|--------|
-| 0. Assurance Setup | ✅ | paper/.aris/assurance.txt = [draft\|submission] |
+| 0. Assurance Setup | ✅ | paper/.labline/assurance.txt = [draft\|submission] |
 | 1. Paper Plan | ✅ | PAPER_PLAN.md |
 | 2. Figures | ✅ | figures/ ([N] auto + [M] manual) |
 | 3. LaTeX Writing | ✅ | paper/sections/*.tex ([N] sections, [M] citations) |
@@ -621,7 +621,7 @@ or directly if `assurance=draft`)
 | 4.5 Proof Audit | [PASS\|WARN\|FAIL\|NOT_APPLICABLE\|BLOCKED\|ERROR] | PROOF_AUDIT.{md,json} |
 | 5.5 Paper Claim Audit | [PASS\|WARN\|FAIL\|NOT_APPLICABLE\|BLOCKED\|ERROR] | PAPER_CLAIM_AUDIT.{md,json} |
 | 5.8 Citation Audit | [PASS\|WARN\|FAIL\|NOT_APPLICABLE\|BLOCKED\|ERROR] | CITATION_AUDIT.{md,json} |
-| 6.0 Assurance Verifier | [OK\|STALE\|BLOCKING_VERDICT\|HAS_ISSUES\|SCHEMA_INVALID\|MISSING] per audit; exit [0\|1] overall (N/A if draft) | .aris/audit-verifier-report.json |
+| 6.0 Assurance Verifier | [OK\|STALE\|BLOCKING_VERDICT\|HAS_ISSUES\|SCHEMA_INVALID\|MISSING] per audit; exit [0\|1] overall (N/A if draft) | .labline/audit-verifier-report.json |
 
 ## Improvement Scores
 | Round | Score | Key Changes |
@@ -639,7 +639,7 @@ or directly if `assurance=draft`)
 - paper/PROOF_AUDIT.{md,json} — Proof-obligation verification (always emitted at `assurance=submission`; `NOT_APPLICABLE` when no theorems)
 - paper/PAPER_CLAIM_AUDIT.{md,json} — Numerical claim verification (always emitted at `assurance=submission`; `NOT_APPLICABLE` when no numeric claims; omitted in `draft` mode if Phase 5.5 detector was negative)
 - paper/CITATION_AUDIT.{md,json} — Bibliography verification (always emitted at `assurance=submission`; `NOT_APPLICABLE` when no `.bib` or no `\cite{...}`; omitted in `draft` mode if Phase 5.8 detector was negative)
-- paper/.aris/audit-verifier-report.json — External verifier report (submission only)
+- paper/.labline/audit-verifier-report.json — External verifier report (submission only)
 
 ## Remaining Issues (if any)
 - [items from final review that weren't addressed]

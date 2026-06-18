@@ -2,7 +2,7 @@
 
 ## Default (NEVER changes without explicit user request)
 
-All review calls use **Codex MCP** (`mcp__codex__codex`) with `reasoning_effort: xhigh`.
+All review calls use **GPT-5.4** through the configured independent review transport, with `reasoning_effort: xhigh` when the transport supports it.
 
 This is the default for ALL skills. No parameter, no config, no effort level changes this.
 
@@ -16,7 +16,7 @@ When the user explicitly passes `— reviewer: oracle-pro`, route the review thr
 Parse $ARGUMENTS for `— reviewer:` directive.
 
 If not specified OR `— reviewer: codex`:
-    → Use mcp__codex__codex with reasoning_effort: xhigh
+    → Use the default independent Codex reviewer with model gpt-5.4 and reasoning_effort: xhigh
     → This is the DEFAULT. No change from current behavior.
 
 If `— reviewer: oracle-pro`:
@@ -90,4 +90,4 @@ If Oracle is not installed, `— reviewer: oracle-pro` gracefully falls back to 
 
 ### Upstream development & known issues
 
-Oracle MCP is maintained at [`steipete/oracle`](https://github.com/steipete/oracle). When you invoke `— reviewer: oracle-pro` (and especially the `o3-deep-research` / `gpt-5.5-pro` paths), it's worth checking the **[open PRs](https://github.com/steipete/oracle/pulls)** for in-flight fixes that may affect your run — e.g., model routing changes, browser-mode auth fixes, rate-limit handling, or new model alias support. ARIS does not vendor Oracle MCP; you're running the published version from `npm install -g @steipete/oracle`. If a behavior surprises you, the upstream PR queue is the first place to check before opening an issue here.
+Oracle MCP is maintained at [`steipete/oracle`](https://github.com/steipete/oracle). When you invoke `— reviewer: oracle-pro` (and especially the `o3-deep-research` / `gpt-5.5-pro` paths), it's worth checking the **[open PRs](https://github.com/steipete/oracle/pulls)** for in-flight fixes that may affect your run — e.g., model routing changes, browser-mode auth fixes, rate-limit handling, or new model alias support. Labline does not vendor Oracle MCP; you're running the published version from `npm install -g @steipete/oracle`. If a behavior surprises you, the upstream PR queue is the first place to check before opening an issue here.

@@ -325,7 +325,7 @@ def generate_catalog(skills_dir: Path, output_path: Path):
 
     # Generate markdown
     lines = []
-    lines.append("# ARIS Skill Catalog")
+    lines.append("# Labline Skill Catalog")
     lines.append("")
     lines.append(f"> 自动生成于 {datetime.now().strftime('%Y-%m-%d %H:%M')}。共 {len(skills)} 个 skill，{len(by_category)} 个分类。")
     lines.append(">")

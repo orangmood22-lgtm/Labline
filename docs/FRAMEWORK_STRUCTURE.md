@@ -1,25 +1,25 @@
-# ARIS 框架目录结构契约
+# Labline 框架目录结构契约
 
 > 版本: 2026-06-10
 > 适用对象: framework repo 维护者、项目开发者、部署管理员
 
 ## 三层分离原则
 
-ARIS 采用 **framework / project / dev** 三层分离模型，防止不同生命周期和所有权的东西混在一起。
+Labline 采用 **framework / project / dev** 三层分离模型，防止不同生命周期和所有权的东西混在一起。
 
 | 层级 | 所有权 | 生命周期 | 存放位置 | 稳定性 |
 |------|--------|---------|----------|--------|
-| **Framework (stable)** | 框架维护者 | 长期演进、版本发布 | `aris-orangmood-edition/` | 生产级 |
-| **Framework (dev)** | 框架开发者 | 实验验证、待 promote | `aris-dev/` | 不稳定 |
+| **Framework (stable)** | 框架维护者 | 长期演进、版本发布 | `lane-orangmood-edition/` | 生产级 |
+| **Framework (dev)** | 框架开发者 | 实验验证、待 promote | `lane-dev/` | 不稳定 |
 | **Project** | 科研人员 | 随研究结束归档 | 各科研项目的独立仓库/目录 | — |
-| **Dev-only docs** | 框架开发者 | 过程记录、计划、日志 | `aris-dev/to-developer/` | — |
+| **Dev-only docs** | 框架开发者 | 过程记录、计划、日志 | `lane-dev/to-developer/` | — |
 
 ## Dev Framework 说明
 
-`aris-dev/` 是 framework 的**测试/开发版本线**，结构与 stable 完全一致：
+`lane-dev/` 是 framework 的**测试/开发版本线**，结构与 stable 完全一致：
 
 - `skills/` — 候选 skill，验证通过后 promote 到 stable
-- `tools/` — 实验性工具（安装器契约 `install_aris.sh` 不可在 dev 改动）
+- `tools/` — 实验性工具（安装器契约 `install_labline.sh` 不可在 dev 改动）
 - `templates/` — 新版模板草稿
 - `deploy/` — 实验性部署配置
 - `docs/` `tests/` `examples/` `compat/` `incubating/` `legacy/` `mcp-servers/` `assets/`
@@ -40,7 +40,7 @@ Stable promote 规范见 `docs/PROMOTE_FLOW.md`；更细的开发过程记录只
 framework repo 是**长期资产**，只放以下类别：
 
 - `skills/` — 正式 skill 定义（SKILL.md）
-- `tools/` — 框架工具（install_aris.sh、同步脚本、队列管理）
+- `tools/` — 框架工具（install_labline.sh、同步脚本、队列管理）
 - `templates/` — 项目模板（project.yaml、CLAUDE.md/AGENTS.md 模板）
 - `deploy/` — Docker 部署配置
 - `docs/` — 面向用户和部署者的文档
@@ -143,7 +143,7 @@ framework:
 
 升级流程：
 1. 框架维护者发布新版本
-2. 项目开发者运行 `$framework-update` 或 `bash tools/install_aris.sh --reconcile`
+2. 项目开发者运行 `$framework-update` 或 `bash tools/install_labline.sh --reconcile`
 3. 更新 `project.yaml` 中的 version/commit/recorded_at
 4. 检查 incubating 条目是否有 promote 机会
 
@@ -172,7 +172,7 @@ framework:
 
 ## 相关文件
 
-- 安装与版本管理: `tools/install_aris.sh`
+- 安装与版本管理: `tools/install_labline.sh`
 - 项目模板: `templates/project.yaml.tmpl`
 - 项目文件指南: `docs/PROJECT_FILES_GUIDE.md`
 - 三边架构: `docs/TRIPARTITE_ARCHITECTURE_GUIDE.md`

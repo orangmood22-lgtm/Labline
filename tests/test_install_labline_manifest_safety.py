@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression test for install_aris.sh manifest safety (S5 atomic write, S6 lock).
+"""Regression test for install_labline.sh manifest safety (S5 atomic write, S6 lock).
 
 Covers:
   install: manifest file exists after successful install
@@ -18,12 +18,12 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_aris.sh"
+INSTALL_SCRIPT = REPO_ROOT / "tools" / "install_labline.sh"
 
 
 class ManifestSafetyTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-manifest-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="labline-manifest-"))
         self.project = self.tmp / "project"
         self.project.mkdir()
 
@@ -36,7 +36,7 @@ class ManifestSafetyTest(unittest.TestCase):
                 "bash",
                 str(INSTALL_SCRIPT),
                 str(self.project),
-                "--aris-repo",
+                "--labline-repo",
                 str(REPO_ROOT),
                 "--quiet",
                 "--no-doc",
@@ -48,11 +48,11 @@ class ManifestSafetyTest(unittest.TestCase):
         return result
 
     def test_manifest_exists_after_install(self):
-        """Successful install must create .aris/installed-skills.txt."""
+        """Successful install must create .labline/installed-skills.txt."""
         result = self._run()
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        manifest = self.project / ".labline" / "installed-skills.txt"
         self.assertTrue(manifest.exists(), "manifest must exist after install")
 
     def test_manifest_has_valid_version_header(self):
@@ -60,7 +60,7 @@ class ManifestSafetyTest(unittest.TestCase):
         result = self._run()
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        manifest = self.project / ".labline" / "installed-skills.txt"
         lines = manifest.read_text().splitlines()
         self.assertGreater(len(lines), 0, "manifest must not be empty")
         self.assertTrue(
@@ -73,7 +73,7 @@ class ManifestSafetyTest(unittest.TestCase):
         result = self._run()
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        manifest = self.project / ".labline" / "installed-skills.txt"
         text = manifest.read_text()
         # After header, there should be body lines with skill entries
         body_lines = [l for l in text.splitlines() if l.startswith("skill\t")]
@@ -82,14 +82,14 @@ class ManifestSafetyTest(unittest.TestCase):
     def test_uninstall_preserves_manifest_as_prev(self):
         """Uninstall should move manifest to .prev, not delete it."""
         self._run()  # install
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        manifest = self.project / ".labline" / "installed-skills.txt"
         self.assertTrue(manifest.exists())
 
         result = self._run("--uninstall")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         self.assertFalse(manifest.exists(), "current manifest must be gone")
-        prev = self.project / ".aris" / "installed-skills.txt.prev"
+        prev = self.project / ".labline" / "installed-skills.txt.prev"
         self.assertTrue(prev.exists(), "previous manifest must be preserved")
 
     def test_concurrent_install_serialize(self):
@@ -117,7 +117,7 @@ class ManifestSafetyTest(unittest.TestCase):
         self.assertTrue(all(rc in (0, 1) for rc in rcodes), "concurrent runs must exit 0 or 1, not crash")
 
         # Manifest should still be valid after concurrency
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        manifest = self.project / ".labline" / "installed-skills.txt"
         self.assertTrue(manifest.exists(), "manifest must survive concurrent access")
         text = manifest.read_text()
         self.assertIn("version\t", text, "manifest must still have valid header")

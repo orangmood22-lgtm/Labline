@@ -1,23 +1,23 @@
-# ARIS Dedicated Real-Machine Test Container
+# Labline Dedicated Real-Machine Test Container
 # Dev-only. Mount a framework checkout, a scratch projects dir, and a host log
 # dir; every run writes logs visible from the host.
 #
 # Usage:
 #   cp to-developer/realtest/.env.test.example to-developer/realtest/.env.test
-#   docker compose --env-file to-developer/realtest/.env.test -f to-developer/realtest/docker-compose.test.yaml up --build aris-realtest
+#   docker compose --env-file to-developer/realtest/.env.test -f to-developer/realtest/docker-compose.test.yaml up --build labline-realtest
 
 services:
-  aris-realtest:
+  labline-realtest:
     build:
       context: ../..
       dockerfile: deploy/Dockerfile
       args:
-        USERNAME: ${TEST_USERNAME:-aris-test}
+        USERNAME: ${TEST_USERNAME:-labline-test}
         UID: ${TEST_UID:-1000}
         GID: ${TEST_GID:-1000}
-        ARIS_BRANCH: ${TEST_ARIS_BRANCH:-stable}
-    container_name: aris-realtest
-    hostname: aris-realtest
+        LABLINE_BRANCH: ${TEST_LABLINE_BRANCH:-stable}
+    container_name: labline-realtest
+    hostname: labline-realtest
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
@@ -30,18 +30,18 @@ services:
       - no_proxy=${no_proxy:-127.0.0.1,localhost}
       - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
       - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
-      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-0}
-      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
-      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
-      - ARIS_WORKSPACE=/home/${TEST_USERNAME:-aris-test}
-      - ARIS_REALTEST_NAME=${ARIS_REALTEST_NAME:-smoke}
-      - ARIS_REALTEST_COMMAND=${ARIS_REALTEST_COMMAND:-}
+      - LABLINE_AUTO_CHECK_UPDATE=${LABLINE_AUTO_CHECK_UPDATE:-0}
+      - LABLINE_UPDATE_CHECK_INTERVAL=${LABLINE_UPDATE_CHECK_INTERVAL:-1d}
+      - LABLINE_UPDATE_CHECK_TIMEOUT=${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}
+      - LABLINE_WORKSPACE=/home/${TEST_USERNAME:-labline-test}
+      - LABLINE_REALTEST_NAME=${LABLINE_REALTEST_NAME:-smoke}
+      - LABLINE_REALTEST_COMMAND=${LABLINE_REALTEST_COMMAND:-}
     volumes:
-      - ${TEST_FRAMEWORK_PATH:?set TEST_FRAMEWORK_PATH in to-developer/realtest/.env.test}:/aris/framework
-      - ${TEST_PROJECTS_PATH:?set TEST_PROJECTS_PATH in to-developer/realtest/.env.test}:/aris/projects
-      - ${TEST_LOGS_PATH:?set TEST_LOGS_PATH in to-developer/realtest/.env.test}:/aris/test-logs
-      - ${TEST_DATASETS_PATH:-/tmp/aris-empty-datasets}:/aris/shared/datasets:ro
-      - ${TEST_PRETRAINED_PATH:-/tmp/aris-empty-pretrained}:/aris/shared/pretrained:ro
+      - ${TEST_FRAMEWORK_PATH:?set TEST_FRAMEWORK_PATH in to-developer/realtest/.env.test}:/labline/framework
+      - ${TEST_PROJECTS_PATH:?set TEST_PROJECTS_PATH in to-developer/realtest/.env.test}:/labline/projects
+      - ${TEST_LOGS_PATH:?set TEST_LOGS_PATH in to-developer/realtest/.env.test}:/labline/test-logs
+      - ${TEST_DATASETS_PATH:-/tmp/labline-empty-datasets}:/labline/shared/datasets:ro
+      - ${TEST_PRETRAINED_PATH:-/tmp/labline-empty-pretrained}:/labline/shared/pretrained:ro
     stdin_open: true
     tty: true
-    command: ["bash", "-lc", "/aris/framework/to-developer/realtest/test-runner.sh"]
+    command: ["bash", "-lc", "/labline/framework/to-developer/realtest/test-runner.sh"]

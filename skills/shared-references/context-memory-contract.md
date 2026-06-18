@@ -4,7 +4,7 @@
 
 ## 问题背景
 
-ARIS 框架在长周期科研项目中存在"遗忘"问题：
+Labline 框架在长周期科研项目中存在"遗忘"问题：
 - 会话断开后，之前讨论的设计决策、实验状态丢失
 - 新会话重新问相同问题，浪费 token 和时间
 - 无法区分"需要人决断"和"可自动继续"的事项
@@ -109,7 +109,7 @@ ARIS 框架在长周期科研项目中存在"遗忘"问题：
 3. 显示摘要：
 ```
 📋 上下文恢复：
-- 项目: aris-orangmood-edition (FSCIOD)
+- 项目: labline-orangmood-edition (FSCIOD)
 - 活跃实验: exp0603 (created)
 - 框架状态: Codex 迁移完成
 - 最近决策: Executor 角色拆分 (Jun 5)

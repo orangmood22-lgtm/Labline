@@ -1,4 +1,4 @@
-# ARIS 操作与运维手册
+# Labline 操作与运维手册
 
 > 分为用户手册和管理员手册。用户手册讲项目创建、日常 workflow、框架更新；管理员手册讲多人容器、共享资产和部署维护。
 
@@ -51,15 +51,15 @@
 |      | 框架 (Framework)                            | 科研项目 (Project)         |
 | ---- | ------------------------------------------- | -------------------------- |
 | 内容 | skills、tools、templates、deploy            | code、data、paper、results |
-| 位置 | 管理员分配；容器内通常是 `/aris/framework` | 容器内通常在 `/aris/projects` 下 |
-| 更新 | `aris framework update` / `aris framework rollback` | 用户自行管理 |
+| 位置 | 管理员分配；容器内通常是 `/lane/framework` | 容器内通常在 `/lane/projects` 下 |
+| 更新 | `lane framework update` / `lane framework rollback` | 用户自行管理 |
 | 共享 | 每个用户一份 framework copy，同一用户项目共享 | 每人/每方向独立 |
 
 框架通过 symlink 安装到项目中：Codex 默认使用 `.agents/skills/`，Claude Code 兼容模式使用 `.claude/skills/`。
 
 #### project.yaml
 
-每个科研项目的核心配置文件，由 `aris project init` 生成：
+每个科研项目的核心配置文件，由 `lane project init` 生成：
 
 ```yaml
 project:
@@ -77,12 +77,12 @@ servers:
   - name: "gpu-server-1"
     host: "gpu-server-1"              # ~/.ssh/config 中的别名
     path: "[服务器上的项目位置]/my-detection"
-    conda_env: "aris"
+    conda_env: "lane"
     gpus: [0, 2]
 
 framework:
   path: "[你的framework位置]"
-  repo: "https://github.com/your-org/aris-framework.git"
+  repo: "https://github.com/your-org/lane-framework.git"
 
 sync_exclude:
   - "outputs/"
@@ -99,23 +99,23 @@ sync_exclude:
 
 #### 创建项目
 
-#### Step 1: 用 `aris project init` 初始化项目
+#### Step 1: 用 `lane project init` 初始化项目
 
-`aris project init PATH` 是新手创建项目的**首选入口**。它会调用底层安装器并生成项目骨架。`PATH` 必填，`.` 表示当前目录。
+`lane project init PATH` 是新手创建项目的**首选入口**。它会调用底层安装器并生成项目骨架。`PATH` 必填，`.` 表示当前目录。
 
 ```bash
 # 当前目录初始化/接入
 mkdir -p ~/projects/my-research
 cd ~/projects/my-research
-aris project init . --direction "研究方向"
+lane project init . --direction "研究方向"
 
 # 从父目录创建项目；目录不存在会自动创建
 cd ~/projects
-aris project init ./my-research --direction "研究方向"
+lane project init ./my-research --direction "研究方向"
 
-# 已有项目半路接入 ARIS
+# 已有项目半路接入 Labline
 cd /path/to/existing-project
-aris project init . --direction "研究方向"
+lane project init . --direction "研究方向"
 ```
 
 安装完成后项目结构：
@@ -127,7 +127,7 @@ my-research/
 ├── CLAUDE.md              ← Claude Code 兼容上下文
 ├── .agents/skills/        ← Codex skills symlinks
 ├── .claude/skills/        ← Claude Code 兼容 symlinks
-├── .aris/
+├── .labline/
 │   ├── manifest.json      ← CLI 初始化记录
 │   ├── installed-skills.txt  ← manifest（记录安装了哪些 skill）
 │   └── installed-skills-codex.txt
@@ -140,7 +140,7 @@ my-research/
 #### Step 2: 检查初始化结果
 
 ```bash
-aris project doctor
+lane project doctor
 ```
 
 如果需要手动补充研究方向、服务器、约束，可再编辑 `AGENTS.md`；Claude Code 兼容模式同步参考 `CLAUDE.md`。
@@ -156,12 +156,12 @@ codex
 
 #### 项目放哪？
 
-普通用户只需要知道自己的项目通常放在 `/aris/projects` 或管理员指定的项目工作区。framework 位置由管理员分配；容器内通常是 `/aris/framework`。
+普通用户只需要知道自己的项目通常放在 `/lane/projects` 或管理员指定的项目工作区。framework 位置由管理员分配；容器内通常是 `/lane/framework`。
 
 ```
-/aris/framework/              # 你的 framework copy
+/lane/framework/              # 你的 framework copy
 
-/aris/projects/               # 你的项目工作区
+/lane/projects/               # 你的项目工作区
 ├── exp-detection/
 └── exp-segmentation/
 ```
@@ -170,8 +170,8 @@ codex
 
 - 每个用户有自己的 framework copy；该用户的项目通过 symlink 共享这份 copy
 - 项目之间完全独立（各自 git repo、各自 `AGENTS.md`）
-- `aris framework update` 默认同步更新已登记项目
-- 单个项目可手动运行 `aris project update`
+- `lane framework update` 默认同步更新已登记项目
+- 单个项目可手动运行 `lane project update`
 
 #### 日常开发
 
@@ -192,9 +192,9 @@ $sync status
 #### 更新框架
 
 ```
-aris framework --version
-aris framework update
-aris framework rollback
+lane framework --version
+lane framework update
+lane framework rollback
 ```
 
 
@@ -265,13 +265,16 @@ Agent 遇到权限/网络/资源阻塞时：
 
 #### 模型分层
 
-| 角色 | 形态 | 原因 |
-|------|------|------|
-| Leader | Codex 主会话 | 决策质量优先，读/判/派 |
-| Coder | 本地派生 agent / `$coder` | 代码实现与测试 |
-| Deployer | 本地派生 agent / `$deployer` | 部署、运行、监控、收集结果 |
-| Writer | 本地派生 agent / `$writer` | 论文、文档、rebuttal |
-| Reviewer | 本地独立 reviewer agent | 原始文件审查，不自审 |
+| 角色 | 形态 | 默认模型 | 原因 |
+|------|------|----------|------|
+| Leader | Codex 主会话 | `gpt-5.5` | 决策质量优先，读/判/派 |
+| Planner | 本地派生 agent / planning skill | `gpt-5.4` | 计划草案、依赖拆解 |
+| Coder | 本地派生 agent / `$coder` | `gpt-5.4-mini` | 代码实现与测试 |
+| Deployer | 本地派生 agent / `$deployer` | `gpt-5.4-mini` | 部署、运行、监控、收集结果 |
+| Writer | 本地派生 agent / `$writer` | `gpt-5.4` | 论文、文档、rebuttal |
+| Reviewer | 本地独立 reviewer agent | `gpt-5.4` | 原始文件审查，不自审 |
+
+这些是默认 Runtime Binding，不改变 Role Contract。需要更高质量或更低成本时，可以按部署策略覆盖模型，但不能改变 Leader / Planner / Coder / Deployer / Writer / Reviewer 的职责边界。
 - 输出审查报告（pass/fail + 具体问题）
 
 #### 文件协作
@@ -492,7 +495,7 @@ servers:
   - name: "gpu-server-1"
     host: "gpu-server-1"             # ~/.ssh/config 中的别名
     path: "[服务器上的项目位置]/project"
-    conda_env: "aris"
+    conda_env: "lane"
     gpus: [0, 2]
 
   - name: "gpu-server-2"
@@ -574,7 +577,7 @@ $paper-slides "paper/"                        # 做 PPT
 
 #### CC-Switch — API Provider 统一管理（推荐）
 
-容器内可用 [cc-switch-cli](https://github.com/SaladDay/cc-switch-cli) 管理 Codex、Claude Code、Gemini 等多个 CLI 的 API 配置。ARIS 默认入口是 Codex。
+容器内可用 [cc-switch-cli](https://github.com/SaladDay/cc-switch-cli) 管理 Codex、Claude Code、Gemini 等多个 CLI 的 API 配置。Labline 默认入口是 Codex。
 
 #### 基本用法
 
@@ -619,13 +622,16 @@ cc-switch provider switch 2 --app codex     # 只改 Codex
 
 三边架构使用不同模型，平衡成本与质量：
 
-| 角色 | 主力 | 说明 |
-|------|------|------|
+| 角色 | 默认模型 | 说明 |
+|------|----------|------|
 | Leader | GPT-5.5 / Codex profile | 决策质量优先 |
-| Executor Agent | GPT-5.5 / Codex profile | 实现、部署、论文撰写 |
-| Reviewer | GPT-5.5 / independent Codex profile | 本地独立审查，不依赖 MCP |
+| Planner | GPT-5.4 / Codex profile | 自动计划草案、任务拆解 |
+| Coder | GPT-5.4-mini / Codex profile | 代码实现、测试、修 bug |
+| Deployer | GPT-5.4-mini / Codex profile | 部署、运行、监控、收集结果 |
+| Writer | GPT-5.4 / Codex profile | 论文、文档、rebuttal |
+| Reviewer | GPT-5.4 / independent Codex profile | 本地独立审查，不依赖 MCP |
 
-三边角色通过本地 Codex profile 区分职责；Claude Code provider 只影响兼容模式。
+三边角色通过本地 Codex profile 和项目文件区分职责；Claude Code provider 只影响兼容模式。
 
 #### 预配 Provider（cc-switch）
 
@@ -711,6 +717,63 @@ git config --global https.proxy "$HTTPS_PROXY"
 
 ---
 
+### 飞书 / Lark 远程入口
+
+Labline 默认通过外部 `lark-channel-bridge` 连接飞书/Lark 和本地 Codex/Claude Code。Labline 的稳定入口是短命令 `lane feishu ...`。
+
+首次安装和检查：
+
+```bash
+lane feishu install
+lane feishu doctor
+```
+
+默认安装到当前用户的 `~/.labline/node`，普通用户不需要 sudo。管理员确实要装到系统 npm 目录时再用：
+
+```bash
+lane feishu install --scope system
+```
+
+在项目目录前台启动 Codex 远程会话：
+
+```bash
+cd [你的project位置]
+lane feishu run
+```
+
+确认扫码和收发消息正常后，改为后台服务：
+
+```bash
+cd [你的project位置]
+lane feishu start
+lane feishu status
+lane feishu logs --tail 50
+```
+
+如果启动时报 `could not resolve bot identity` 或飞书开放平台 502，先试直连禁用代理：
+
+```bash
+lane feishu run --no-proxy
+```
+
+Claude Code 用独立 profile：
+
+```bash
+cd [你的project位置]
+lane feishu run --profile lane-claude --agent claude
+```
+
+飞书入口只是 transport adapter，不是远程 shell，也不替代 Leader。实际代码修改、工具执行和权限判断仍发生在本地 Codex/Claude Code session 中。详细配置见 `docs/FEISHU_INTEGRATION.md`。
+
+多人共用同一台服务器、同一 Linux 账户时，至少用不同 `--home`、`--profile` 和 `--workspace` 隔离：
+
+```bash
+lane feishu start --home /root/.lark-channel-user-a --profile user-a-codex --workspace /lane/projects/user-a-project
+lane feishu start --home /root/.lark-channel-user-b --profile user-b-codex --workspace /lane/projects/user-b-project
+```
+
+---
+
 ### 框架管理
 
 #### 更新框架
@@ -718,7 +781,7 @@ git config --global https.proxy "$HTTPS_PROXY"
 只检查是否有新版本，不改变本地 framework：
 
 ```bash
-aris framework check-update
+lane framework check-update
 ```
 
 输出含义：
@@ -726,7 +789,7 @@ aris framework check-update
 | status | 含义 |
 |--------|------|
 | `up-to-date` | 当前 framework 已经是 upstream 最新 |
-| `update available` | upstream 有新提交，可以运行 `aris framework update` |
+| `update available` | upstream 有新提交，可以运行 `lane framework update` |
 | `local ahead` | 本地比 upstream 新，通常是本地开发或未推送 |
 | `diverged` | 本地和 upstream 分叉，需要人工处理 |
 | `unknown` | 当前 framework 没有配置 upstream |
@@ -734,34 +797,34 @@ aris framework check-update
 容器启动、进入交互 shell、打开 tmux pane 时都会触发一次轻量检查入口；默认最多每天联网检查一次，且每个用户每天最多提醒一次。它只检查，不会自动更新。
 
 ```
-aris framework update
+lane framework update
 ```
 
 默认行为：更新你自己的 framework copy，然后根据 Project Registry 自动同步已登记项目。若只想更新 framework，不同步项目：
 
 ```bash
-aris framework update --no-project-sync
+lane framework update --no-project-sync
 ```
 
 如果更新后遇到兼容性问题：
 
 ```bash
-aris framework rollback
+lane framework rollback
 ```
 
 #### 项目接入更新
 
-单个项目重建 ARIS 接入：
+单个项目重建 Labline 接入：
 
 ```bash
-aris project update
+lane project update
 ```
 
 查看版本：
 
 ```bash
-aris framework --version
-aris project --version
+lane framework --version
+lane project --version
 ```
 
 ---
@@ -773,7 +836,7 @@ aris project --version
 每人 fork 框架仓库，独立开发：
 
 ```
-upstream (your-org/aris-framework)
+upstream (your-org/lane-framework)
   ├── fork-zhangsan
   ├── fork-lisi
   └── fork-wangwu
@@ -805,26 +868,26 @@ Gitea (http://gitea:3000)
 
 ### Docker 多人环境
 
-每人一个长期容器。每个容器有自己的 `/aris/framework` 和 `/aris/projects`；数据集、预训练模型、下载缓存共享：
+每人一个长期容器。每个容器有自己的 `/lane/framework` 和 `/lane/projects`；数据集、预训练模型、下载缓存共享：
 
 ```
 ┌─────────────────────────────────────────┐
 │ Host Server                              │
 ├──────────┬──────────┬───────────────────┤
-│ aris-    │ aris-    │ aris-gitea        │
+│ lane-    │ lane-    │ lane-gitea        │
 │ zhangsan │ lisi     │ (git server)      │
 ├──────────┴──────────┴───────────────────┤
 │ Shared Volumes:                          │
-│  [你的数据集目录] -> /aris/shared/datasets (ro)     │
-│  shared-pretrained -> /aris/shared/pretrained        │
-│  shared-downloads -> /aris/shared/downloads          │
+│  [你的数据集目录] -> /lane/shared/datasets (ro)     │
+│  shared-pretrained -> /lane/shared/pretrained        │
+│  shared-downloads -> /lane/shared/downloads          │
 │ Per-user Volumes:                        │
-│  zhangsan/framework -> aris-zhangsan:/aris/framework │
-│  lisi/framework -> aris-lisi:/aris/framework         │
-│  user1-projects -> aris-zhangsan:/aris/projects     │
-│  user2-projects -> aris-lisi:/aris/projects         │
-│  zhangsan/.aris -> aris-zhangsan:~/.aris             │
-│  lisi/.aris -> aris-lisi:~/.aris                     │
+│  zhangsan/framework -> lane-zhangsan:/lane/framework │
+│  lisi/framework -> lane-lisi:/lane/framework         │
+│  user1-projects -> lane-zhangsan:/lane/projects     │
+│  user2-projects -> lane-lisi:/lane/projects         │
+│  zhangsan/.labline -> lane-zhangsan:~/.labline             │
+│  lisi/.labline -> lane-lisi:~/.labline                     │
 └─────────────────────────────────────────┘
 ```
 
@@ -855,26 +918,26 @@ cc-switch provider switch 1
 管理员提供每个用户的初始 framework copy，但不在后台强制更新用户的 framework。容器启动、进入交互 shell、打开 tmux pane 时默认都会触发一次轻量检查入口：
 
 ```bash
-aris framework check-update --aris-repo /aris/framework --if-stale 1d --notify
+lane framework check-update --lane-repo /lane/framework --if-stale 1d --notify
 ```
 
 `--if-stale 1d` 让同一用户每天最多联网检查一次；`--notify` 让同一用户每天最多看到一次更新提醒。这只提示是否有 upstream 更新，不会 `git pull`。用户确认后自己运行：
 
 ```bash
-aris framework update
+lane framework update
 ```
 
 如果实验期需要固定版本，可以在 `.env` 中关闭启动检查：
 
 ```env
-ARIS_AUTO_CHECK_UPDATE=0
+LABLINE_AUTO_CHECK_UPDATE=0
 ```
 
 检查间隔和超时也可以调：
 
 ```env
-ARIS_UPDATE_CHECK_INTERVAL=1d
-ARIS_UPDATE_CHECK_TIMEOUT=10s
+LABLINE_UPDATE_CHECK_INTERVAL=1d
+LABLINE_UPDATE_CHECK_TIMEOUT=10s
 ```
 
 ---
@@ -886,7 +949,7 @@ ARIS_UPDATE_CHECK_TIMEOUT=10s
 | 问题                                | 解决                                              |
 | ----------------------------------- | ------------------------------------------------- |
 | Skill 不可用                         | 检查 `.agents/skills/` symlink 是否存在且指向正确 |
-| `aris framework update` 报 "有本地修改" | 先提交/保存本地修改，或手动处理 framework git 状态 |
+| `lane framework update` 报 "有本地修改" | 先提交/保存本地修改，或手动处理 framework git 状态 |
 | API 403/401                         | 检查 key 是否过期，base_url 是否正确              |
 | Codex 返回空                         | 检查 `~/.codex/config.toml` 的 base_url            |
 

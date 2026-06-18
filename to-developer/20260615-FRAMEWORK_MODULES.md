@@ -1,4 +1,4 @@
-# ARIS 框架模块说明
+# Labline 框架模块说明
 
 本文档定义开发者侧的框架模块边界。`to-developer/20260613-DEVELOPMENT_LOG.md` 按这里的模块名记录开发变更；发布前再把用户可见部分蒸馏到 `CHANGELOG.md`。
 
@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `skills` | `skills/`, `.agents/skills/` | 用户侧 Agent 可调用能力、workflow、role skill、shared references、Codex/Claude 兼容镜像。 | `docs/SKILL_DAG.yaml`, `docs/SKILL_CATALOG*.md`, mirror 测试、相关 skill 文档。 |
 | `dev-skills` | `to-developer/skills/`, dev checkout `.agents/skills/dev-*` | 开发侧 maintainer-only skills，用于框架维护、review、生成、promote、测试、批量清扫等；必须使用 `dev-` 前缀，不安装到用户项目。 | dev skills installer、`to-developer/` 文档、开发日志、dev-only 测试。 |
-| `dev-user-surface` | `skills/skills-codex/`, `docs/SKILL_*`, 用户模板与用户文档生成物 | 开发 checkout 中准备给用户/stable 的表面，包括 User Skill mirror、catalog、DAG、模板和用户文档一致性。 | `aris dev user-surface ...`、生成器、mirror 测试、promote gate。 |
+| `dev-user-surface` | `skills/skills-codex/`, `docs/SKILL_*`, 用户模板与用户文档生成物 | 开发 checkout 中准备给用户/stable 的表面，包括 User Skill mirror、catalog、DAG、模板和用户文档一致性。 | `lane dev user-surface ...`、生成器、mirror 测试、promote gate。 |
 | `tools` | `tools/` | 本地 CLI/脚本工具，包括文档 DAG、release、状态流、飞书 session runner、安装/同步辅助。 | 对应测试、README/工具索引、开发日志。 |
 | `templates` | `templates/` | 新项目初始化模板、项目内 agent 配置模板、`project.yaml` 模板。 | 安装器测试、项目文件指南、模板 README。 |
 | `docs` | `docs/`, `README.md`, `CONTEXT.md`, `AGENTS.md` | stable 面向用户和 agent 的正式说明、治理术语、入口索引。 | `docs/README.md`, 用户入口链接、相关 generated docs。 |

@@ -8,12 +8,12 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DOCTOR = REPO_ROOT / "deploy" / "aris_gpu_doctor.sh"
+DOCTOR = REPO_ROOT / "deploy" / "labline_gpu_doctor.sh"
 
 
-class ArisGpuDoctorTest(unittest.TestCase):
+class LablineGpuDoctorTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-gpu-doctor-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="labline-gpu-doctor-"))
         self.framework = self.tmp / "framework"
         self.projects_root = self.tmp / "projects"
         self.datasets = self.tmp / "datasets"
@@ -45,14 +45,14 @@ class ArisGpuDoctorTest(unittest.TestCase):
         project = self.projects_root / "exp0603"
         skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
-        os.symlink("/root/Projects/aris/Auto-research-in-sleep/aris-orangmood-edition/skills/leader", skills_dir / "leader")
+        os.symlink("/root/Projects/labline/Auto-research-in-sleep/labline-orangmood-edition/skills/leader", skills_dir / "leader")
 
         result = self._run("--project", "exp0603")
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("FAIL exp0603 skills: stale target outside framework", result.stdout)
         self.assertIn(
-            f"bash {self.framework}/tools/install_aris.sh {self.projects_root}/exp0603 --aris-repo {self.framework} --quiet --no-doc",
+            f"bash {self.framework}/tools/install_labline.sh {self.projects_root}/exp0603 --labline-repo {self.framework} --quiet --no-doc",
             result.stdout,
         )
 
@@ -96,7 +96,7 @@ class ArisGpuDoctorTest(unittest.TestCase):
         os.symlink(str(self.framework / "skills" / "leader"), skills_dir / "leader")
         (project / "data").mkdir()
         (self.datasets / "VOCdevkit").mkdir()
-        os.symlink("/aris/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
+        os.symlink("/labline/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
 
         result = self._run("--project", "exp0603")
 
@@ -108,10 +108,10 @@ class ArisGpuDoctorTest(unittest.TestCase):
         project = self.projects_root / "exp0603"
         skills_dir = project / ".agents" / "skills"
         skills_dir.mkdir(parents=True)
-        os.symlink("/aris/framework/skills/leader", skills_dir / "leader")
+        os.symlink("/labline/framework/skills/leader", skills_dir / "leader")
         (project / "data").mkdir()
         (self.datasets / "VOCdevkit").mkdir()
-        os.symlink("/aris/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
+        os.symlink("/labline/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
 
         result = self._run("--project", "exp0603")
 
@@ -125,7 +125,7 @@ class ArisGpuDoctorTest(unittest.TestCase):
         os.symlink(str(self.framework / "skills" / "leader"), skills_dir / "leader")
         (project / "data").mkdir()
         (self.datasets / "VOCdevkit").mkdir()
-        os.symlink("/aris/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
+        os.symlink("/labline/shared/datasets/VOCdevkit", project / "data" / "VOCdevkit")
 
         result = self._run("--project", "exp0603")
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ARIS Meta-Optimize: Readiness Check
+# Labline Meta-Optimize: Readiness Check
 # Called by SessionEnd hook. If enough data has accumulated,
 # outputs a reminder to stdout (injected into Claude's context).
 #
@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-ARIS_META_DIR="${CLAUDE_PROJECT_DIR:-.}/.aris/meta"
-EVENTS_FILE="$ARIS_META_DIR/events.jsonl"
-LAST_RUN_FILE="$ARIS_META_DIR/.last_optimize"
+LABLINE_META_DIR="${CLAUDE_PROJECT_DIR:-.}/.labline/meta"
+EVENTS_FILE="$LABLINE_META_DIR/events.jsonl"
+LAST_RUN_FILE="$LABLINE_META_DIR/.last_optimize"
 
 # No log = nothing to check
 [ -f "$EVENTS_FILE" ] || exit 0
@@ -28,5 +28,5 @@ fi
 
 # Threshold: 5 skill invocations since last optimize
 if [ "$SINCE_LAST" -ge 5 ]; then
-    echo "📊 ARIS has logged $SINCE_LAST skill runs since last optimization. Run /meta-optimize to check for improvement opportunities."
+    echo "📊 Labline has logged $SINCE_LAST skill runs since last optimization. Run /meta-optimize to check for improvement opportunities."
 fi

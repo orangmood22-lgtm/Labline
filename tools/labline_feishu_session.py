@@ -18,7 +18,7 @@ FEISHU_CONTROL = REPO_ROOT / "tools" / "feishu_control.py"
 def state_root(args: argparse.Namespace) -> Path:
     if args.state_root:
         return Path(args.state_root)
-    return Path(args.project_root) / ".aris" / "feishu-control"
+    return Path(args.project_root) / ".labline" / "feishu-control"
 
 
 def inbox_file(root: Path, session_id: str) -> Path:
@@ -180,7 +180,7 @@ def read_transcript_context(path: Path | None, max_chars: int) -> str:
 
 def build_btw_prompt(question: str, transcript_context: str) -> str:
     return (
-        "你是 ARIS/Codex 的 BTW side-channel。\n"
+        "你是 Labline/Codex 的 BTW side-channel。\n"
         "回答用户问题，但不要修改文件、不要执行项目操作、不要影响主 Codex CLI thread。\n"
         "你只能基于下面当前 thread transcript 摘要/尾部和用户问题回答。\n\n"
         f"用户 BTW 问题：\n{question}\n\n"
@@ -448,7 +448,7 @@ def send_response(args: argparse.Namespace, text: str, message: dict | None = No
         )
         if args.send_feishu:
             if args.feishu_format == "card":
-                payload = {"title": "ARIS", "body": text, "color": "blue"}
+                payload = {"title": "Labline", "body": text, "color": "blue"}
             else:
                 payload = {"type": "text", "content": text}
             payload = with_recipient(payload, message_sender(args, message))
@@ -465,7 +465,7 @@ def send_status(args: argparse.Namespace, text: str, color: str = "yellow", chan
     if not args.bridge_url or not args.send_feishu or not args.feishu_status_updates:
         return
     if args.feishu_format == "card":
-        payload = {"title": "ARIS 状态", "body": text, "color": color}
+        payload = {"title": "Labline 状态", "body": text, "color": color}
     else:
         payload = {"type": "text", "content": text}
     payload = with_recipient(payload, message_sender(args))

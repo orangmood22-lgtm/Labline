@@ -4,22 +4,22 @@ Project-local status snapshots let Leader observe delegated agents without readi
 
 ## Location
 
-Runtime status belongs to the research project, not the ARIS framework repo:
+Runtime status belongs to the research project, not the Labline framework repo:
 
 ```text
-.aris/status/
+.labline/status/
   agents/<agent_id>.json
   events.jsonl          # optional diagnostics only
 ```
 
-Do not commit `.aris/status/`. Framework tests must use `--status-root` with a tmp dir.
+Do not commit `.labline/status/`. Framework tests must use `--status-root` with a tmp dir.
 
 ## Tool
 
-Use `.aris/tools/agent_status.py` in installed projects; use `tools/agent_status.py` only inside the ARIS framework repo. Do not hand-write JSON unless recovering from tool failure.
+Use `.labline/tools/agent_status.py` in installed projects; use `tools/agent_status.py` only inside the Labline framework repo. Do not hand-write JSON unless recovering from tool failure.
 
 ```bash
-python3 .aris/tools/agent_status.py --project-root "$PWD" start \
+python3 .labline/tools/agent_status.py --project-root "$PWD" start \
   --agent-id deployer-20260613-001 \
   --role deployer \
   --task "run full experiments" \
@@ -73,7 +73,7 @@ starting | running | waiting_on_job | blocked | done | failed
 Long training, downloads, queue runs, or remote deployments must expose a durable job handle before the agent waits:
 
 ```bash
-python3 .aris/tools/agent_status.py --project-root "$PWD" update \
+python3 .labline/tools/agent_status.py --project-root "$PWD" update \
   --agent-id deployer-20260613-001 \
   --status waiting_on_job \
   --current-action "training in tmux exp01" \

@@ -1,6 +1,6 @@
-# ARIS Version Management
+# Labline Version Management
 
-ARIS uses lightweight semantic versioning before `v1.0.0`. This document defines the branch roles, release tags, changelog split, and guarded release tooling.
+Labline uses lightweight semantic versioning before `v1.0.0`. This document defines the branch roles, release tags, changelog split, and guarded release tooling.
 
 ## Branch Roles
 

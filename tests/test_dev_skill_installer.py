@@ -6,8 +6,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_SCRIPT = REPO_ROOT / "tools" / "install_aris_dev_skills.sh"
-ARIS_CLI = REPO_ROOT / "tools" / "aris"
+SOURCE_SCRIPT = REPO_ROOT / "tools" / "install_labline_dev_skills.sh"
+LANE_CLI = REPO_ROOT / "tools" / "lane"
 
 
 def run(cmd: list[str], *, cwd: Path, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -21,11 +21,11 @@ def write_skill(root: Path, name: str, body: str = "# skill\n") -> None:
 
 
 def make_checkout(tmp_path: Path) -> Path:
-    repo = tmp_path / "aris-dev"
+    repo = tmp_path / "labline-dev"
     (repo / "tools").mkdir(parents=True)
     (repo / "templates").mkdir()
-    shutil.copy2(SOURCE_SCRIPT, repo / "tools" / "install_aris_dev_skills.sh")
-    (repo / "tools" / "install_aris_dev_skills.sh").chmod(0o755)
+    shutil.copy2(SOURCE_SCRIPT, repo / "tools" / "install_labline_dev_skills.sh")
+    (repo / "tools" / "install_labline_dev_skills.sh").chmod(0o755)
 
     write_skill(repo, "dev-alpha", "# alpha\n")
     write_skill(repo, "dev-beta", "# beta\n")
@@ -40,7 +40,7 @@ def make_checkout(tmp_path: Path) -> Path:
 def test_dev_skill_installer_installs_only_dev_skills_and_keeps_claude(tmp_path: Path) -> None:
     repo = make_checkout(tmp_path)
 
-    result = run(["bash", "tools/install_aris_dev_skills.sh", "--quiet"], cwd=repo)
+    result = run(["bash", "tools/install_labline_dev_skills.sh", "--quiet"], cwd=repo)
     assert result.returncode == 0, result.stderr
 
     alpha_link = repo / ".agents" / "skills" / "dev-alpha"
@@ -51,7 +51,7 @@ def test_dev_skill_installer_installs_only_dev_skills_and_keeps_claude(tmp_path:
     assert beta_link.resolve() == repo / "to-developer" / "skills" / "dev-beta"
     assert not (repo / ".agents" / "skills" / "caveman").exists()
 
-    manifest = repo / ".aris" / "installed-dev-skills.txt"
+    manifest = repo / ".labline" / "installed-dev-skills.txt"
     manifest_text = manifest.read_text(encoding="utf-8")
     assert "dev-alpha" in manifest_text
     assert "dev-beta" in manifest_text
@@ -64,11 +64,11 @@ def test_dev_skill_installer_installs_only_dev_skills_and_keeps_claude(tmp_path:
 def test_dev_skill_installer_dry_run_does_not_create_local_state(tmp_path: Path) -> None:
     repo = make_checkout(tmp_path)
 
-    result = run(["bash", "tools/install_aris_dev_skills.sh", "--dry-run", "--quiet"], cwd=repo)
+    result = run(["bash", "tools/install_labline_dev_skills.sh", "--dry-run", "--quiet"], cwd=repo)
     assert result.returncode == 0, result.stderr
 
     assert not (repo / ".agents").exists()
-    assert not (repo / ".aris").exists()
+    assert not (repo / ".labline").exists()
     assert not (repo / ".claude" / "skills" / "dev-alpha").exists()
 
 
@@ -76,7 +76,7 @@ def test_dev_skills_cli_wraps_installer(tmp_path: Path) -> None:
     repo = make_checkout(tmp_path)
 
     install = subprocess.run(
-        [str(ARIS_CLI), "dev", "skills", "install", "--aris-repo", str(repo), "--quiet"],
+        [str(LANE_CLI), "dev", "skills", "install", "--labline-repo", str(repo), "--quiet"],
         cwd=tmp_path,
         text=True,
         capture_output=True,
@@ -84,10 +84,10 @@ def test_dev_skills_cli_wraps_installer(tmp_path: Path) -> None:
     )
     assert install.returncode == 0, install.stderr
     assert (repo / ".agents" / "skills" / "dev-alpha").is_symlink()
-    assert (repo / ".aris" / "installed-dev-skills.txt").exists()
+    assert (repo / ".labline" / "installed-dev-skills.txt").exists()
 
     doctor = subprocess.run(
-        [str(ARIS_CLI), "dev", "skills", "doctor", "--aris-repo", str(repo), "--quiet"],
+        [str(LANE_CLI), "dev", "skills", "doctor", "--labline-repo", str(repo), "--quiet"],
         cwd=tmp_path,
         text=True,
         capture_output=True,
@@ -96,7 +96,7 @@ def test_dev_skills_cli_wraps_installer(tmp_path: Path) -> None:
     assert doctor.returncode == 0, doctor.stderr
 
     detach = subprocess.run(
-        [str(ARIS_CLI), "dev", "skills", "detach", "--aris-repo", str(repo), "--quiet"],
+        [str(LANE_CLI), "dev", "skills", "detach", "--labline-repo", str(repo), "--quiet"],
         cwd=tmp_path,
         text=True,
         capture_output=True,
@@ -109,41 +109,41 @@ def test_dev_skills_cli_wraps_installer(tmp_path: Path) -> None:
 def test_dev_skill_installer_reconciles_and_detaches(tmp_path: Path) -> None:
     repo = make_checkout(tmp_path)
 
-    first = run(["bash", "tools/install_aris_dev_skills.sh", "--quiet"], cwd=repo)
+    first = run(["bash", "tools/install_labline_dev_skills.sh", "--quiet"], cwd=repo)
     assert first.returncode == 0, first.stderr
 
     (repo / "to-developer" / "skills" / "dev-beta").rename(repo / "to-developer" / "skills" / "dev-gamma")
 
-    second = run(["bash", "tools/install_aris_dev_skills.sh", "--quiet"], cwd=repo)
+    second = run(["bash", "tools/install_labline_dev_skills.sh", "--quiet"], cwd=repo)
     assert second.returncode == 0, second.stderr
 
     assert not (repo / ".agents" / "skills" / "dev-beta").exists()
     assert (repo / ".agents" / "skills" / "dev-gamma").resolve() == repo / "to-developer" / "skills" / "dev-gamma"
-    manifest_text = (repo / ".aris" / "installed-dev-skills.txt").read_text(encoding="utf-8")
+    manifest_text = (repo / ".labline" / "installed-dev-skills.txt").read_text(encoding="utf-8")
     assert "dev-beta" not in manifest_text
     assert "dev-gamma" in manifest_text
 
     (repo / ".agents" / "skills" / "local-note.txt").write_text("keep\n", encoding="utf-8")
-    detach = run(["bash", "tools/install_aris_dev_skills.sh", "--detach", "--quiet"], cwd=repo)
+    detach = run(["bash", "tools/install_labline_dev_skills.sh", "--detach", "--quiet"], cwd=repo)
     assert detach.returncode == 0, detach.stderr
 
     assert not (repo / ".agents" / "skills" / "dev-alpha").exists()
     assert not (repo / ".agents" / "skills" / "dev-gamma").exists()
     assert (repo / ".agents" / "skills" / "local-note.txt").read_text(encoding="utf-8") == "keep\n"
-    assert not (repo / ".aris" / "installed-dev-skills.txt").exists()
+    assert not (repo / ".labline" / "installed-dev-skills.txt").exists()
     assert (repo / ".claude" / "skills" / "existing.txt").exists()
 
 
 def test_dev_skill_installer_doctor_reports_bad_links(tmp_path: Path) -> None:
     repo = make_checkout(tmp_path)
 
-    install = run(["bash", "tools/install_aris_dev_skills.sh", "--quiet"], cwd=repo)
+    install = run(["bash", "tools/install_labline_dev_skills.sh", "--quiet"], cwd=repo)
     assert install.returncode == 0, install.stderr
 
     dev_alpha = repo / ".agents" / "skills" / "dev-alpha"
     dev_alpha.unlink()
     dev_alpha.symlink_to(repo / "to-developer" / "skills" / "caveman")
 
-    doctor = run(["bash", "tools/install_aris_dev_skills.sh", "--doctor", "--quiet"], cwd=repo, check=False)
+    doctor = run(["bash", "tools/install_labline_dev_skills.sh", "--doctor", "--quiet"], cwd=repo, check=False)
     assert doctor.returncode != 0
     assert "wrong target" in doctor.stderr

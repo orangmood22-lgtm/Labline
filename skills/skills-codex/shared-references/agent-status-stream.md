@@ -5,15 +5,15 @@
 ## 默认路径
 
 ```text
-.aris/status/agents/<agent_id>.json
+.labline/status/agents/<agent_id>.json
 ```
 
 优先使用项目内工具写状态：
 
 ```bash
-.aris/tools/agent_status.py start --agent-id coder-001 --role coder --task "implement evaluator"
-.aris/tools/agent_status.py update --agent-id coder-001 --status running --current-action "checking tests"
-.aris/tools/agent_status.py finish --agent-id coder-001 --status done --current-action "completed"
+.labline/tools/agent_status.py start --agent-id coder-001 --role coder --task "implement evaluator"
+.labline/tools/agent_status.py update --agent-id coder-001 --status running --current-action "checking tests"
+.labline/tools/agent_status.py finish --agent-id coder-001 --status done --current-action "completed"
 ```
 
 长任务必须写 durable job handle，例如 tmux/screen/session/queue/log/result dir。

@@ -1,4 +1,4 @@
-# ARIS Multi-User Deployment
+# LABLINE Multi-User Deployment
 # One long-running container per researcher.
 # Each researcher gets an isolated framework checkout and projects directory.
 # Datasets, pretrained models, and download cache are shared across researcher
@@ -8,7 +8,7 @@
 #   1. Copy this file to your group server
 #   2. Edit .env file with user list and API keys
 #   3. docker compose up -d
-#   4. docker exec -it aris-zhangsan bash
+#   4. docker exec -it labline-zhangsan bash
 #
 # Add more users: copy a researcher block and change name/UID/GID/SSH,
 # USERn_FRAMEWORK_PATH, USERn_PROJECTS_PATH, and USERn_STATE_PATH.
@@ -17,7 +17,7 @@ services:
   # ─── Self-hosted Git (Gitea) ──────────────────────────────────────────────
   gitea:
     image: gitea/gitea:latest
-    container_name: aris-gitea
+    container_name: labline-gitea
     environment:
       - USER_UID=1000
       - USER_GID=1000
@@ -39,8 +39,8 @@ services:
         USERNAME: ${USER1_NAME:-researcher1}
         UID: ${USER1_UID:-1001}
         GID: ${USER1_GID:-1001}
-    container_name: aris-${USER1_NAME:-researcher1}
-    hostname: aris-${USER1_NAME:-researcher1}
+    container_name: labline-${USER1_NAME:-researcher1}
+    hostname: labline-${USER1_NAME:-researcher1}
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
@@ -53,31 +53,31 @@ services:
       - no_proxy=${no_proxy:-}
       - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
       - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
-      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-1}
-      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
-      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
+      - LABLINE_AUTO_CHECK_UPDATE=${LABLINE_AUTO_CHECK_UPDATE:-1}
+      - LABLINE_UPDATE_CHECK_INTERVAL=${LABLINE_UPDATE_CHECK_INTERVAL:-1d}
+      - LABLINE_UPDATE_CHECK_TIMEOUT=${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}
       - FEISHU_APP_ID=${FEISHU_APP_ID:-}
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}
       - FEISHU_USER_ID=${FEISHU_USER_ID:-}
       - FEISHU_RECEIVE_ID_TYPE=${FEISHU_RECEIVE_ID_TYPE:-open_id}
       - FEISHU_ENABLE_WS=${FEISHU_ENABLE_WS:-0}
       - BRIDGE_PORT=${BRIDGE_PORT:-5000}
-      - ARIS_PROJECT_ROOT=${ARIS_PROJECT_ROOT:-/aris/framework}
-      - ARIS_FEISHU_CONTROL_ROOT=${ARIS_FEISHU_CONTROL_ROOT:-}
+      - LABLINE_PROJECT_ROOT=${LABLINE_PROJECT_ROOT:-/labline/framework}
+      - LABLINE_FEISHU_CONTROL_ROOT=${LABLINE_FEISHU_CONTROL_ROOT:-}
       - GITEA_URL=http://gitea:3000
     volumes:
       # Per-user framework checkout: user controls update/rollback.
-      - ${USER1_FRAMEWORK_PATH:?set USER1_FRAMEWORK_PATH in .env}:/aris/framework
+      - ${USER1_FRAMEWORK_PATH:?set USER1_FRAMEWORK_PATH in .env}:/labline/framework
       # Per-user projects: do not share this path with another researcher.
-      - ${USER1_PROJECTS_PATH:?set USER1_PROJECTS_PATH in .env}:/aris/projects
-      # Per-user ARIS local state: project registry, framework rollback history.
-      - ${USER1_STATE_PATH:?set USER1_STATE_PATH in .env}:/home/${USER1_NAME:-researcher1}/.aris
+      - ${USER1_PROJECTS_PATH:?set USER1_PROJECTS_PATH in .env}:/labline/projects
+      # Per-user LABLINE local state: project registry, framework rollback history.
+      - ${USER1_STATE_PATH:?set USER1_STATE_PATH in .env}:/home/${USER1_NAME:-researcher1}/.labline
       # Shared datasets (read-only)
-      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro
+      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/labline/shared/datasets:ro
       # Shared download cache
-      - ${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/aris/shared/downloads
+      - ${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/labline/shared/downloads
       # Shared pretrained models/cache
-      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained
+      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/labline/shared/pretrained
       # SSH keys (mount from host)
       - ${USER1_SSH:-/dev/null}:/run/secrets/ssh:ro
     stdin_open: true
@@ -94,8 +94,8 @@ services:
         USERNAME: ${USER2_NAME:-researcher2}
         UID: ${USER2_UID:-1002}
         GID: ${USER2_GID:-1002}
-    container_name: aris-${USER2_NAME:-researcher2}
-    hostname: aris-${USER2_NAME:-researcher2}
+    container_name: labline-${USER2_NAME:-researcher2}
+    hostname: labline-${USER2_NAME:-researcher2}
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
@@ -108,28 +108,28 @@ services:
       - no_proxy=${no_proxy:-}
       - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
       - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
-      - ARIS_AUTO_CHECK_UPDATE=${ARIS_AUTO_CHECK_UPDATE:-1}
-      - ARIS_UPDATE_CHECK_INTERVAL=${ARIS_UPDATE_CHECK_INTERVAL:-1d}
-      - ARIS_UPDATE_CHECK_TIMEOUT=${ARIS_UPDATE_CHECK_TIMEOUT:-10s}
+      - LABLINE_AUTO_CHECK_UPDATE=${LABLINE_AUTO_CHECK_UPDATE:-1}
+      - LABLINE_UPDATE_CHECK_INTERVAL=${LABLINE_UPDATE_CHECK_INTERVAL:-1d}
+      - LABLINE_UPDATE_CHECK_TIMEOUT=${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}
       - FEISHU_APP_ID=${FEISHU_APP_ID:-}
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}
       - FEISHU_USER_ID=${FEISHU_USER_ID:-}
       - FEISHU_RECEIVE_ID_TYPE=${FEISHU_RECEIVE_ID_TYPE:-open_id}
       - FEISHU_ENABLE_WS=${FEISHU_ENABLE_WS:-0}
       - BRIDGE_PORT=${BRIDGE_PORT:-5000}
-      - ARIS_PROJECT_ROOT=${ARIS_PROJECT_ROOT:-/aris/framework}
-      - ARIS_FEISHU_CONTROL_ROOT=${ARIS_FEISHU_CONTROL_ROOT:-}
+      - LABLINE_PROJECT_ROOT=${LABLINE_PROJECT_ROOT:-/labline/framework}
+      - LABLINE_FEISHU_CONTROL_ROOT=${LABLINE_FEISHU_CONTROL_ROOT:-}
       - GITEA_URL=http://gitea:3000
     volumes:
-      - ${USER2_FRAMEWORK_PATH:?set USER2_FRAMEWORK_PATH in .env}:/aris/framework
+      - ${USER2_FRAMEWORK_PATH:?set USER2_FRAMEWORK_PATH in .env}:/labline/framework
       # Per-user projects: do not share this path with another researcher.
-      - ${USER2_PROJECTS_PATH:?set USER2_PROJECTS_PATH in .env}:/aris/projects
-      # Per-user ARIS local state: project registry, framework rollback history.
-      - ${USER2_STATE_PATH:?set USER2_STATE_PATH in .env}:/home/${USER2_NAME:-researcher2}/.aris
-      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/aris/shared/datasets:ro
-      - ${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/aris/shared/downloads
+      - ${USER2_PROJECTS_PATH:?set USER2_PROJECTS_PATH in .env}:/labline/projects
+      # Per-user LABLINE local state: project registry, framework rollback history.
+      - ${USER2_STATE_PATH:?set USER2_STATE_PATH in .env}:/home/${USER2_NAME:-researcher2}/.labline
+      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/labline/shared/datasets:ro
+      - ${DOWNLOADS_PATH:?set DOWNLOADS_PATH in .env}:/labline/shared/downloads
       # Shared pretrained models/cache
-      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/aris/shared/pretrained
+      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/labline/shared/pretrained
       - ${USER2_SSH:-/dev/null}:/run/secrets/ssh:ro
     stdin_open: true
     tty: true

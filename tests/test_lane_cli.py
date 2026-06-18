@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Behavior tests for the beginner-facing ARIS CLI."""
+"""Behavior tests for the beginner-facing Labline CLI."""
 
 import json
 import os
@@ -14,12 +14,12 @@ from threading import Thread
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ARIS_CLI = REPO_ROOT / "tools" / "aris"
+LANE_CLI = REPO_ROOT / "tools" / "lane"
 
 
-class ArisCliTest(unittest.TestCase):
+class LaneCliTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-cli-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="lane-cli-"))
         self.workspace = self.tmp / "workspace"
         self.workspace.mkdir()
         self.framework = self.workspace / "framework"
@@ -53,15 +53,15 @@ class ArisCliTest(unittest.TestCase):
             #!/usr/bin/env bash
             set -euo pipefail
             project="$1"
-            mkdir -p "$project/.aris" "$project/.claude/skills" "$project/.agents/skills"
+            mkdir -p "$project/.labline" "$project/.claude/skills" "$project/.agents/skills"
             if [[ " $* " == *" --uninstall "* ]]; then
-              rm -f "$project/.aris/installed-skills.txt" "$project/.aris/installed-skills-codex.txt"
+              rm -f "$project/.labline/installed-skills.txt" "$project/.labline/installed-skills-codex.txt"
               exit 0
             fi
             if [[ " $* " == *" --codex "* ]]; then
-              printf 'version\\t1\\nkind\\tname\\tsource_rel\\ttarget_rel\\tmode\\n' > "$project/.aris/installed-skills-codex.txt"
+              printf 'version\\t1\\nkind\\tname\\tsource_rel\\ttarget_rel\\tmode\\n' > "$project/.labline/installed-skills-codex.txt"
             else
-              printf 'version\\t1\\nkind\\tname\\tsource_rel\\ttarget_rel\\tmode\\n' > "$project/.aris/installed-skills.txt"
+              printf 'version\\t1\\nkind\\tname\\tsource_rel\\ttarget_rel\\tmode\\n' > "$project/.labline/installed-skills.txt"
             fi
             """
         )
@@ -70,24 +70,24 @@ class ArisCliTest(unittest.TestCase):
             #!/usr/bin/env bash
             set -euo pipefail
             project="$1"
-            mkdir -p "$project/.aris" "$project/.agents/skills"
+            mkdir -p "$project/.labline" "$project/.agents/skills"
             if [[ " $* " == *" --uninstall "* ]]; then
-              rm -f "$project/.aris/installed-skills-codex.txt"
+              rm -f "$project/.labline/installed-skills-codex.txt"
               exit 0
             fi
-            printf 'version\\t1\\nkind\\tname\\tsource_rel\\ttarget_rel\\tmode\\n' > "$project/.aris/installed-skills-codex.txt"
+            printf 'version\\t1\\nkind\\tname\\tsource_rel\\ttarget_rel\\tmode\\n' > "$project/.labline/installed-skills-codex.txt"
             """
         )
-        for name, body in {"install_aris.sh": installer, "install_aris_codex.sh": codex_installer}.items():
+        for name, body in {"install_labline.sh": installer, "install_labline_codex.sh": codex_installer}.items():
             path = self.framework / "tools" / name
             path.write_text(body)
             path.chmod(0o755)
 
     def _run(self, cwd: Path, *args: str) -> subprocess.CompletedProcess:
         env = os.environ.copy()
-        env["ARIS_WORKSPACE"] = str(self.workspace)
+        env["LABLINE_WORKSPACE"] = str(self.workspace)
         return subprocess.run(
-            [str(ARIS_CLI), *args, "--aris-repo", str(self.framework), "--quiet"],
+            [str(LANE_CLI), *args, "--labline-repo", str(self.framework), "--quiet"],
             cwd=str(cwd),
             capture_output=True,
             text=True,
@@ -98,13 +98,13 @@ class ArisCliTest(unittest.TestCase):
         return subprocess.run(["git", *args], cwd=str(self.framework), check=True, capture_output=True, text=True).stdout.strip()
 
     def _registry(self) -> dict:
-        return json.loads((self.workspace / ".aris" / "project-registry.json").read_text())
+        return json.loads((self.workspace / ".labline" / "project-registry.json").read_text())
 
     def _update_status(self) -> dict:
-        return json.loads((self.workspace / ".aris" / "framework-update-status.json").read_text())
+        return json.loads((self.workspace / ".labline" / "framework-update-status.json").read_text())
 
     def _write_update_status(self, data: dict):
-        path = self.workspace / ".aris" / "framework-update-status.json"
+        path = self.workspace / ".labline" / "framework-update-status.json"
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
     def _start_http_server(self, handler_factory):
@@ -143,9 +143,9 @@ class ArisCliTest(unittest.TestCase):
         self.assertTrue((project / "CLAUDE.md").exists())
         self.assertTrue((project / ".gitignore").exists())
         self.assertTrue((project / ".git").exists())
-        self.assertTrue((project / ".aris" / "manifest.json").exists())
-        self.assertTrue((project / ".aris" / "installed-skills.txt").exists())
-        self.assertTrue((project / ".aris" / "installed-skills-codex.txt").exists())
+        self.assertTrue((project / ".labline" / "manifest.json").exists())
+        self.assertTrue((project / ".labline" / "installed-skills.txt").exists())
+        self.assertTrue((project / ".labline" / "installed-skills-codex.txt").exists())
         for rel in ["code", "data", "outputs", "refine-logs", "idea-stage", "paper", "discussions", "figures", "overrides"]:
             self.assertTrue((project / rel).is_dir(), rel)
 
@@ -156,7 +156,7 @@ class ArisCliTest(unittest.TestCase):
         self.assertEqual(project_yaml.count("schema_version:"), 1)
         self.assertIn(f'path: "{self.framework}"', project_yaml)
 
-        manifest = json.loads((project / ".aris" / "manifest.json").read_text())
+        manifest = json.loads((project / ".labline" / "manifest.json").read_text())
         self.assertEqual(manifest["project_name"], "demo")
         self.assertEqual(manifest["schema_version"], 1)
         self.assertIn("codex", manifest["clients"])
@@ -216,7 +216,7 @@ class ArisCliTest(unittest.TestCase):
 
         detach = self._run(project, "project", "detach")
         self.assertEqual(detach.returncode, 0, msg=detach.stderr)
-        self.assertFalse((project / ".aris" / "manifest.json").exists())
+        self.assertFalse((project / ".labline" / "manifest.json").exists())
         self.assertNotIn(str(project.resolve()), self._registry()["projects"])
 
     def test_project_version_defaults_to_current_directory(self):
@@ -235,7 +235,7 @@ class ArisCliTest(unittest.TestCase):
         project.mkdir()
         init_result = self._run(project, "project", "init", ".", "--name", "demo", "--direction", "sync")
         self.assertEqual(init_result.returncode, 0, msg=init_result.stderr)
-        (project / ".aris" / "installed-skills.txt").unlink()
+        (project / ".labline" / "installed-skills.txt").unlink()
 
         version = self._run(project, "framework", "--version")
         self.assertEqual(version.returncode, 0, msg=version.stderr)
@@ -252,7 +252,7 @@ class ArisCliTest(unittest.TestCase):
         update = self._run(project, "framework", "update")
         self.assertEqual(update.returncode, 0, msg=update.stderr)
         self.assertIn("project sync: 1 updated", update.stdout)
-        self.assertTrue((project / ".aris" / "installed-skills.txt").exists())
+        self.assertTrue((project / ".labline" / "installed-skills.txt").exists())
         self.assertEqual(self._git(["rev-parse", "HEAD"]), new_commit)
 
         rollback = self._run(project, "framework", "rollback")
@@ -263,10 +263,10 @@ class ArisCliTest(unittest.TestCase):
         workspace = self.tmp / "readonly-workspace"
         workspace.mkdir()
         env = os.environ.copy()
-        env["ARIS_WORKSPACE"] = str(workspace)
+        env["LABLINE_WORKSPACE"] = str(workspace)
 
         result = subprocess.run(
-            [str(ARIS_CLI), "framework", "--version", "--aris-repo", str(self.framework), "--quiet"],
+            [str(LANE_CLI), "framework", "--version", "--labline-repo", str(self.framework), "--quiet"],
             cwd=str(self.tmp),
             capture_output=True,
             text=True,
@@ -275,17 +275,17 @@ class ArisCliTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("framework:", result.stdout)
-        self.assertFalse((workspace / ".aris" / "framework-history").exists())
+        self.assertFalse((workspace / ".labline" / "framework-history").exists())
 
-    def test_framework_state_defaults_to_home_aris_without_workspace_env(self):
+    def test_framework_state_defaults_to_home_labline_without_workspace_env(self):
         home = self.tmp / "home"
         home.mkdir()
         env = os.environ.copy()
-        env.pop("ARIS_WORKSPACE", None)
+        env.pop("LABLINE_WORKSPACE", None)
         env["HOME"] = str(home)
 
         result = subprocess.run(
-            [str(ARIS_CLI), "framework", "check-update", "--no-fetch", "--aris-repo", str(self.framework), "--quiet"],
+            [str(LANE_CLI), "framework", "check-update", "--no-fetch", "--labline-repo", str(self.framework), "--quiet"],
             cwd=str(self.tmp),
             capture_output=True,
             text=True,
@@ -293,7 +293,7 @@ class ArisCliTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertTrue((home / ".aris" / "framework-update-status.json").exists())
+        self.assertTrue((home / ".labline" / "framework-update-status.json").exists())
 
     def test_framework_check_update_notify_reminds_at_most_once_per_day(self):
         project = self.tmp / "project"
@@ -304,7 +304,7 @@ class ArisCliTest(unittest.TestCase):
 
         first = self._run(project, "framework", "check-update", "--if-stale", "1d", "--notify")
         self.assertEqual(first.returncode, 0, msg=first.stderr)
-        self.assertIn("[ARIS] framework update available", first.stdout)
+        self.assertIn("[Labline] framework update available", first.stdout)
         self.assertIn(new_commit[:7], first.stdout)
 
         second = self._run(project, "framework", "check-update", "--if-stale", "1d", "--notify")
@@ -317,18 +317,18 @@ class ArisCliTest(unittest.TestCase):
 
         third = self._run(project, "framework", "check-update", "--if-stale", "1d", "--notify")
         self.assertEqual(third.returncode, 0, msg=third.stderr)
-        self.assertIn("[ARIS] framework update available", third.stdout)
+        self.assertIn("[Labline] framework update available", third.stdout)
 
     def test_framework_update_can_skip_registered_project_sync(self):
         project = self.tmp / "project"
         project.mkdir()
         init_result = self._run(project, "project", "init", ".", "--name", "demo", "--direction", "sync")
         self.assertEqual(init_result.returncode, 0, msg=init_result.stderr)
-        (project / ".aris" / "installed-skills.txt").unlink()
+        (project / ".labline" / "installed-skills.txt").unlink()
 
         result = self._run(project, "framework", "update", "--no-project-sync")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertFalse((project / ".aris" / "installed-skills.txt").exists())
+        self.assertFalse((project / ".labline" / "installed-skills.txt").exists())
         self.assertIn("project sync: skipped", result.stdout)
 
     def test_dev_runtime_run_openai_compatible_posts_messages_and_writes_artifacts(self):
@@ -371,11 +371,11 @@ class ArisCliTest(unittest.TestCase):
             "DEEPSEEK_API_KEY",
         )
         env = os.environ.copy()
-        env["ARIS_WORKSPACE"] = str(self.workspace)
+        env["LABLINE_WORKSPACE"] = str(self.workspace)
         env["DEEPSEEK_API_KEY"] = "super-secret-value"
         result = subprocess.run(
             [
-                str(ARIS_CLI),
+                str(LANE_CLI),
                 "dev",
                 "rt",
                 "run",
@@ -385,7 +385,7 @@ class ArisCliTest(unittest.TestCase):
                 "deepseek-v4-flash",
                 "--timeout",
                 "3",
-                "--aris-repo",
+                "--labline-repo",
                 str(self.framework),
                 "--quiet",
             ],
@@ -398,7 +398,7 @@ class ArisCliTest(unittest.TestCase):
         self.assertEqual(received["path"], "/chat/completions")
         self.assertEqual(received["auth"], "Bearer super-secret-value")
         self.assertEqual(received["body"]["model"], "deepseek-v4-flash")
-        self.assertIn("ARIS Dev Runtime Guardrails", received["body"]["messages"][0]["content"])
+        self.assertIn("Labline Dev Runtime Guardrails", received["body"]["messages"][0]["content"])
         self.assertIn("role: dev-worker", received["body"]["messages"][0]["content"])
         self.assertIn("provider: deepseek-v4-flash", received["body"]["messages"][0]["content"])
         self.assertIn("write a tiny finding", received["body"]["messages"][1]["content"])
@@ -422,7 +422,7 @@ class ArisCliTest(unittest.TestCase):
     def test_short_legacy_commands_are_not_supported(self):
         for command in ["init", "update", "doctor", "detach"]:
             result = subprocess.run(
-                [str(ARIS_CLI), "--aris-repo", str(self.framework), "--quiet", command],
+                [str(LANE_CLI), "--labline-repo", str(self.framework), "--quiet", command],
                 cwd=str(self.tmp),
                 capture_output=True,
                 text=True,
@@ -434,15 +434,15 @@ class ArisCliTest(unittest.TestCase):
     def test_cli_works_when_invoked_through_path_symlink(self):
         bin_dir = self.tmp / "bin"
         bin_dir.mkdir()
-        (bin_dir / "aris").symlink_to(ARIS_CLI)
+        (bin_dir / "lane").symlink_to(LANE_CLI)
         env = os.environ.copy()
         env["PATH"] = f"{bin_dir}:{env['PATH']}"
-        env["ARIS_WORKSPACE"] = str(self.workspace)
+        env["LABLINE_WORKSPACE"] = str(self.workspace)
         project = self.tmp / "path-project"
         project.mkdir()
 
         result = subprocess.run(
-            ["aris", "project", "init", ".", "--direction", "path mode", "--aris-repo", str(self.framework), "--quiet"],
+            ["lane", "project", "init", ".", "--direction", "path mode", "--labline-repo", str(self.framework), "--quiet"],
             cwd=str(project),
             capture_output=True,
             text=True,

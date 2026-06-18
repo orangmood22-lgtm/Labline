@@ -15,6 +15,7 @@ graph LR
     to_developer_20260613_HANDOFF_CLAUDE_TO_CODEX_md["to-developer/20260613-HANDOFF_CLAUDE_TO_CODEX.md<br/><small>Claude 到 Codex handoff · handoff</small>"]
     to_developer_20260613_handoff_2026_06_11_md["to-developer/20260613-handoff-2026-06-11.md<br/><small>历史 handoff · handoff</small>"]
     to_developer_20260615_FRAMEWORK_MODULES_md["to-developer/20260615-FRAMEWORK_MODULES.md<br/><small>开发者侧框架模块说明 · architecture</small>"]
+    to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md["to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md<br/><small>Labline 顶层设计与开发地图 · architecture</small>"]
     to_developer_DEV_SKILL_CATALOG_md["to-developer/DEV_SKILL_CATALOG.md<br/><small>Developer Skill 目录 · generated</small>"]
     to_developer_DEV_SKILL_DAG_mmd["to-developer/DEV_SKILL_DAG.mmd<br/><small>Developer Skill DAG Mermaid 图 · generated</small>"]
     to_developer_DEV_SKILL_DAG_yaml["to-developer/DEV_SKILL_DAG.yaml<br/><small>Developer Skill DAG 源数据 · generated</small>"]
@@ -40,6 +41,8 @@ graph LR
     to_developer_plans_20260613_VERSION_MANAGEMENT_md["to-developer/plans/20260613-VERSION_MANAGEMENT.md<br/><small>版本管理方案 · release</small>"]
     to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md["to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md<br/><small>cheap worker 默认分工 · architecture</small>"]
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md["to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md<br/><small>CLI 与部署运行时机制 · architecture</small>"]
+    to_developer_plans_20260617_DEV_AGENT_SURFACE_PRD_md["to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md<br/><small>Developer Agent Surface PRD · architecture</small>"]
+    to_developer_plans_20260617_MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE_md["to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md<br/><small>多 Provider 本地 Coding Agent 框架 Spike · architecture</small>"]
     to_developer_realtest_20260616_REALTEST_CONTAINER_md["to-developer/realtest/20260616-REALTEST_CONTAINER.md<br/><small>实机测试容器说明 · deploy</small>"]
     to_developer_skills_dev___SKILL_md["to-developer/skills/dev-*/SKILL.md<br/><small>Developer Skill 源文件 · architecture</small>"]
 
@@ -48,6 +51,11 @@ graph LR
     to_developer_20260615_FRAMEWORK_MODULES_md -- "constrains" --> to_developer_20260613_DEVELOPMENT_LOG_md
     to_developer_20260615_FRAMEWORK_MODULES_md -- "related_to" --> docs_FRAMEWORK_STRUCTURE_md
     to_developer_20260615_FRAMEWORK_MODULES_md -- "constrains" --> docs_README_md
+    CONTEXT_md -- "constrains" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
+    to_developer_20260615_FRAMEWORK_MODULES_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
+    docs_FRAMEWORK_STRUCTURE_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
+    to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md -- "summarized_by" --> to_developer_20260613_DEVELOPMENT_LOG_md
+    to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md -- "informs" --> to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md
     to_developer_docs___md -- "constrains" --> to_developer_DOC_DAG_yaml
     to_developer_plans_20260613_BRANCH_AND_PROMOTE_GUIDE_md -- "constrains" --> to_developer_plans_20260613_PROMOTE_FLOW_md
     to_developer_plans_20260613_VERSION_MANAGEMENT_md -- "constrains" --> to_developer_plans_20260613_PROMOTE_FLOW_md
@@ -56,12 +64,21 @@ graph LR
     to_developer_plans_20260613_VERSION_MANAGEMENT_md -- "constrains" --> docs_PROMOTE_FLOW_md
     to_developer_plans_20260613_AGENT_STATUS_STREAM_md -- "related_to" --> docs_DOC_DAG_yaml
     to_developer_plans_20260613_AGENT_STATUS_STREAM_md -- "validated_by" --> to_developer_logs_20260613_AGENT_STATUS_STREAM_VALIDATION_20260613_md
+    to_developer_plans_20260613_AGENT_STATUS_STREAM_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
     to_developer_plans_20260613_LANGGRAPH_EVALUATION_md -- "informs" --> to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md
+    to_developer_plans_20260613_LANGGRAPH_EVALUATION_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
     to_developer_plans_20260610_codex_migration_md -- "informs" --> to_developer_20260615_FRAMEWORK_MODULES_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "constrains" --> deploy_DEPLOY_GUIDE_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "constrains" --> docs_OPERATIONS_GUIDE_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "informs" --> to_developer_20260615_FRAMEWORK_MODULES_md
+    to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
     to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md -- "summarized_by" --> to_developer_20260613_DEVELOPMENT_LOG_md
+    to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md -- "informs" --> to_developer_plans_20260617_MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE_md
+    to_developer_plans_20260617_MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE_md -- "informs" --> to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md
+    to_developer_plans_20260617_MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE_md -- "informs" --> to_developer_plans_20260617_DEV_AGENT_SURFACE_PRD_md
+    to_developer_plans_20260617_DEV_AGENT_SURFACE_PRD_md -- "informs" --> to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md
+    to_developer_plans_20260617_DEV_AGENT_SURFACE_PRD_md -- "summarized_by" --> to_developer_20260613_DEVELOPMENT_LOG_md
+    to_developer_plans_20260617_DEV_AGENT_SURFACE_PRD_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
     to_developer_adr___md -- "informs" --> docs_FEISHU_INTEGRATION_md
     to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md -- "constrains" --> to_developer_20260615_FRAMEWORK_MODULES_md
     to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md -- "constrains" --> to_developer_plans_20260613_PROMOTE_FLOW_md
@@ -92,7 +109,7 @@ graph LR
     classDef deploy fill:#e0f2fe,stroke:#0369a1
     classDef discussion fill:#ffedd5,stroke:#c2410c
     classDef stable fill:#ecfccb,stroke:#4d7c0f
-    class to_developer_20260615_FRAMEWORK_MODULES_md,to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md,to_developer_adr___md,to_developer_plans_20260610_codex_migration_md,to_developer_plans_20260613_AGENT_STATUS_STREAM_md,to_developer_plans_20260613_LANGGRAPH_EVALUATION_md,to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md,to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md,to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md,to_developer_skills_dev___SKILL_md architecture
+    class to_developer_20260615_FRAMEWORK_MODULES_md,to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md,to_developer_adr_20260617_0005_developer_skills_use_separate_install_surface_md,to_developer_adr___md,to_developer_plans_20260610_codex_migration_md,to_developer_plans_20260613_AGENT_STATUS_STREAM_md,to_developer_plans_20260613_LANGGRAPH_EVALUATION_md,to_developer_plans_20260613_REPO_EVOLUTION_PLAN_md,to_developer_plans_20260616_CHEAP_WORKER_DEFAULT_DIVISION_md,to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md,to_developer_plans_20260617_DEV_AGENT_SURFACE_PRD_md,to_developer_plans_20260617_MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE_md,to_developer_skills_dev___SKILL_md architecture
     class to_developer_deploy_QAs_20260613_clash_with_servers_md,to_developer_realtest_20260616_REALTEST_CONTAINER_md deploy
     class to_developer_context_archive___md,to_developer_discussions___md,to_developer_discussions___txt discussion
     class to_developer_DEV_SKILL_CATALOG_md,to_developer_DEV_SKILL_DAG_mmd,to_developer_DEV_SKILL_DAG_yaml,to_developer_DOC_DAG_mmd generated

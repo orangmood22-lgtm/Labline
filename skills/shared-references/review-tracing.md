@@ -16,7 +16,7 @@ Do NOT trace: purely informational LLM calls (e.g., `codex exec` for code genera
 ## Trace Directory
 
 ```
-.aris/traces/<skill-name>/<YYYY-MM-DD>_run<NN>/
+.labline/traces/<skill-name>/<YYYY-MM-DD>_run<NN>/
   ├── run.meta.json                      # Run-level metadata
   ├── 001-<purpose>.request.json         # Request snapshot
   ├── 001-<purpose>.response.md          # Full response text
@@ -25,7 +25,7 @@ Do NOT trace: purely informational LLM calls (e.g., `codex exec` for code genera
   └── ...
 ```
 
-- `<skill-name>`: the ARIS skill that triggered this call (e.g., `auto-review-loop`)
+- `<skill-name>`: the Labline skill that triggered this call (e.g., `auto-review-loop`)
 - `<YYYY-MM-DD>_run<NN>`: date + sequential run number (start from `01`)
 - `<purpose>`: short kebab-case label (e.g., `round-1-review`, `critique`, `ideation`, `audit`, `patch-gate`)
 
@@ -99,16 +99,16 @@ Tracing respects three modes, set via inline parameter `--- trace: off | meta | 
 
 ## Integration with events.jsonl
 
-After writing a trace, append a compact summary event to `.aris/meta/events.jsonl`:
+After writing a trace, append a compact summary event to `.labline/meta/events.jsonl`:
 
 ```json
-{"event":"review_trace","skill":"auto-review-loop","purpose":"round-1-review","thread_id":"...","trace_path":".aris/traces/auto-review-loop/2026-04-15_run01/","status":"ok"}
+{"event":"review_trace","skill":"auto-review-loop","purpose":"round-1-review","thread_id":"...","trace_path":".labline/traces/auto-review-loop/2026-04-15_run01/","status":"ok"}
 ```
 
 This allows `/meta-optimize` to discover traces without reading the full trace files.
 
 ## Privacy
 
-- `.aris/traces/` should be in `.gitignore` — traces are project-local, never committed
+- `.labline/traces/` should be in `.gitignore` — traces are project-local, never committed
 - Traces may contain sensitive research content; treat them as confidential
 - Use `--- trace: off` for projects with strict confidentiality requirements

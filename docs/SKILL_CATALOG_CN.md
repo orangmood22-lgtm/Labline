@@ -1,6 +1,6 @@
-# ARIS Skill 目录（中文版）
+# Labline Skill 目录（中文版）
 
-> 自动生成于 2026-06-17 11:11。共 95 个 skill，12 个分类。
+> 自动生成于 2026-06-18 17:23。共 95 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/translate_skill_catalog.py`
 
@@ -55,7 +55,7 @@
 
 ### `/meta-optimize`
 
-**分析 ARIS 使用日志，提出 SKILL.md 和工作流优化建议。**
+**分析 Labline 使用日志，提出 SKILL.md 和工作流优化建议。**
 
 参数：`目标 skill 或 all`
 
@@ -775,7 +775,7 @@
 
 ### `/feishu-session`
 
-**管理飞书/Lark 远程 Codex 或 Claude Code 会话；默认使用 lark-channel-bridge，ARIS 自研 runner 仅作审计/合并 fallback。**
+**管理飞书/Lark 远程 Codex 或 Claude Code 会话；默认使用 lark-channel-bridge，Labline 自研 runner 仅作审计/合并 fallback。**
 
 参数：`[start|mark-seen|report|merge]`
 
@@ -785,7 +785,7 @@
 
 ### `/framework-update`
 
-**一键更新 ARIS 框架：git pull + 重建 symlinks。**
+**一键更新 Labline 框架：git pull + 重建 symlinks。**
 
 参数：`[--force] [--dry-run]`
 

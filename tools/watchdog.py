@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-watchdog.py — Server-side unified monitoring daemon for ARIS.
+watchdog.py — Server-side unified monitoring daemon for Labline.
 
 One process per server, monitors all registered tasks (training / download).
 Outputs per-task status JSON + aggregated summary.txt for low-frequency polling.
@@ -12,7 +12,7 @@ Recovery contract:
 
 Usage:
     # Start the daemon (runs in foreground, use tmux/screen to persist)
-    python3 watchdog.py [--base-dir /tmp/aris-watchdog] [--interval 60]
+    python3 watchdog.py [--base-dir /tmp/labline-watchdog] [--interval 60]
 
     # Register a training task
     python3 watchdog.py --register '{"name":"exp01","type":"training","session":"exp01","session_type":"screen","gpus":[0,1,2,3]}'
@@ -27,7 +27,7 @@ Usage:
     python3 watchdog.py --status
 
 Directory structure:
-    /tmp/aris-watchdog/
+    /tmp/labline-watchdog/
     ├── watchdog.pid
     ├── tasks.json          # [{name, type, session, session_type, ...}, ...]
     ├── alerts.log          # anomaly log (DEAD/STALLED/IDLE) for cross-session recovery
@@ -46,7 +46,7 @@ import tempfile
 import time
 from pathlib import Path
 
-DEFAULT_BASE = "/tmp/aris-watchdog"
+DEFAULT_BASE = "/tmp/labline-watchdog"
 DEFAULT_INTERVAL = 60
 SLOW_SPEED_THRESHOLD = 1 * 1024 * 1024  # 1 MB/s
 GPU_IDLE_THRESHOLD = 5  # percent
@@ -372,7 +372,7 @@ def run_watchdog(base_dir, interval):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ARIS Watchdog — server-side task monitoring daemon",
+        description="Labline Watchdog — server-side task monitoring daemon",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

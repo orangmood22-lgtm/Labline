@@ -1,4 +1,4 @@
-# ARIS Codex Agent Guide
+# Labline Codex Agent Guide
 
 > 给 Codex harness subagent 看的工具手册。人类用户请看 `QUICK_START.md` 和 `docs/OPERATIONS_GUIDE.md`。
 
@@ -31,11 +31,13 @@
 ### Agent Status Stream
 
 - Agent 启动、进入长任务、遇阻塞、完成时更新自己的 status file。
-- 优先用 `.aris/tools/agent_status.py`，不要手写 JSON。
+- 优先用 `.labline/tools/agent_status.py`，不要手写 JSON。
 - 长训练、下载、队列、远程部署必须写 job handle。
 - Leader 只读状态摘要，不把状态流当任务队列或 agent 聊天室。
 
 ## 角色边界
+
+详见 `role-contracts.md`（同目录）。
 
 | 角色 | 职责 | 禁止 |
 |------|------|------|
@@ -49,9 +51,14 @@
 
 | 角色 | 默认 |
 |------|------|
-| Leader | 当前 Codex 主会话 |
-| Coder / Deployer / Writer | Codex harness subagent |
-| Reviewer | 独立 reviewer agent |
+| Leader | `gpt-5.5` 当前 Codex 主会话 |
+| Planner | `gpt-5.4` Codex harness subagent |
+| Coder | `gpt-5.4-mini` Codex harness subagent |
+| Deployer | `gpt-5.4-mini` Codex harness subagent |
+| Writer | `gpt-5.4` Codex harness subagent |
+| Reviewer | `gpt-5.4` 独立 reviewer agent |
+
+默认模型只描述 Runtime Binding，不改变角色职责。
 
 ## Skill 分层
 

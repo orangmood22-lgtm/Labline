@@ -3,8 +3,8 @@
 
 Covers the bug that left a real user's research-wiki/ empty for a week:
 caller skills hard-coded `python3 tools/research_wiki.py`, which silently
-fails when <project>/tools/ is not on disk (the post-install_aris.sh
-default — install_aris.sh creates .aris/tools symlink, not tools/).
+fails when <project>/tools/ is not on disk (the post-install_labline.sh
+default — install_labline.sh creates .labline/tools symlink, not tools/).
 
 The fix is a 3-layer resolution chain documented in
 skills/shared-references/wiki-helper-resolution.md. This test runs the
@@ -35,10 +35,10 @@ HELPER = REPO_ROOT / "tools" / "research_wiki.py"
 # strict mode is the documented contract.
 RESOLUTION_CHAIN = r'''
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills.txt 2>/dev/null)}"
-WIKI_SCRIPT=".aris/tools/research_wiki.py"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills.txt 2>/dev/null)}"
+WIKI_SCRIPT=".labline/tools/research_wiki.py"
 [ -f "$WIKI_SCRIPT" ] || WIKI_SCRIPT="tools/research_wiki.py"
-[ -f "$WIKI_SCRIPT" ] || { [ -n "${ARIS_REPO:-}" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"; }
+[ -f "$WIKI_SCRIPT" ] || { [ -n "${LABLINE_REPO:-}" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"; }
 [ -f "$WIKI_SCRIPT" ] || exit 42
 printf '%s\n' "$WIKI_SCRIPT"
 python3 "$WIKI_SCRIPT" init research-wiki || exit 1
@@ -61,7 +61,7 @@ def _git_init(path: Path) -> None:
 
 def _run_chain(cwd: Path, env_overrides: Optional[dict] = None):
     env = os.environ.copy()
-    env.pop("ARIS_REPO", None)
+    env.pop("LABLINE_REPO", None)
     if env_overrides:
         env.update(env_overrides)
     # Use `bash -c` (not `-lc`); SKILL bash blocks execute in non-login
@@ -77,7 +77,7 @@ def _run_chain(cwd: Path, env_overrides: Optional[dict] = None):
 
 class ChainTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aris-wiki-chain-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="labline-wiki-chain-"))
         self.project = self.tmp / "project"
         self.project.mkdir()
         _git_init(self.project)
@@ -86,18 +86,18 @@ class ChainTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # Layer 1: .aris/tools/ symlink (post-install_aris.sh default)
+    # Layer 1: .labline/tools/ symlink (post-install_labline.sh default)
     # ------------------------------------------------------------------
     def test_layer1_symlink(self):
-        """Helper at .aris/tools/research_wiki.py -> <repo>/tools/."""
-        (self.project / ".aris").mkdir()
-        (self.project / ".aris" / "tools").symlink_to(REPO_ROOT / "tools")
+        """Helper at .labline/tools/research_wiki.py -> <repo>/tools/."""
+        (self.project / ".labline").mkdir()
+        (self.project / ".labline" / "tools").symlink_to(REPO_ROOT / "tools")
 
         result = _run_chain(self.project)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertEqual(
             result.stdout.splitlines()[0],
-            ".aris/tools/research_wiki.py",
+            ".labline/tools/research_wiki.py",
         )
         self.assertTrue((self.project / "research-wiki" / "query_pack.md").exists())
 
@@ -138,13 +138,13 @@ class ChainTest(unittest.TestCase):
         self.assertFalse((self.project / "paper" / "research-wiki").exists())
 
     # ------------------------------------------------------------------
-    # Layer 3a: $ARIS_REPO env var
+    # Layer 3a: $LABLINE_REPO env var
     # ------------------------------------------------------------------
-    def test_layer3_aris_repo_env(self):
-        """ARIS_REPO env var points at the repo; no .aris/tools, no tools/."""
+    def test_layer3_labline_repo_env(self):
+        """LABLINE_REPO env var points at the repo; no .labline/tools, no tools/."""
         result = _run_chain(
             self.project,
-            env_overrides={"ARIS_REPO": str(REPO_ROOT)},
+            env_overrides={"LABLINE_REPO": str(REPO_ROOT)},
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertEqual(
@@ -154,12 +154,12 @@ class ChainTest(unittest.TestCase):
         self.assertTrue((self.project / "research-wiki" / "query_pack.md").exists())
 
     # ------------------------------------------------------------------
-    # Layer 3b: ARIS_REPO auto-resolved from install manifest
+    # Layer 3b: LABLINE_REPO auto-resolved from install manifest
     # ------------------------------------------------------------------
     def test_layer3_manifest_repo_root(self):
-        """ARIS_REPO unset; install manifest contains repo_root field."""
-        (self.project / ".aris").mkdir()
-        manifest = self.project / ".aris" / "installed-skills.txt"
+        """LABLINE_REPO unset; install manifest contains repo_root field."""
+        (self.project / ".labline").mkdir()
+        manifest = self.project / ".labline" / "installed-skills.txt"
         manifest.write_text(f"repo_root\t{REPO_ROOT}\n")
 
         result = _run_chain(self.project)
@@ -173,7 +173,7 @@ class ChainTest(unittest.TestCase):
     # Helper-missing case: chain exits 42 (test harness sentinel)
     # ------------------------------------------------------------------
     def test_helper_missing(self):
-        """No symlink, no tools/, no ARIS_REPO, no manifest → chain fails."""
+        """No symlink, no tools/, no LABLINE_REPO, no manifest → chain fails."""
         result = _run_chain(self.project)
         self.assertEqual(
             result.returncode, 42,

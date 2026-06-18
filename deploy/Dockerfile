@@ -1,10 +1,10 @@
-# ARIS Research Framework — Container Image
+# LABLINE Research Framework — Container Image
 # Lightweight: no GPU runtime (experiments SSH to GPU servers)
 # Base: Ubuntu 22.04 + Node.js + Python 3.11 + Claude Code + Codex CLI
 
 FROM ubuntu:22.04
 
-LABEL maintainer="ARIS Framework"
+LABEL maintainer="LABLINE Framework"
 LABEL description="AI Research Infrastructure — per-user container"
 
 # Avoid interactive prompts
@@ -47,7 +47,7 @@ RUN pip install --no-cache-dir \
     wandb tensorboard
 
 # ─── Directory structure ─────────────────────────────────────────────────────
-RUN mkdir -p /aris/framework /aris/projects /aris/shared/datasets /aris/shared/pretrained
+RUN mkdir -p /labline/framework /labline/projects /labline/shared/datasets /labline/shared/pretrained
 
 # ─── User setup (non-root) ───────────────────────────────────────────────────
 ARG USERNAME=researcher
@@ -61,19 +61,19 @@ RUN groupadd -g ${GID} ${USERNAME} \
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
-# ─── ARIS framework clone ────────────────────────────────────────────────────
+# ─── LABLINE framework clone ────────────────────────────────────────────────────
 # Framework cloned at build time; update via /framework-update at runtime
-ARG ARIS_REPO=https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
-ARG ARIS_BRANCH=main
+ARG LABLINE_REPO=https://github.com/orangmood22-lgtm/Labline.git
+ARG LABLINE_BRANCH=main
 
-RUN git clone --depth 1 -b ${ARIS_BRANCH} ${ARIS_REPO} /aris/framework || true
+RUN git clone --depth 1 -b ${LABLINE_BRANCH} ${LABLINE_REPO} /labline/framework || true
 
 # ─── Config directories ─────────────────────────────────────────────────────
-RUN mkdir -p ~/.claude ~/.codex ~/.aris ~/.ssh \
+RUN mkdir -p ~/.claude ~/.codex ~/.labline ~/.ssh \
     && chmod 700 ~/.ssh
 
-# ─── Default API config (user overrides via mount or `aris project init`) ────
-COPY templates/api-config.yaml.tmpl /home/${USERNAME}/.aris/api.yaml
+# ─── Default API config (user overrides via mount or `labline project init`) ────
+COPY templates/api-config.yaml.tmpl /home/${USERNAME}/.labline/api.yaml
 
 # ─── Entrypoint ──────────────────────────────────────────────────────────────
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh

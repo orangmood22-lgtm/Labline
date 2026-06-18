@@ -51,9 +51,9 @@ chmod 600 ~/.gemini/.env
 
 ## 为什么默认走 direct API
 
-- 这条路径的目标是：**最大化复用原始 ARIS 的 reviewer-aware skills，同时最少改 skill**。
+- 这条路径的目标是：**最大化复用原始 Labline 的 reviewer-aware skills，同时最少改 skill**。
 - `gemini-review` bridge 保留了与 Claude-review overlay 相同的 `review` / `review_reply` / `review_start` / `review_reply_start` / `review_status` 契约。
-- 直接走 Gemini API 可以去掉本地 CLI 这一跳，让 reviewer 路径更接近 ARIS 里已有的 API 型集成方式。
+- 直接走 Gemini API 可以去掉本地 CLI 这一跳，让 reviewer 路径更接近 Labline 里已有的 API 型集成方式。
 
 ## 接入边界说明
 
@@ -105,7 +105,7 @@ codex mcp remove gemini-review
 codex mcp add gemini-review --env GEMINI_REVIEW_BACKEND=api --env GEMINI_REVIEW_MODEL=gemini-flash-latest -- python3 ~/.codex/mcp-servers/gemini-review/server.py
 ```
 
-这不会改变 ARIS 的 reviewer 契约，也不会改变 skill overlay 的组织方式，只是让同一个本地 `gemini-review` bridge 在底层改用另一个 Gemini API 模型。
+这不会改变 Labline 的 reviewer 契约，也不会改变 skill overlay 的组织方式，只是让同一个本地 `gemini-review` bridge 在底层改用另一个 Gemini API 模型。
 
 ## 验证结果摘要
 

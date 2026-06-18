@@ -1,6 +1,6 @@
-# ARIS 用户文档索引
+# Labline 用户文档索引
 
-`docs/` 只放用户安装、配置、运行和使用 ARIS 时需要看的文档。开发计划、ADR、迁移记录、评估材料和文档维护规则放在 `to-developer/`。
+`docs/` 只放用户安装、配置、运行和使用 Labline 时需要看的文档。开发计划、ADR、迁移记录、评估材料和文档维护规则放在 `to-developer/`。
 
 ## 入门和日常使用
 
@@ -9,7 +9,7 @@
 | [FRAMEWORK_STRUCTURE.md](FRAMEWORK_STRUCTURE.md) | 理解 framework / project / dev 边界 |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | 日常操作、API 配置、workflow 使用 |
 | [TRIPARTITE_ARCHITECTURE_GUIDE.md](TRIPARTITE_ARCHITECTURE_GUIDE.md) | Leader / Executor / Reviewer 三边协作 |
-| [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | 飞书/Lark 远控：默认 `lark-channel-bridge`，旧版 ARIS runner fallback |
+| [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | 飞书/Lark 远控：默认 `lark-channel-bridge`，旧版 Labline runner fallback |
 
 ## 项目文件和恢复
 
@@ -17,6 +17,7 @@
 |------|------|
 | [PROJECT_FILES_GUIDE.md](PROJECT_FILES_GUIDE.md) | 项目文件布局 |
 | [PROJECT_FILES_GUIDE_CN.md](PROJECT_FILES_GUIDE_CN.md) | 项目文件布局中文版 |
+| [EXPERIMENT_TRANSPARENCY_LEDGER.md](EXPERIMENT_TRANSPARENCY_LEDGER.md) | 实验透明度 ledger 契约：数据、split、metric、run、artifact、claim、checkpoint 追踪 |
 | [SESSION_RECOVERY_GUIDE.md](SESSION_RECOVERY_GUIDE.md) | 会话恢复协议 |
 | [SESSION_RECOVERY_GUIDE_CN.md](SESSION_RECOVERY_GUIDE_CN.md) | 会话恢复协议中文版 |
 | [WATCHDOG_GUIDE.md](WATCHDOG_GUIDE.md) | watchdog 使用 |
@@ -52,8 +53,8 @@
 | 文档 | 用途 |
 |------|------|
 | [CURSOR_ADAPTATION.md](CURSOR_ADAPTATION.md) | Cursor 适配 |
-| [TRAE_ARIS_RUNBOOK_CN.md](TRAE_ARIS_RUNBOOK_CN.md) | Trae 中文 runbook |
-| [TRAE_ARIS_RUNBOOK_EN.md](TRAE_ARIS_RUNBOOK_EN.md) | Trae English runbook |
+| [TRAE_LABLINE_RUNBOOK_CN.md](TRAE_LABLINE_RUNBOOK_CN.md) | Trae 中文 runbook |
+| [TRAE_LABLINE_RUNBOOK_EN.md](TRAE_LABLINE_RUNBOOK_EN.md) | Trae English runbook |
 | [ANTIGRAVITY_ADAPTATION.md](ANTIGRAVITY_ADAPTATION.md) | Antigravity 适配 |
 | [ANTIGRAVITY_ADAPTATION_CN.md](ANTIGRAVITY_ADAPTATION_CN.md) | Antigravity 中文适配 |
 | [OPENCLAW_ADAPTATION.md](OPENCLAW_ADAPTATION.md) | OpenClaw 适配 |
@@ -62,4 +63,4 @@
 
 | 文件 | 用途 |
 |------|------|
-| [aris_logo.svg](aris_logo.svg) | ARIS logo |
+| [labline_logo.svg](labline_logo.svg) | Labline logo |

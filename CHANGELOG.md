@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the ARIS framework.
+All notable changes to the Labline framework.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
@@ -26,21 +26,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [v0.3.1] - 2026-06-16
 
 ### Fixed
-- `aris framework --version` is now read-only and no longer tries to create framework rollback history.
-- Framework-level CLI state now defaults to the user's `~/.aris` directory unless `ARIS_WORKSPACE` is explicitly set.
-- Docker deployments now persist ARIS state under each container user's home directory instead of requiring `/aris/.aris`.
+- `lane framework --version` is now read-only and no longer tries to create framework rollback history.
+- Framework-level CLI state now defaults to the user's `~/.labline` directory unless `LABLINE_WORKSPACE` is explicitly set.
+- Docker deployments now persist Labline state under each container user's home directory instead of requiring `/lane/.labline`.
 
 ---
 
 ## [v0.3.0] - 2026-06-16
 
 ### Added
-- ARIS beginner CLI under `tools/aris` with `project` and `framework` namespaces.
-- `aris project init PATH --direction "..."` for current-directory initialization, path-based project creation, and attaching ARIS to existing projects without overwriting user files.
-- `aris project doctor`, `aris project update`, `aris project detach`, and project/framework version inspection commands.
+- Labline beginner CLI under `tools/lane` with `project` and `framework` namespaces.
+- `lane project init PATH --direction "..."` for current-directory initialization, path-based project creation, and attaching Labline to existing projects without overwriting user files.
+- `lane project doctor`, `lane project update`, `lane project detach`, and project/framework version inspection commands.
 - User workspace Project Registry for syncing registered projects after framework updates.
-- Non-destructive `aris framework check-update` with cached daily notification support for shell/tmux sessions.
-- Per-user Docker workspace topology: each researcher gets an isolated framework copy, projects directory, and ARIS state directory while sharing datasets, pretrained models, and download cache.
+- Non-destructive `lane framework check-update` with cached daily notification support for shell/tmux sessions.
+- Per-user Docker workspace topology: each researcher gets an isolated framework copy, projects directory, and Labline state directory while sharing datasets, pretrained models, and download cache.
 - `cc-switch-cli` is preinstalled in container images for provider management.
 - Detailed user/admin operation guide split in `docs/OPERATIONS_GUIDE.md`.
 - Feishu control bridge and managed Codex runner for opt-in remote session input, live tmux takeover, status-card updates, `/interrupt`, and side-channel `/btw` questions.
@@ -50,29 +50,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Stable-readable Chinese promote specification in `docs/PROMOTE_FLOW.md` and root `AGENTS.md` guidance for Codex/developers.
 
 ### Changed
-- ARIS documentation is now Codex-first while preserving Claude Code compatibility.
-- `README.md`, `QUICK_START.md`, deployment docs, and project templates now use `aris project ...` / `aris framework ...` commands.
+- Labline documentation is now Codex-first while preserving Claude Code compatibility.
+- `README.md`, `QUICK_START.md`, deployment docs, and project templates now use `lane project ...` / `lane framework ...` commands.
 - Tripartite architecture docs now describe one Codex leader session, local delegated agents, Executor sub-roles Coder/Deployer/Writer, and local independent Reviewer.
 - Framework updates are explicit user actions; container startup and shell/tmux entry only check and notify.
 - Promote 文档纳入已有 release、tag、install、smart update 工具，避免 Codex 手写临时发布流程。
 - Feishu status cards now update in place with minimal state and elapsed time instead of sending repeated acknowledgement cards.
 
 ### Fixed
-- Deployment guides no longer assume hard-coded `/data`, `/opt/aris-framework`, or shared framework named-volume layouts.
+- Deployment guides no longer assume hard-coded `/data`, `/opt/lane-framework`, or shared framework named-volume layouts.
 - Container entrypoint no longer performs silent `git pull` on framework startup.
 - Stable-facing docs no longer directly depend on dev-only `to-developer/` paths.
 - Feishu bridge now supports card patch updates and disables noisy queue acknowledgements by default.
 - Stable framework no longer tracks dev-only `to-developer/` materials; release checks rely on `CHANGELOG.md` for stable readiness.
 
 ### Removed
-- Legacy short CLI commands `aris init`, `aris update`, `aris doctor`, and `aris detach` are intentionally unsupported.
+- Legacy short CLI commands `lane init`, `lane update`, `lane doctor`, and `lane detach` are intentionally unsupported.
 
 ---
 
 ## [v0.2.0] - 2026-06-13
 
 ### Added
-- Agent Status Stream: project-local per-agent status snapshots under `.aris/status/` so Leader can observe running Coder, Deployer, Writer, and Reviewer roles without reading full transcripts.
+- Agent Status Stream: project-local per-agent status snapshots under `.labline/status/` so Leader can observe running Coder, Deployer, Writer, and Reviewer roles without reading full transcripts.
 - `tools/agent_status.py` CLI with `start`, `update`, `finish`, `list`, `summary`, and `validate` commands.
 - Shared Agent Status Stream protocol and role guidance for long-running job handles, expected update timing, read-only status checks, and reviewer transport metadata.
 - Maintainer validation report for local GPU smoke testing on the 3090x2 development container.
@@ -82,7 +82,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Release tag tooling now uses `${PYTHON:-python3}` instead of assuming `python3.8` is installed.
 
 ### Fixed
-- `.aris/status/` is ignored as project-local runtime state and should not be committed.
+- `.labline/status/` is ignored as project-local runtime state and should not be committed.
 
 ---
 
@@ -95,22 +95,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Codex skill mirrors for newly added skills.
 - LangGraph evaluation document for future optional orchestration backend decisions.
 - Portable MCP server index and Codex review bridge path handling.
-- Development log and guarded release tooling plan for ARIS version management.
-- Framework version recording in `install_aris.sh` (`record_framework_version`)
+- Development log and guarded release tooling plan for Labline version management.
+- Framework version recording in `install_labline.sh` (`record_framework_version`)
 - `project.yaml` template fields: `framework.version`, `framework.commit`, `overrides` registry
 - `docs/FRAMEWORK_STRUCTURE.md` — framework/project/dev boundary contract
 - Four top-level buckets: `examples/`, `compat/`, `incubating/`, `legacy/`
-- Regression tests for framework version recording (`tests/test_install_aris_version_record.py`)
-- `--dev` flag in `install_aris.sh` to use aris-dev/ repo instead of stable
-- `--Codex` platform switching tests (`tests/test_install_aris_codex_flag.py`)
-- Manifest safety tests (`tests/test_install_aris_manifest_safety.py`)
-- `--reconcile` synchronization tests (`tests/test_install_aris_reconcile.py`)
+- Regression tests for framework version recording (`tests/test_install_labline_version_record.py`)
+- `--dev` flag in `install_labline.sh` to use lane-dev/ repo instead of stable
+- `--Codex` platform switching tests (`tests/test_install_labline_codex_flag.py`)
+- Manifest safety tests (`tests/test_install_labline_manifest_safety.py`)
+- `--reconcile` synchronization tests (`tests/test_install_labline_reconcile.py`)
 
 ### Changed
-- README and documentation index now describe the current ARIS framework layout and dual-client usage.
-- Documentation paths were updated from the upstream Claude-only project to the current ARIS repository.
+- README and documentation index now describe the current Labline framework layout and dual-client usage.
+- Documentation paths were updated from the upstream Claude-only project to the current Labline repository.
 - Templates and installer path discovery were generalized to avoid hard-coded user/server paths.
-- `install_aris.sh`: refactored dead `$DRY_RUN` branch in uninstall cleanup
+- `install_labline.sh`: refactored dead `$DRY_RUN` branch in uninstall cleanup
 - `templates/CLAUDE_MD_TEMPLATE.md` and `AGENTS_MD_TEMPLATE.md`: added Project Overrides section
 - `README.md`: referenced framework structure docs
 - `QUICK_START.md`: added framework version recording step
@@ -121,7 +121,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Codex review bridge no longer hard-codes a developer-local server path.
 
 ### Removed
-- Obsolete ARIS-Code README variants and old README image assets.
+- Obsolete Labline-Code README variants and old README image assets.
 
 ---
 
@@ -137,10 +137,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 - Codex migration artifacts (`.agents/skills/`, `AGENTS.md`)
-- `test_install_aris_tools_symlink.py` regression tests (#174)
+- `test_install_labline_tools_symlink.py` regression tests (#174)
 
 ### Fixed
-- Symlink handling edge cases in `install_aris.sh`
+- Symlink handling edge cases in `install_labline.sh`
 
 ---
 
@@ -202,7 +202,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [2026-06-01]
 
 ### Added
-- ARIS framework v1 — docs, deployment, skill catalog, mattpocock skills
+- Labline framework v1 — docs, deployment, skill catalog, mattpocock skills
 - `/paper-talk` + `/slides-polish` skills
 
 ---

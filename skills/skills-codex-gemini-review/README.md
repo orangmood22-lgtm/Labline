@@ -97,13 +97,13 @@ Optional fallback only:
 1. Install the base Codex-native mirror first:
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project
 ```
 
 2. Re-run with the Gemini overlay enabled:
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile --with-gemini-review-overlay
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile --with-gemini-review-overlay
 ```
 
 3. Register the local reviewer bridge:
@@ -158,7 +158,7 @@ Operational note:
 
 ## References
 
-- Upstream overlay pattern from ARIS:
+- Upstream overlay pattern from Labline:
   - <https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/tree/main/skills/skills-codex-claude-review>
   - <https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/tree/main/mcp-servers/claude-review>
 - Local Gemini reviewer bridge in this repo:
@@ -168,4 +168,4 @@ Operational note:
   - Official Gemini CLI: <https://github.com/google-gemini/gemini-cli>
   - AI Studio API key entry: <https://aistudio.google.com/apikey>
 
-This package keeps the upstream ARIS skill shape, but swaps the reviewer transport to the local `gemini-review` bridge. It now covers every predefined Codex skill in this repo that previously depended on a secondary Codex reviewer or `mcp__codex__codex` review step. We intentionally did not directly depend on a generic Gemini MCP server package because the ARIS review skills rely on the narrow `review*` tool contract, resumable review-thread behavior, and now optional local-image review for poster PNGs.
+This package keeps the upstream Labline skill shape, but swaps the reviewer transport to the local `gemini-review` bridge. It now covers every predefined Codex skill in this repo that previously depended on a secondary Codex reviewer or `mcp__codex__codex` review step. We intentionally did not directly depend on a generic Gemini MCP server package because the Labline review skills rely on the narrow `review*` tool contract, resumable review-thread behavior, and now optional local-image review for poster PNGs.

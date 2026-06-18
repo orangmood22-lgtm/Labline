@@ -1,10 +1,10 @@
 # 开发侧 cheap worker / gpt-5.4-mini 默认分工
 
 > 创建时间: 2026-06-16
-> 适用对象: ARIS 开发侧 Leader、Codex、gpt-5.4-mini worker、reviewer
+> 适用对象: Labline 开发侧 Leader、Codex、gpt-5.4-mini worker、reviewer
 > 状态: dev-only 草案
 
-本文定义开发侧默认分工。它不引入新的 ARIS Role；它只规定一种默认的 Role Transport / worker 运行方式，用于把低风险、可批量处理的工作从主控路径中剥离出来。
+本文定义开发侧默认分工。它不引入新的 Labline Role；它只规定一种默认的 Role Transport / worker 运行方式，用于把低风险、可批量处理的工作从主控路径中剥离出来。
 
 `dev-worker` 的职责文档位于 `to-developer/skills/dev-worker/SKILL.md`。它是 Developer Skill，不是 User Skill，不进入用户项目 role graph。
 
@@ -66,7 +66,7 @@ worker 不负责：
 - task file、日志和 stdout 都不能泄露真实密钥。
 - `base_url` 可以覆盖，但 provider 名称和 model 仍应保留明确含义，便于批量任务追踪。
 
-规范命令使用 `aris dev rt ...` 短命令；`aris dev runtime ...` 是等价长命令。不保留 `aris dev worker ...` 作为 canonical 入口。
+规范命令使用 `lane dev rt ...` 短命令；`lane dev runtime ...` 是等价长命令。不保留 `aris dev worker ...` 作为 canonical 入口。
 
 最小配置文件示例：
 
@@ -81,18 +81,18 @@ model_name=deepseek-v4-flash
 注入配置：
 
 ```bash
-aris dev rt load .env
+lane dev rt load .env
 ```
 
-`load` 会将 provider/agent 绑定写入 `~/.aris/dev-runtime.json`，将 API key 写入本机 `~/.aris/dev-runtime.env` 并设为 `0600`。运行时优先读取环境变量，其次读取该本机 secret 文件；stdout、task file、metadata 不打印真实 key。
+`load` 会将 provider/agent 绑定写入 `~/.labline/dev-runtime.json`，将 API key 写入本机 `~/.labline/dev-runtime.env` 并设为 `0600`。运行时优先读取环境变量，其次读取该本机 secret 文件；stdout、task file、metadata 不打印真实 key。
 
 等价的手动配置命令：
 
 ```bash
-aris dev rt provider set deepseek-v4-flash --transport openai_compatible --model deepseek-v4-flash --base-url https://api.deepseek.com/v1 --api-key-env DEEPSEEK_API_KEY
-aris dev rt use dev-worker deepseek-v4-flash
-aris dev rt prompt dev-worker "批量扫文档并补链接" --file docs/FEISHU_INTEGRATION.md
-aris dev rt run dev-worker "批量扫文档并补链接" --file docs/FEISHU_INTEGRATION.md
+lane dev rt provider set deepseek-v4-flash --transport openai_compatible --model deepseek-v4-flash --base-url https://api.deepseek.com/v1 --api-key-env DEEPSEEK_API_KEY
+lane dev rt use dev-worker deepseek-v4-flash
+lane dev rt prompt dev-worker "批量扫文档并补链接" --file docs/FEISHU_INTEGRATION.md
+lane dev rt run dev-worker "批量扫文档并补链接" --file docs/FEISHU_INTEGRATION.md
 ```
 
 ## prompt / run / 日志分工

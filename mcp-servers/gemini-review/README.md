@@ -1,6 +1,6 @@
 # Gemini Review MCP
 
-Bridge Codex-first ARIS workflows to Gemini, using the direct Gemini API by default.
+Bridge Codex-first Labline workflows to Gemini, using the direct Gemini API by default.
 
 ## What it does
 
@@ -59,18 +59,18 @@ is enough for API mode without exporting the variable in every shell.
 
 ## Notes
 
-- The bridge defaults to the direct Gemini API path. This is the intended reviewer backend for the ARIS skill overlay.
+- The bridge defaults to the direct Gemini API path. This is the intended reviewer backend for the Labline skill overlay.
 - `GEMINI_REVIEW_BACKEND=auto` is still supported if you want API-first auto-selection, and `GEMINI_REVIEW_BACKEND=cli` is available as an explicit fallback.
 - If the default API model is temporarily rate-limited on your current free-tier window, keep the same bridge and set `GEMINI_REVIEW_MODEL=gemini-flash-latest` as a model override.
 - The `tools` argument is accepted for compatibility with existing skills, but is ignored. This matches the original pattern where the external reviewer only sees the prompt context prepared by Codex.
 - `imagePaths` / `image_paths` are supported only by the direct Gemini API backend in this bridge. CLI fallback remains text-only.
 - `threadId` is a bridge-local conversation id persisted under `~/.codex/state/gemini-review/threads/` by default and can be passed to `review_reply`.
 - `jobId` is a bridge-local background task id stored under `~/.codex/state/gemini-review/jobs/` by default, so status can be resumed across MCP server restarts.
-- This is intentionally a narrow, repo-local adapter. We did not directly vendor a generic Gemini MCP server, because the ARIS reviewer-aware skills expect the specific `review` / `review_reply` / `review_start` / `review_reply_start` / `review_status` interface and resumable review-thread semantics.
+- This is intentionally a narrow, repo-local adapter. We did not directly vendor a generic Gemini MCP server, because the Labline reviewer-aware skills expect the specific `review` / `review_reply` / `review_start` / `review_reply_start` / `review_status` interface and resumable review-thread semantics.
 
 ## Validation
 
-This bridge was validated against the ARIS reviewer workflow in a privacy-safe way:
+This bridge was validated against the Labline reviewer workflow in a privacy-safe way:
 
 - direct bridge smoke tests passed for:
   - `review`
@@ -143,7 +143,7 @@ When complete, `review_status` returns the same reviewer payload fields as the s
 
 ## Provenance and References
 
-- Upstream interaction pattern: ARIS `claude-review` bridge and `skills-codex-claude-review` in `Auto-research-in-sleep`
+- Upstream interaction pattern: Labline `claude-review` bridge and `skills-codex-claude-review` in `Auto-research-in-sleep`
   - <https://github.com/orangmood22-lgtm/Auto-research-in-sleep/tree/main/mcp-servers/claude-review>
   - <https://github.com/orangmood22-lgtm/Auto-research-in-sleep/tree/main/skills/skills-codex-claude-review>
 - Gemini backends used by this bridge:
@@ -156,4 +156,4 @@ When complete, `review_status` returns the same reviewer payload fields as the s
   - <https://modelcontextprotocol.info/specification/>
 - Related generic Gemini MCP server example:
   - `eLyiN/gemini-bridge`: <https://github.com/eLyiN/gemini-bridge>
-  - We inspected this class of generic Gemini MCP servers, but kept a thin compatibility adapter here because their tool schema and session model do not match the ARIS review-only bridge directly.
+  - We inspected this class of generic Gemini MCP servers, but kept a thin compatibility adapter here because their tool schema and session model do not match the Labline review-only bridge directly.

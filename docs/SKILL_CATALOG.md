@@ -1,6 +1,6 @@
-# ARIS Skill Catalog
+# Labline Skill Catalog
 
-> 自动生成于 2026-06-17 11:11。共 95 个 skill，12 个分类。
+> 自动生成于 2026-06-18 17:23。共 95 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/generate_skill_catalog.py`
 
@@ -55,7 +55,7 @@
 
 ### `/meta-optimize`
 
-**Analyze ARIS usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspi...**
+**Analyze Labline usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization in...**
 
 参数：`[target-skill-or-all]`
 
@@ -775,7 +775,7 @@
 
 ### `/feishu-session`
 
-**Manage Feishu/Lark remote Codex or Claude Code access, with lark-channel-bridge as the default transport and ARIS phone-session reports as legacy/f...**
+**Manage Feishu/Lark remote Codex or Claude Code access, with lark-channel-bridge as the default transport and Labline phone-session reports as legac...**
 
 参数：`[start|mark-seen|report|merge]`
 
@@ -785,7 +785,7 @@
 
 ### `/framework-update`
 
-**一键更新 ARIS 框架：git pull + 重建 symlinks。用户不需要懂 git。**
+**一键更新 Labline 框架：git pull + 重建 symlinks。用户不需要懂 git。**
 
 参数：`[--force] [--dry-run]`
 
@@ -795,7 +795,7 @@
 
 ### `/overleaf-sync`
 
-**Two-way sync between a local paper directory and an Overleaf project via the Overleaf Git bridge (Premium feature). Lets you keep ARIS audit/edit w...**
+**Two-way sync between a local paper directory and an Overleaf project via the Overleaf Git bridge (Premium feature). Lets you keep Labline audit/edi...**
 
 参数：`[setup <project-id> | pull | push | status]`
 

@@ -30,7 +30,7 @@ examples:
 
 ## 前置检查
 
-1. 确认当前目录有 `project.yaml`。没有 → 报错 "不在 ARIS 项目目录内，先 /init-research"
+1. 确认当前目录有 `project.yaml`。没有 → 报错 "不在 Labline 项目目录内，先 /init-research"
 2. 读 `project.yaml` 获取:
    - `git.remote` — push/pull 目标
    - `git.auto_commit` — 是否自动 commit

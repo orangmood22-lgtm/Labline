@@ -2,11 +2,11 @@
 
 [中文版](PROJECT_FILES_GUIDE_CN.md) | English
 
-> How to organize project-level state files for ARIS research workflows — what each file does, when to write it, and how they relate to each other.
+> How to organize project-level state files for Labline research workflows — what each file does, when to write it, and how they relate to each other.
 
 ## The Problem
 
-ARIS workflows generate a lot of information across multiple stages: ideas, experiment plans, results, review feedback, decisions. Without clear file conventions, this information gets scattered across chat sessions and lost on context compaction or new sessions.
+Labline workflows generate a lot of information across multiple stages: ideas, experiment plans, results, review feedback, decisions. Without clear file conventions, this information gets scattered across chat sessions and lost on context compaction or new sessions.
 
 This guide establishes a layered file system where each file has a clear purpose, update trigger, and relationship to other files.
 
@@ -48,7 +48,7 @@ project/
     └── graph/
 ```
 
-### Existing ARIS Files (unchanged)
+### Existing Labline Files (unchanged)
 
 | File | Created by | Purpose |
 |------|-----------|---------|
@@ -132,7 +132,7 @@ Do NOT read `IDEA_REPORT.md` or `IDEA_CANDIDATES.md` unless switching ideas.
 
 ## Output Versioning
 
-ARIS skills use timestamped filenames to preserve history. Each output is written twice:
+Labline skills use timestamped filenames to preserve history. Each output is written twice:
 
 1. **Timestamped file**: `{FILENAME}_{YYYYMMDD_HHmmss}.md` — permanent history
 2. **Fixed-name file**: `{FILENAME}.md` — latest copy, read by downstream skills

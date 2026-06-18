@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verify_paper_audits.sh — External verifier for ARIS mandatory paper audits.
+# verify_paper_audits.sh — External verifier for Labline mandatory paper audits.
 #
 # Single source of truth for "are this paper's mandatory audits complete and
 # current?" Called by paper-writing Phase 6 and by the audit-enforcement Stop
@@ -9,8 +9,8 @@
 #   bash tools/verify_paper_audits.sh <paper-dir> [--assurance draft|submission] [--json-out <path>]
 #
 # Defaults:
-#   --assurance: read from <paper-dir>/.aris/assurance.txt if present, else "draft"
-#   --json-out:  <paper-dir>/.aris/audit-verifier-report.json
+#   --assurance: read from <paper-dir>/.labline/assurance.txt if present, else "draft"
+#   --json-out:  <paper-dir>/.labline/audit-verifier-report.json
 #
 # Exit codes:
 #   0  All required audits present, schema-valid, fresh (no STALE), no
@@ -71,8 +71,8 @@ PAPER_DIR="$(cd "$PAPER_DIR" && pwd)"
 
 # Resolve assurance level
 if [[ -z "$ASSURANCE" ]]; then
-    if [[ -f "$PAPER_DIR/.aris/assurance.txt" ]]; then
-        ASSURANCE="$(tr -d '[:space:]' < "$PAPER_DIR/.aris/assurance.txt")"
+    if [[ -f "$PAPER_DIR/.labline/assurance.txt" ]]; then
+        ASSURANCE="$(tr -d '[:space:]' < "$PAPER_DIR/.labline/assurance.txt")"
     else
         ASSURANCE="draft"
     fi
@@ -82,7 +82,7 @@ case "$ASSURANCE" in
     *) echo "invalid --assurance: $ASSURANCE (expected draft or submission)" >&2; exit 2 ;;
 esac
 
-[[ -n "$JSON_OUT" ]] || JSON_OUT="$PAPER_DIR/.aris/audit-verifier-report.json"
+[[ -n "$JSON_OUT" ]] || JSON_OUT="$PAPER_DIR/.labline/audit-verifier-report.json"
 mkdir -p "$(dirname "$JSON_OUT")"
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

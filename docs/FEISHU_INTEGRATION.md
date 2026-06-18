@@ -1,13 +1,15 @@
 # Feishu / Lark Integration
 
-For Codex + Claude Code remote control from Feishu/Lark, ARIS recommends
+For Codex + Claude Code remote control from Feishu/Lark, Labline recommends
 [`lark-channel-bridge`](https://github.com/zarazhangrui/lark-coding-agent-bridge) as the default bridge. It is an external transport adapter for local Codex CLI or Claude Code sessions, with streaming cards, per-chat sessions, workspace switching, and first-run QR setup.
 
-The older in-repo path, `mcp-servers/feishu-bridge` plus `tools/aris_feishu_session.py`, remains documented below as a legacy/fallback ARIS-managed runner. Use it when you specifically need ARIS inbox/outbox files, report generation, or tmux injection behavior.
+The older in-repo path, `mcp-servers/feishu-bridge` plus `tools/labline_feishu_session.py`, remains documented below as a legacy/fallback Labline-managed runner. Use it when you specifically need Labline inbox/outbox files, report generation, or tmux injection behavior.
 
 ## Recommended Path: `lark-channel-bridge`
 
-`lark-channel-bridge` forwards Feishu/Lark messages to a local `codex` or `claude` process. It does not make Feishu a remote shell, does not become the ARIS Leader, and does not own workflow decisions. Execution still happens in the local Codex/Claude Code session, under that agent's normal permissions and the selected workspace.
+`lark-channel-bridge` forwards Feishu/Lark messages to a local `codex` or `claude` process. It does not make Feishu a remote shell, does not become the Labline Leader, and does not own workflow decisions. Execution still happens in the local Codex/Claude Code session, under that agent's normal permissions and the selected workspace.
+
+Labline wraps the external bridge with `lane feishu ...` so users do not need to remember the long bridge command. The wrapper does not vendor or reimplement `lark-channel-bridge`; it installs, launches, checks, and locates logs for the external CLI.
 
 Prerequisites:
 
@@ -18,34 +20,49 @@ Prerequisites:
 Install:
 
 ```bash
-npm i -g lark-channel-bridge
+lane feishu install
+lane feishu doctor
 ```
 
-Start a Codex profile in the foreground:
+`lane feishu install` defaults to a user-local npm prefix under `~/.labline/node`, so it works for non-root users on shared servers. Labline automatically adds that prefix's `bin` directory when running `lane feishu ...`. Administrators who intentionally want a system-wide install can use `lane feishu install --scope system`.
+
+First-run foreground setup for the current project directory:
 
 ```bash
-lark-channel-bridge run \
-  --profile codex \
-  --agent codex \
-  --workspace [你的project位置]
+cd [你的project位置]
+lane feishu run
 ```
 
-Or start the Codex profile as a background service:
+This starts `lark-channel-bridge run --profile lane-codex --agent codex --workspace [当前目录]`. The first run opens the bridge QR wizard if the PersonalAgent app is not configured yet.
+
+After the QR setup works, run the Codex profile as a background service:
 
 ```bash
-lark-channel-bridge start \
-  --profile codex \
-  --agent codex \
-  --workspace [你的project位置]
+cd [你的project位置]
+lane feishu start
+lane feishu status
 ```
 
 For Claude Code, use a separate profile:
 
 ```bash
-lark-channel-bridge run \
-  --profile claude \
-  --agent claude \
-  --workspace [你的project位置]
+cd [你的project位置]
+lane feishu run --profile lane-claude --agent claude
+```
+
+Useful local commands:
+
+```bash
+lane feishu stop
+lane feishu restart
+lane feishu logs --tail 50
+```
+
+If startup fails with `could not resolve bot identity` and the log shows `Request failed with status code 502`, retry without proxy. Some local HTTP proxies do not handle the Node SDK's Feishu API requests correctly, while direct access still works:
+
+```bash
+lane feishu run --no-proxy
+lane feishu start --no-proxy
 ```
 
 Common Feishu/Lark commands:
@@ -56,21 +73,21 @@ Common Feishu/Lark commands:
 | `/ws` | Manage saved workspaces, such as list/save/use |
 | `/status` | Show profile, agent, working directory, session, identity, and run state |
 
-Use `/cd [你的project位置]` after startup if you did not pass `--workspace`, or when moving a chat thread to another ARIS project.
+Use `/cd [你的project位置]` after startup if you did not pass `--workspace`, or when moving a chat thread to another Labline project.
 
-## ARIS Boundary
+## Labline Boundary
 
-Feishu/Lark integration is a Transport Adapter Skill boundary in ARIS terms. The bridge transports messages, status, approvals, files, or reports between chat and a local agent process. It is not a Leader, not a workflow runtime, and not a remote shell. Research orchestration remains in the active Codex/Claude Code session and the ARIS skills it invokes.
+Feishu/Lark integration is a Transport Adapter Skill boundary in Labline terms. The bridge transports messages, status, approvals, files, or reports between chat and a local agent process. It is not a Leader, not a workflow runtime, and not a remote shell. Research orchestration remains in the active Codex/Claude Code session and the Labline skills it invokes.
 
-## Legacy / Fallback: ARIS-Managed Runner
+## Legacy / Fallback: Labline-Managed Runner
 
-The sections below describe the older ARIS-managed path:
+The sections below describe the older Labline-managed path:
 
 ```text
-mcp-servers/feishu-bridge/server.py + tools/aris_feishu_session.py
+mcp-servers/feishu-bridge/server.py + tools/labline_feishu_session.py
 ```
 
-Keep using this path only when you need ARIS-managed runtime files, explicit inbox/outbox inspection, phone-session merge reports, or the tmux live-TUI injection flow.
+Keep using this path only when you need Labline-managed runtime files, explicit inbox/outbox inspection, phone-session merge reports, or the tmux live-TUI injection flow.
 
 ## What Works
 
@@ -78,7 +95,7 @@ Keep using this path only when you need ARIS-managed runtime files, explicit inb
 |-----------|--------|------|
 | Local to Feishu | Supported | `POST /send`, `POST /update` for card updates |
 | Feishu to local | Supported | Feishu long connection -> `/control/message` |
-| Feishu message to Codex | Legacy/fallback | `tools/aris_feishu_session.py` consumes inbox and runs `codex exec` |
+| Feishu message to Codex | Legacy/fallback | `tools/labline_feishu_session.py` consumes inbox and runs `codex exec` |
 | Codex response to Feishu | Legacy/fallback | runner writes outbox and calls `/send` |
 | Already-open Codex TUI takeover | Legacy/fallback | `--tmux-pane <target>` injects Feishu text into the live pane |
 
@@ -88,8 +105,8 @@ The bridge does not execute shell commands, tools, or skills itself. It only rec
 
 - **Recommended Bridge**: `lark-channel-bridge`, external Feishu/Lark transport adapter for local Codex CLI or Claude Code.
 - **Legacy Feishu Bridge**: `mcp-servers/feishu-bridge/server.py`, local HTTP + Feishu long-connection process.
-- **Remote Session Inbox**: `.aris/feishu-control/inbox/<session_id>.jsonl`.
-- **Feishu-Controlled Session**: a legacy registered session consumed by `tools/aris_feishu_session.py`.
+- **Remote Session Inbox**: `.labline/feishu-control/inbox/<session_id>.jsonl`.
+- **Feishu-Controlled Session**: a legacy registered session consumed by `tools/labline_feishu_session.py`.
 - **Control Lease**: input ownership marker. Feishu messages can take remote priority; `/release` returns control to local.
 
 See [CONTEXT.md](../CONTEXT.md) for stable terminology. Detailed ADRs are kept in the dev checkout and are not part of stable releases.
@@ -126,8 +143,8 @@ FEISHU_USER_ID=ou_xxx
 FEISHU_RECEIVE_ID_TYPE=open_id
 FEISHU_ENABLE_WS=1
 BRIDGE_PORT=5000
-ARIS_PROJECT_ROOT=/aris/aris-dev
-ARIS_FEISHU_CONTROL_ROOT=
+LABLINE_PROJECT_ROOT=/lane/lane-dev
+LABLINE_FEISHU_CONTROL_ROOT=
 ```
 
 `FEISHU_USER_ID` must match `FEISHU_RECEIVE_ID_TYPE`:
@@ -163,10 +180,10 @@ Adjust port to your local proxy.
 Terminal 1:
 
 ```bash
-cd /aris/aris-dev
+cd /lane/lane-dev
 set -a; source .env; set +a
 export FEISHU_ENABLE_WS=1
-export ARIS_PROJECT_ROOT=/aris/aris-dev
+export LABLINE_PROJECT_ROOT=/lane/lane-dev
 .venv-feishu/bin/python mcp-servers/feishu-bridge/server.py
 ```
 
@@ -183,7 +200,7 @@ Smoke test:
 curl -sS http://127.0.0.1:5000/health
 curl -sS -X POST http://127.0.0.1:5000/send \
   -H 'Content-Type: application/json' \
-  -d '{"type":"text","content":"ARIS Feishu bridge live test"}'
+  -d '{"type":"text","content":"Labline Feishu bridge live test"}'
 ```
 
 ## Start Legacy Codex Runner
@@ -191,11 +208,11 @@ curl -sS -X POST http://127.0.0.1:5000/send \
 Terminal 2:
 
 ```bash
-cd /aris/aris-dev
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+cd /lane/lane-dev
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
   --role leader \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --profile leader \
   --bridge-url http://127.0.0.1:5000
 ```
@@ -205,10 +222,10 @@ Codex replies are sent back to Feishu as interactive cards by default, so basic 
 YOLO mode passes Codex `--dangerously-bypass-approvals-and-sandbox`:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
   --role leader \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --profile leader \
   --bridge-url http://127.0.0.1:5000 \
   --feishu-format card \
@@ -234,10 +251,10 @@ tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_pid}
 Start the runner in live injection mode:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
   --role leader \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --bridge-url http://127.0.0.1:5000 \
   --tmux-pane dev:1.0 \
   --feishu-status-interval-seconds 15
@@ -308,9 +325,9 @@ Do not run live injection and fresh `codex exec` runner for the same `--session-
 Continue newest saved Codex conversation:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --bridge-url http://127.0.0.1:5000 \
   --resume-last
 ```
@@ -320,9 +337,9 @@ Do not use `--resume-last` while the newest Codex session is an active TUI you a
 If the inbox already contains old messages and you do not want to replay them:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --bridge-url http://127.0.0.1:5000 \
   --mark-seen \
   --once
@@ -331,9 +348,9 @@ If the inbox already contains old messages and you do not want to replay them:
 Bind a specific saved Codex conversation:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --bridge-url http://127.0.0.1:5000 \
   --codex-session-id <codex-session-id>
 ```
@@ -366,7 +383,7 @@ These are intentionally not executed by the legacy bridge.
 Default root:
 
 ```text
-.aris/feishu-control/
+.labline/feishu-control/
   sessions.json
   inbox/<session_id>.jsonl
   outbox/<session_id>.jsonl
@@ -385,18 +402,18 @@ Phone control is treated as a fork. Do not rely on hidden Codex context moving f
 Generate a report:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --write-report
 ```
 
 Generate a report and print a local merge prompt:
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
-  --project-root /aris/aris-dev \
+  --project-root /lane/lane-dev \
   --merge-prompt
 ```
 
@@ -410,7 +427,7 @@ Run focused tests:
 
 ```bash
 .venv-feishu/bin/python -m pytest \
-  tests/test_aris_feishu_session.py \
+  tests/test_labline_feishu_session.py \
   tests/test_feishu_control.py \
   tests/test_feishu_bridge_server.py \
   tests/test_agent_status.py -q
@@ -426,8 +443,8 @@ curl -sS http://127.0.0.1:5000/control/sessions
 Send a private message to the bot and check:
 
 ```bash
-tail -5 .aris/feishu-control/inbox/<session_id>.jsonl
-tail -5 .aris/feishu-control/outbox/<session_id>.jsonl
+tail -5 .labline/feishu-control/inbox/<session_id>.jsonl
+tail -5 .labline/feishu-control/outbox/<session_id>.jsonl
 ```
 
 ## Troubleshooting

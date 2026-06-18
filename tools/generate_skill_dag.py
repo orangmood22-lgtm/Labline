@@ -13,7 +13,7 @@ Only frontmatter `invokes` creates formal graph edges. Body mentions such as
 Outputs docs/SKILL_DAG.yaml and validates the formal graph is acyclic.
 
 Usage:
-    python3 tools/generate_skill_dag.py [--check-only] [--mermaid] [--html]
+    python3 tools/generate_skill_dag.py [--check-only] [--fail-on-inferred] [--mermaid] [--html]
 """
 
 import argparse
@@ -246,6 +246,28 @@ def compute_impact(nodes: dict, skill_name: str) -> dict:
     }
 
 
+def collect_inferred_mentions(nodes: dict) -> list[tuple[str, list[str]]]:
+    """Return skills that contain inferred mentions, sorted by skill name."""
+    offenders = []
+    for name, node in sorted(nodes.items()):
+        inferred = sorted(set(node.get("inferred_mentions", [])))
+        if inferred:
+            offenders.append((name, inferred))
+    return offenders
+
+
+def assert_no_inferred_mentions(nodes: dict) -> None:
+    """Raise ValueError if any skill contains inferred mentions."""
+    offenders = collect_inferred_mentions(nodes)
+    if not offenders:
+        return
+
+    lines = ["Inferred mentions detected:"]
+    for name, inferred in offenders:
+        lines.append(f"  {name}: {', '.join(inferred)}")
+    raise ValueError("\n".join(lines))
+
+
 def generate_html(nodes: dict, dag_data: dict) -> str:
     """Generate self-contained HTML visualization page using D3.js force layout."""
     invoked_by = compute_invoked_by(nodes)
@@ -296,7 +318,7 @@ def generate_html(nodes: dict, dag_data: dict) -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARIS Skill DAG</title>
+<title>Labline Skill DAG</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
@@ -370,7 +392,7 @@ body {{ font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; backgro
 </head>
 <body>
 <div id="nav">
-  <h1>ARIS <span>Skill DAG</span></h1>
+  <h1>Labline <span>Skill DAG</span></h1>
   <div id="stats">
     <span><b>{len(nodes)}</b> skills</span>
     <span><b>{dag_data["stats"]["total_edges"]}</b> edges</span>
@@ -442,7 +464,7 @@ let currentLang = 'en';
 // Bilingual translations
 const I18N = {{
   en: {{
-    title: 'ARIS Skill DAG',
+    title: 'Labline Skill DAG',
     skills: 'skills', edges: 'edges', leader: 'leader', reviewer: 'reviewer', executor: 'executor', any: 'any',
     searchPlaceholder: 'Search skills...',
     all: 'All', orchestration: 'Orchestration', coder: 'Coder', deployer: 'Deployer', writer: 'Writer', tools: 'Tools',
@@ -455,7 +477,7 @@ const I18N = {{
     invokes: 'Invokes', invokedBy: 'Invoked by', produces: 'Produces', consumes: 'Consumes'
   }},
   zh: {{
-    title: 'ARIS 技能依赖图',
+    title: 'Labline 技能依赖图',
     skills: '技能', edges: '边', leader: '编排', reviewer: '审查', executor: '执行', any: '通用',
     searchPlaceholder: '搜索技能...',
     all: '全部', orchestration: '编排层', coder: '编码', deployer: '部署', writer: '写作', tools: '工具',
@@ -472,7 +494,7 @@ const I18N = {{
 function updateLang(lang) {{
   currentLang = lang;
   const t = I18N[lang];
-  document.querySelector('#nav h1').innerHTML = `ARIS <span>${{t.title.split(' ').slice(1).join(' ')}}</span>`;
+  document.querySelector('#nav h1').innerHTML = `Labline <span>${{t.title.split(' ').slice(1).join(' ')}}</span>`;
   document.querySelector('#search').placeholder = t.searchPlaceholder;
   document.querySelectorAll('.btn-group .btn')[0].textContent = t.all;
   document.querySelector('#legend h4').textContent = t.layers;
@@ -687,6 +709,11 @@ simulation.on('end', () => {{
 def main():
     parser = argparse.ArgumentParser(description="Generate SKILL_DAG.yaml")
     parser.add_argument("--check-only", action="store_true", help="Only validate, don't write")
+    parser.add_argument(
+        "--fail-on-inferred",
+        action="store_true",
+        help="Exit nonzero if any skill has inferred mentions",
+    )
     parser.add_argument("--mermaid", action="store_true", help="Also generate Mermaid diagram")
     parser.add_argument("--html", action="store_true", help="Also generate HTML visualization")
     args = parser.parse_args()
@@ -713,6 +740,13 @@ def main():
     inferred_mentions = sum(len(n.get("inferred_mentions", [])) for n in nodes.values())
     print(f"Total invocation edges: {edges}")
     print(f"Total inferred mentions: {inferred_mentions}")
+
+    if args.fail_on_inferred:
+        try:
+            assert_no_inferred_mentions(nodes)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            sys.exit(1)
 
     if args.check_only:
         sys.exit(1 if cycles else 0)

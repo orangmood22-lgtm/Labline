@@ -1,13 +1,13 @@
-# ARIS Trae Adaptation Guide (Workflow Runbook)
+# Labline Trae Adaptation Guide (Workflow Runbook)
 
-Use ARIS research workflows in Trae without relying on Claude Code `/skill-name` slash commands.
+Use Labline research workflows in Trae without relying on Claude Code `/skill-name` slash commands.
 
 ## 1. Key Differences: Claude Code vs Trae
 
 | Concept | Claude Code | Trae |
 |---|---|---|
 | Skill invocation | `/skill-name "args"` (slash command) | Natural language auto-discovery, `#` quick match, `@skills/.../SKILL.md` (file reference) |
-| Skill storage | `~/.claude/skills/...` | Global `~/.trae/skills/` (cross-project available) or project `<project>/.trae/skills/` (current project only), or directly reference ARIS repo `skills/` |
+| Skill storage | `~/.claude/skills/...` | Global `~/.trae/skills/` (cross-project available) or project `<project>/.trae/skills/` (current project only), or directly reference Labline repo `skills/` |
 | MCP setup | `claude mcp add ...` | `Settings → MCP → Manual Add` |
 | Agent execution | Persistent CLI session | Chat/Agent session |
 | File references | Auto-read from project | Explicit `@filename` attachment |
@@ -15,7 +15,7 @@ Use ARIS research workflows in Trae without relying on Claude Code `/skill-name`
 
 ## 2. Setup
 
-It is recommended to create a dedicated Trae agent for ARIS workflows to avoid conflicts with other agents and to keep role instructions stable.
+It is recommended to create a dedicated Trae agent for Labline workflows to avoid conflicts with other agents and to keep role instructions stable.
 
 ### 2.1 Clone the repository and configure Skills
 
@@ -29,7 +29,7 @@ Method 1: Install via Trae UI (Recommended)
 
 1. Go to `Settings → Rules and Skills`
 2. Select "Global" or "Project" installation scope
-3. Click "Import File" and select SKILL.md files from the ARIS repo's `skills/` directory
+3. Click "Import File" and select SKILL.md files from the Labline repo's `skills/` directory
 4. After installation, skills can be triggered via natural language
 
 > **Note:** Globally installed skills can be triggered via natural language in all projects; project-level installed skills can be triggered via natural language within that project.
@@ -50,7 +50,7 @@ After installation, simply describe your needs in natural language within the co
 
 ### 2.2 Configure Codex reviewer MCP (recommended)
 
-ARIS relies on an executor model + external reviewer model. Configure reviewer MCP first, then run workflows.
+Labline relies on an executor model + external reviewer model. Configure reviewer MCP first, then run workflows.
 
 1) Install and authenticate Codex CLI
 
@@ -155,7 +155,7 @@ Directly reference the skill file and attach an action instruction in the conver
 Run the auto review loop for "factorized gap in discrete diffusion LMs".
 ```
 
-Note: `@skills/.../SKILL.md` references only resolve if the ARIS repo (or its `skills/` folder) is part of the current Trae workspace. They will not work when the skills folder exists only in a separate workspace.
+Note: `@skills/.../SKILL.md` references only resolve if the Labline repo (or its `skills/` folder) is part of the current Trae workspace. They will not work when the skills folder exists only in a separate workspace.
 ### D. Convert Frequent Skills into Local Rules
 
 Move frequently used skill instructions into project rules to reduce repeated manual pasting.
@@ -166,7 +166,7 @@ Paste workflow instructions directly into chat for temporary tasks.
 
 ## 4. Workflow Mapping (Claude Flow → Trae Usage)
 
-Trae automatically discovers ARIS skills via the YAML `description` field in `SKILL.md`. Below are invocation methods for each workflow:
+Trae automatically discovers Labline skills via the YAML `description` field in `SKILL.md`. Below are invocation methods for each workflow:
 
 ### Workflow 1: Idea Discovery
 
@@ -253,7 +253,7 @@ Each stage reads output files from the previous stage, so context can be passed 
 
 ## 5. MCP Tool Calls Mapping
 
-| ARIS MCP tool | Purpose | Required MCP server |
+| Labline MCP tool | Purpose | Required MCP server |
 |---|---|---|
 | `mcp__codex__codex` | Send review prompt to GPT-5.4 | codex |
 | `mcp__codex__codex-reply` | Continue review thread | codex |
@@ -322,7 +322,7 @@ Use run-experiment skill. Deploy: python train.py --lr 1e-4 --epochs 100
 ## 10. Migration Checklist: Claude Code → Trae
 
 - [ ] Go to `Settings → Rules and Skills`, select "Global" or "Project" installation scope
-- [ ] Import ARIS skills' SKILL.md files
+- [ ] Import Labline skills' SKILL.md files
 - [ ] Configure MCP server in `Settings → MCP`
 - [ ] Use natural language to describe needs and trigger skills
 - [ ] Verify MCP tools are available (codex or llm-chat)

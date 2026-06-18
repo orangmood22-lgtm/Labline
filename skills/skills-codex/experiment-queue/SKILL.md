@@ -49,7 +49,7 @@ conda: my_env
 # Optional: override conda hook path if conda is not at a standard location.
 # Can be a bare path (wrapped automatically) or a full `eval "$(... shell.bash hook)"` string.
 # Falls back to auto-detect of ~/anaconda3, ~/miniconda3, /opt/anaconda3, etc.,
-# or the ARIS_CONDA_HOOK environment variable.
+# or the LABLINE_CONDA_HOOK environment variable.
 # conda_hook: /custom/path/to/conda
 ssh: gpu-server
 default_cmd: >
@@ -128,31 +128,31 @@ If any precondition fails, show user which jobs are blocked and why.
 Resolve the bundled helper directory (`$PROJECT_DIR` / `$RUN_TS` / `$LOCAL_RUN_DIR` already set in Step 1):
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-[ -n "$ARIS_REPO" ] || { echo "ERROR: ARIS_REPO not set. Use install_aris_codex.sh managed install or export ARIS_REPO=/path/to/ARIS."; exit 1; }
-QUEUE_TOOLS="$ARIS_REPO/tools/experiment_queue"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+[ -n "$LABLINE_REPO" ] || { echo "ERROR: LABLINE_REPO not set. Use install_labline_codex.sh managed install or export LABLINE_REPO=/path/to/Labline."; exit 1; }
+QUEUE_TOOLS="$LABLINE_REPO/tools/experiment_queue"
 [ -f "$QUEUE_TOOLS/queue_manager.py" ] || { echo "ERROR: queue_manager.py not found under $QUEUE_TOOLS"; exit 1; }
 ```
 
 Compute remote paths (note: modern `scp` runs in SFTP mode and does NOT reliably expand `$HOME` in destination paths — use remote-relative for `scp`, `$HOME`-prefixed for `ssh` command strings):
 
 ```bash
-REMOTE_RUN_REL=".aris_queue/runs/$RUN_TS"
+REMOTE_RUN_REL=".labline_queue/runs/$RUN_TS"
 REMOTE_RUN_DIR="\$HOME/$REMOTE_RUN_REL"
 ```
 
 Bootstrap remote run dir + copy helpers + copy manifest. Per-invocation, idempotent:
 
 ```bash
-ssh <server> "mkdir -p \"$REMOTE_RUN_DIR/logs\" \"\$HOME/.aris_queue\""
-scp "$QUEUE_TOOLS/queue_manager.py" "$QUEUE_TOOLS/build_manifest.py" <server>:.aris_queue/
+ssh <server> "mkdir -p \"$REMOTE_RUN_DIR/logs\" \"\$HOME/.labline_queue\""
+scp "$QUEUE_TOOLS/queue_manager.py" "$QUEUE_TOOLS/build_manifest.py" <server>:.labline_queue/
 scp "$LOCAL_RUN_DIR/manifest.json" <server>:"$REMOTE_RUN_REL/manifest.json"
 ```
 
 Launch the scheduler as a detached `nohup` process:
 
 ```bash
-ssh <server> "nohup python3 \"\$HOME/.aris_queue/queue_manager.py\" \\
+ssh <server> "nohup python3 \"\$HOME/.labline_queue/queue_manager.py\" \\
   --manifest \"$REMOTE_RUN_DIR/manifest.json\" \\
   --state    \"$REMOTE_RUN_DIR/queue_state.json\" \\
   --log-dir  \"$REMOTE_RUN_DIR/logs\" \\

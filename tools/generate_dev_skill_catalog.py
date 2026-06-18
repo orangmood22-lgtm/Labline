@@ -126,7 +126,7 @@ def render_catalog(skills: list[DevSkill], skills_root: Path, output_path: Path)
 
     project_root = project_root_for(skills_root)
     lines = [
-        "# ARIS Dev Skill Catalog",
+        "# Labline Dev Skill Catalog",
         "",
         f"> 自动生成于 {datetime.now().strftime('%Y-%m-%d %H:%M')}。共 {len(skills)} 个 dev skill。",
         ">",

@@ -1,4 +1,4 @@
-# ARIS Agent Guide
+# Labline Agent Guide
 
 > **给 AI agent 看的工具手册。** 人类用户请看 [QUICK_START.md](../../QUICK_START.md) 和 [docs/OPERATIONS_GUIDE.md](../../docs/OPERATIONS_GUIDE.md)。
 
@@ -39,10 +39,12 @@
 
 - Agent 启动、进入长任务、遇阻塞、完成时更新自己的 Agent Status File
 - 长训练、下载、队列、远程部署必须写 job handle（tmux/screen/watchdog/queue/log/result path）
-- 不手写 JSON；优先用 `.aris/tools/agent_status.py`
+- 不手写 JSON；优先用 `.labline/tools/agent_status.py`
 - Leader 只读状态摘要，不把状态流当任务队列或 agent 聊天室
 
 ### 5. 角色边界
+
+详见 `role-contracts.md`（同目录）。
 
 - **Leader** 只读/判/派。不写代码、不跑命令、不画图
 - **Executor** → 三种主执行角色：Coder / Deployer / Writer
@@ -60,11 +62,16 @@ Leader 派发任务时使用专用角色：
 
 ### 7. 模型分层
 
-| 角色 | 模型 | Agent 参数 |
-|------|------|-----------|
-| Leader | Opus | 用户当前模型 |
-| Coder / Deployer / Writer | Sonnet | `model: "sonnet"` |
-| Reviewer | GPT-5.5 | `mcp__codex__codex` |
+默认模型只描述 Runtime Binding，不改变角色职责。
+
+| 角色 | 默认模型 | Agent 参数 |
+|------|----------|-----------|
+| Leader | `gpt-5.5` | 用户当前 Codex 主会话 |
+| Planner | `gpt-5.4` | `model: "gpt-5.4"` |
+| Coder | `gpt-5.4-mini` | `model: "gpt-5.4-mini"` |
+| Deployer | `gpt-5.4-mini` | `model: "gpt-5.4-mini"` |
+| Writer | `gpt-5.4` | `model: "gpt-5.4"` |
+| Reviewer | `gpt-5.4` | 独立 reviewer agent / review transport |
 
 ---
 

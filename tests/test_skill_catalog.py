@@ -90,7 +90,7 @@ argument-hint: "[args]"
 
         assert output.exists(), "output file should exist"
         content = output.read_text()
-        assert "# ARIS Skill Catalog" in content
+        assert "# Labline Skill Catalog" in content
         assert "`/sync`" in content
         assert "`/arxiv`" in content
         assert "`/leader`" in content

@@ -114,7 +114,7 @@ def test_non_degrading_skill_rules_are_documented() -> None:
         assert needle in text
 
 
-def test_codex_skill_helper_commands_use_installed_aris_repo() -> None:
+def test_codex_skill_helper_commands_use_installed_labline_repo() -> None:
     bad_command_patterns = [
         r"python3 tools/",
         r"python tools/",
@@ -220,7 +220,7 @@ def test_codex_high_risk_skills_preserve_claude_semantics() -> None:
         "arxiv": [
             "Update Research Wiki",
             "integration-contract.md",
-            "export ARIS_REPO",
+            "export LABLINE_REPO",
         ],
         "rebuttal": [
             "Review Tracing",
@@ -330,7 +330,7 @@ def test_codex_skill_instructions_use_codex_paths() -> None:
 
     assert "~/.codex/feishu.json" in auto_paper
     assert "~/.claude/feishu.json" not in auto_paper
-    assert ".aris/installed-skills-codex.txt" in paper_writing
+    assert ".labline/installed-skills-codex.txt" in paper_writing
     assert ".agents/skills/paper-writing" in paper_writing
     assert "~/.claude/skills/paper-writing/SKILL.md" not in paper_writing
     assert "~/.claude/settings.json" not in paper_writing
@@ -349,4 +349,4 @@ def test_codex_experiment_queue_points_to_bundled_helpers() -> None:
     assert "tools/experiment_queue/build_manifest.py" in text
     assert "tools/queue_manager.py" not in text
     assert "tools/build_manifest.py" not in text
-    assert ".aris/installed-skills-codex.txt" in text
+    assert ".labline/installed-skills-codex.txt" in text

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ARIS Smart Skill Update
+# Labline Smart Skill Update
 # Intelligently compares local skills with upstream, detects personal
 # customizations, and recommends safe update strategy per skill.
 #
@@ -9,15 +9,14 @@
 #   Project-level (Claude Code):
 #     bash tools/smart_update.sh --project <path> [--apply]
 #   Project-level (Codex CLI):
-#     bash tools/smart_update.sh --project <path> --target-subdir .agents/skills/aris [--apply]
+#     bash tools/smart_update.sh --project <path> --target-subdir .agents/skills [--apply]
 #   Custom paths:
 #     bash tools/smart_update.sh --upstream <path> --local <path> [--apply]
 #
 #   --apply: actually perform the updates (default: dry-run analysis only)
 #   --project <path>: project root — upstream from repo, local from <path>/<target-subdir>
 #   --target-subdir <relative>: project-mode skill subdirectory (default: .claude/skills)
-#                               common values: .claude/skills, .claude/skills/aris,
-#                                              .agents/skills, .agents/skills/aris
+#                               common values: .claude/skills, .agents/skills
 #                               must be a relative path
 #   --upstream <path>: explicit upstream skills directory
 #   --local <path>: explicit local skills directory
@@ -117,7 +116,7 @@ esac
 
 # ─── Deprecate nested --target-subdir (.claude/skills/aris, .agents/skills/aris) ──
 # Nested install hides skills from Claude Code's slash-command discovery (it scans
-# only one level deep). The replacement is the flat install via install_aris.sh.
+# only one level deep). The replacement is the flat install via install_labline.sh.
 if [[ "$TARGET_SUBDIR" == ".claude/skills/aris" || "$TARGET_SUBDIR" == ".agents/skills/aris" ]]; then
     REPO_ROOT_FOR_HINT="$(cd "$(dirname "$0")/.." && pwd)"
     echo "" >&2
@@ -127,21 +126,21 @@ if [[ "$TARGET_SUBDIR" == ".claude/skills/aris" || "$TARGET_SUBDIR" == ".agents/
     echo "          slash-command discovery (which only scans .claude/skills/ one level deep)." >&2
     echo "" >&2
     echo "  Switch to the flat install (auto-reconciles new/removed skills on re-run):" >&2
-    echo "    bash $REPO_ROOT_FOR_HINT/tools/install_aris.sh \"${PROJECT_PATH:-<project>}\"" >&2
+    echo "    bash $REPO_ROOT_FOR_HINT/tools/install_labline.sh \"${PROJECT_PATH:-<project>}\"" >&2
     echo "" >&2
     echo "  To migrate an existing nested install:" >&2
-    echo "    bash $REPO_ROOT_FOR_HINT/tools/install_aris.sh \"${PROJECT_PATH:-<project>}\" --from-old" >&2
+    echo "    bash $REPO_ROOT_FOR_HINT/tools/install_labline.sh \"${PROJECT_PATH:-<project>}\" --from-old" >&2
     echo "    (for COPY-style installs, also pass --migrate-copy keep-user|prefer-upstream)" >&2
     echo "" >&2
     if $APPLY; then
-        echo -e "\033[0;31mRefusing to --apply with deprecated nested target. Use install_aris.sh instead.\033[0m" >&2
+        echo -e "\033[0;31mRefusing to --apply with deprecated nested target. Use install_labline.sh instead.\033[0m" >&2
         exit 2
     fi
     echo "(continuing dry-run analysis for backward compatibility — no changes will be made)" >&2
     echo "" >&2
 fi
 
-# ─── Refuse to operate on symlinked installs (those use install_aris.sh, not smart_update) ──
+# ─── Refuse to operate on symlinked installs (those use install_labline.sh, not smart_update) ──
 if [[ -L "$LOCAL_DIR" ]]; then
     LINK_TARGET="$(readlink "$LOCAL_DIR")"
     REPO_ROOT_FOR_HINT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -149,9 +148,9 @@ if [[ -L "$LOCAL_DIR" ]]; then
     echo -e "\033[0;31m✗ Local skill directory is a symlink: $LOCAL_DIR\033[0m" >&2
     echo "  → $LINK_TARGET" >&2
     echo "" >&2
-    echo "smart_update is for COPIED installs. Symlinked installs are managed by install_aris.sh:" >&2
-    echo "  cd <aris-repo> && git pull           # updates content of existing skills" >&2
-    echo "  bash $REPO_ROOT_FOR_HINT/tools/install_aris.sh <project>   # reconciles new/removed skills" >&2
+    echo "smart_update is for COPIED installs. Symlinked installs are managed by install_labline.sh:" >&2
+    echo "  cd <labline-repo> && git pull        # updates content of existing skills" >&2
+    echo "  bash $REPO_ROOT_FOR_HINT/tools/install_labline.sh <project>   # reconciles new/removed skills" >&2
     echo "" >&2
     exit 2
 fi
@@ -188,7 +187,7 @@ PERSONAL_PATTERNS=(
     '122\.'
 )
 
-echo -e "${BLUE}━━━ ARIS Smart Skill Update ━━━${NC}"
+echo -e "${BLUE}━━━ Labline Smart Skill Update ━━━${NC}"
 echo -e "Scope:    ${SCOPE}"
 echo -e "Upstream: ${UPSTREAM_DIR}"
 echo -e "Local:    ${LOCAL_DIR}"

@@ -14,7 +14,7 @@ examples:
 
 Structural guidance for **$ARGUMENTS**
 
-## Relationship to Other ARIS Skills
+## Relationship to Other Labline Skills
 
 - **paper-write**: General paper generation workflow with citation verification. This skill complements it with systems-specific structural blueprints.
 - **paper-slides**: Conference presentation generation (Beamer+PPTX). Already covers talks — no overlap.

@@ -64,7 +64,7 @@ def resolve_status_root(args: argparse.Namespace) -> Path:
     if args.status_root:
         return Path(args.status_root)
     project_root = Path(args.project_root or ".")
-    return project_root / ".aris" / "status"
+    return project_root / ".labline" / "status"
 
 
 def agent_file(status_root: Path, agent_id: str) -> Path:
@@ -263,7 +263,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Read/write ARIS agent status snapshots.")
+    parser = argparse.ArgumentParser(description="Read/write Labline agent status snapshots.")
     parser.add_argument("--project-root")
     parser.add_argument("--status-root")
     subparsers = parser.add_subparsers(dest="command", required=True)

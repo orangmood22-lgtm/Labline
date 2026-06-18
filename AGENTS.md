@@ -1,10 +1,11 @@
-# ARIS Dev Agent 指南
+# Labline Dev Agent 指南
 
 本文件给 Codex、Claude 和框架开发者读取。开发者文档默认使用中文。
 
 ## 必读文档
 
 - `CONTEXT.md`：框架版本、分支、release 术语。
+- `to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md`：框架顶层设计、模块接口、优先级和开发路线图。
 - `to-developer/20260615-FRAMEWORK_MODULES.md`：开发者侧框架模块边界。
 - `to-developer/DOC_DAG.yaml`：开发者文档依赖 DAG 源数据。
 - `to-developer/DOC_DAG.mmd`：开发者文档依赖图。

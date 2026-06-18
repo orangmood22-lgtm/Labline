@@ -18,7 +18,7 @@ Verify every `\cite{...}` in a paper against three independent layers:
 2. **Metadata correctness** — author names, year, venue, and title match canonical sources (DBLP, arXiv, ACL Anthology, Nature, OpenReview, etc.).
 3. **Context appropriateness** — the cited paper actually supports the claim it is being used to support in the manuscript.
 
-This skill is the fourth layer of \aris{}'s evidence-and-claim assurance, complementing `experiment-audit` (code), `result-to-claim` (science verdict), and `paper-claim-audit` (numerical claims). Together they form a bottom-up integrity stack from raw evaluation code to manuscript bibliography.
+This skill is the fourth layer of Labline's evidence-and-claim assurance, complementing `experiment-audit` (code), `result-to-claim` (science verdict), and `paper-claim-audit` (numerical claims). Together they form a bottom-up integrity stack from raw evaluation code to manuscript bibliography.
 
 ## When to Use This Skill
 
@@ -75,7 +75,7 @@ Define two protocol sets used throughout the rest of the workflow: `cited_keys` 
 
 If the user passed `--uncited`, also compute the set difference `bib_keys \ cited_keys` here and stash it for use in Steps 5 and the JSON aggregation; see "Uncited Entry Detection (opt-in)" below for the protocol. The set-diff is a string operation only and does not consume reviewer budget.
 
-Save the extracted contexts to `paper/.aris/citation-audit/contexts.txt` so the reviewer can read it directly. Use the paper-dir-relative path `.aris/citation-audit/contexts.txt` when recording the file in `audited_input_hashes`; do not stage under `/tmp` or other transient locations that the verifier cannot rehash later.
+Save the extracted contexts to `paper/.labline/citation-audit/contexts.txt` so the reviewer can read it directly. Use the paper-dir-relative path `.labline/citation-audit/contexts.txt` when recording the file in `audited_input_hashes`; do not stage under `/tmp` or other transient locations that the verifier cannot rehash later.
 
 ### Step 3: Send each entry to fresh cross-model reviewer
 
@@ -114,7 +114,7 @@ mcp__codex__codex:
     Be honest. If you cannot verify online, say UNCERTAIN; do not guess.
 ```
 
-Save the response to `.aris/traces/citation-audit/<date>_runNN/<key>.md` per the review-tracing protocol.
+Save the response to `.labline/traces/citation-audit/<date>_runNN/<key>.md` per the review-tracing protocol.
 
 ### Step 4: Aggregate verdicts
 
@@ -303,13 +303,13 @@ Together: code → result → numerical claim → cited claim. Each layer has cr
 
 ## Review Tracing
 
-After each `mcp__codex__codex` reviewer call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.aris/traces/citation-audit/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
+After each `mcp__codex__codex` reviewer call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.labline/traces/citation-audit/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
 
 ## Output Contract
 
 - `CITATION_AUDIT.md` (human-readable report) at paper root
 - `CITATION_AUDIT.json` (machine-readable ledger; schema below) at paper root
-- `.aris/traces/citation-audit/<date>_runNN/` (per-entry review traces)
+- `.labline/traces/citation-audit/<date>_runNN/` (per-entry review traces)
 - Optional: applied fixes to `references.bib` + `sec/*.tex` (with `--apply` flag)
 - Optional: `details.uncited_entries` field in JSON + `## Uncited Entries (opt-in)` MD section (with `--uncited` flag; field absent and section omitted when flag is unset)
 
@@ -416,7 +416,7 @@ The artifact conforms to the schema in `shared-references/assurance-contract.md`
     "main.tex":                   "sha256:...",
     "sections/3.related.tex":     "sha256:..."
   },
-  "trace_path":       ".aris/traces/citation-audit/<date>_run<NN>/",
+  "trace_path":       ".labline/traces/citation-audit/<date>_run<NN>/",
   "thread_id":        "<codex mcp thread id>",
   "reviewer_model":   "gpt-5.4",
   "reviewer_reasoning": "xhigh",
@@ -456,7 +456,7 @@ Hash the **declared input set** actually passed to this audit: the `.bib`
 file, `main.tex`, and every `sections/*.tex` file that supplied citation
 contexts. Do NOT hash extracted contexts from `/tmp` or other transient
 paths — if you need to stage extracted contexts, materialize them under
-`paper/.aris/` so the verifier can rehash reproducibly. Do NOT hash
+`paper/.labline/` so the verifier can rehash reproducibly. Do NOT hash
 repo-wide unions or the reviewer's self-reported opened subset.
 
 **Path convention** (must match `tools/verify_paper_audits.sh`): keys are

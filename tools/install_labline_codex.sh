@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# install_aris_codex.sh -- Project-local ARIS Codex skill installation.
+# install_labline_codex.sh -- Project-local Labline Codex skill installation.
 #
 # This installer manages a flat Codex project layout:
-#   <project>/.agents/skills/<skill-name> -> <aris-repo>/skills/<package>/<skill-name>
+#   <project>/.agents/skills/<skill-name> -> <labline-repo>/skills/<package>/<skill-name>
 #
 # Managed entries are tracked in:
-#   <project>/.aris/installed-skills-codex.txt
+#   <project>/.labline/installed-skills-codex.txt
 #
 # Default package set:
 #   - skills/skills-codex
@@ -15,7 +15,7 @@
 #   --with-gemini-review-overlay
 #
 # Usage:
-#   bash tools/install_aris_codex.sh [project_path] [options]
+#   bash tools/install_labline_codex.sh [project_path] [options]
 #
 # Actions (mutually exclusive, default: auto):
 #   default          install if no manifest, else reconcile
@@ -23,7 +23,7 @@
 #   --uninstall      remove only entries in manifest; delete manifest
 #
 # Options:
-#   --aris-repo PATH                 override repo discovery
+#   --labline-repo PATH                 override repo discovery
 #   --with-claude-review-overlay     install skills-codex-claude-review on top
 #   --with-gemini-review-overlay     install skills-codex-gemini-review on top
 #   --dry-run                        show plan, no writes
@@ -37,17 +37,17 @@ set -euo pipefail
 MANIFEST_VERSION="1"
 MANIFEST_NAME="installed-skills-codex.txt"
 MANIFEST_PREV_NAME="installed-skills-codex.txt.prev"
-ARIS_DIR_NAME=".aris"
+LABLINE_DIR_NAME=".labline"
 LOCK_DIR_NAME=".install-codex.lock.d"
 SKILLS_REL=".agents/skills"
 DOC_FILE_NAME="AGENTS.md"
-BLOCK_BEGIN="<!-- ARIS-CODEX:BEGIN -->"
-BLOCK_END="<!-- ARIS-CODEX:END -->"
+BLOCK_BEGIN="<!-- LABLINE-CODEX:BEGIN -->"
+BLOCK_END="<!-- LABLINE-CODEX:END -->"
 SAFE_NAME_REGEX='^[A-Za-z0-9][A-Za-z0-9._-]*$'
 BASE_PACKAGE="skills-codex"
 
 PROJECT_PATH=""
-ARIS_REPO_OVERRIDE=""
+LABLINE_REPO_OVERRIDE=""
 ACTION="auto"
 DRY_RUN=false
 QUIET=false
@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --reconcile) ACTION="reconcile"; shift ;;
         --uninstall) ACTION="uninstall"; shift ;;
-        --aris-repo) ARIS_REPO_OVERRIDE="${2:?--aris-repo requires path}"; shift 2 ;;
+        --labline-repo) LABLINE_REPO_OVERRIDE="${2:?--labline-repo requires path}"; shift 2 ;;
         --with-claude-review-overlay) WITH_CLAUDE_OVERLAY=true; shift ;;
         --with-gemini-review-overlay) WITH_GEMINI_OVERLAY=true; shift ;;
         --dry-run) DRY_RUN=true; shift ;;
@@ -121,23 +121,23 @@ canonicalize() {
     fi
 }
 
-resolve_aris_repo() {
+resolve_labline_repo() {
     local p
-    if [[ -n "$ARIS_REPO_OVERRIDE" ]]; then
-        p="$(abs_path "$ARIS_REPO_OVERRIDE")" || die "--aris-repo path not found: $ARIS_REPO_OVERRIDE"
+    if [[ -n "$LABLINE_REPO_OVERRIDE" ]]; then
+        p="$(abs_path "$LABLINE_REPO_OVERRIDE")" || die "--labline-repo path not found: $LABLINE_REPO_OVERRIDE"
     else
         local script_dir parent guess
         script_dir="$(cd "$(dirname "$0")" && pwd)"
         parent="$(cd "$script_dir/.." && pwd)"
         if [[ -d "$parent/skills/$BASE_PACKAGE" ]]; then
             p="$parent"
-        elif [[ -n "${ARIS_REPO:-}" && -d "$ARIS_REPO/skills/$BASE_PACKAGE" ]]; then
-            p="$(abs_path "$ARIS_REPO")"
+        elif [[ -n "${LABLINE_REPO:-}" && -d "$LABLINE_REPO/skills/$BASE_PACKAGE" ]]; then
+            p="$(abs_path "$LABLINE_REPO")"
         else
             for guess in \
                 "$HOME/Desktop/Auto-research-in-sleep" \
                 "$HOME/Auto-research-in-sleep" \
-                "$HOME/aris_repo" \
+                "$HOME/labline_repo" \
                 "$HOME/.codex/Auto-research-in-sleep"; do
                 if [[ -d "$guess/skills/$BASE_PACKAGE" ]]; then
                     p="$(abs_path "$guess")"
@@ -146,7 +146,7 @@ resolve_aris_repo() {
             done
         fi
     fi
-    [[ -n "${p:-}" ]] || die "cannot find ARIS repo with skills/$BASE_PACKAGE. Use --aris-repo PATH."
+    [[ -n "${p:-}" ]] || die "cannot find Labline repo with skills/$BASE_PACKAGE. Use --labline-repo PATH."
     [[ -d "$p/skills/$BASE_PACKAGE" ]] || die "repo missing skills/$BASE_PACKAGE: $p"
     echo "$p"
 }
@@ -161,7 +161,7 @@ selected_packages() {
 build_upstream_inventory() {
     local repo="$1" out="$2"
     local package package_dir d name kind source_rel tmp
-    tmp="$(mktemp -t aris-codex-upstream-raw.XXXX)"
+    tmp="$(mktemp -t labline-codex-upstream-raw.XXXX)"
     : > "$out"
     : > "$tmp"
 
@@ -217,18 +217,18 @@ manifest_repo_root() { awk -F'\t' '$1=="repo_root" {print $2; exit}' "$1"; }
 PROJECT_PATH="${PROJECT_PATH:-$(pwd)}"
 [[ -d "$PROJECT_PATH" ]] || die "project path does not exist: $PROJECT_PATH"
 PROJECT_PATH="$(abs_path "$PROJECT_PATH")"
-ARIS_REPO="$(resolve_aris_repo)"
+LABLINE_REPO="$(resolve_labline_repo)"
 PROJECT_SKILLS_DIR="$PROJECT_PATH/$SKILLS_REL"
-PROJECT_ARIS_DIR="$PROJECT_PATH/$ARIS_DIR_NAME"
-MANIFEST_PATH="$PROJECT_ARIS_DIR/$MANIFEST_NAME"
-MANIFEST_PREV="$PROJECT_ARIS_DIR/$MANIFEST_PREV_NAME"
-LOCK_DIR="$PROJECT_ARIS_DIR/$LOCK_DIR_NAME"
+PROJECT_LABLINE_DIR="$PROJECT_PATH/$LABLINE_DIR_NAME"
+MANIFEST_PATH="$PROJECT_LABLINE_DIR/$MANIFEST_NAME"
+MANIFEST_PREV="$PROJECT_LABLINE_DIR/$MANIFEST_PREV_NAME"
+LOCK_DIR="$PROJECT_LABLINE_DIR/$LOCK_DIR_NAME"
 DOC_FILE="$PROJECT_PATH/$DOC_FILE_NAME"
 LEGACY_NESTED="$PROJECT_PATH/.agents/skills/aris"
 
 check_no_symlinked_parents() {
     local p
-    for p in "$PROJECT_ARIS_DIR" "$PROJECT_PATH/.agents" "$PROJECT_SKILLS_DIR"; do
+    for p in "$PROJECT_LABLINE_DIR" "$PROJECT_PATH/.agents" "$PROJECT_SKILLS_DIR"; do
         if is_symlink "$p"; then
             die "$p is a symlink; refusing to mutate symlinked parent directories"
         fi
@@ -243,7 +243,7 @@ check_legacy_nested_install() {
 
 write_lock_metadata() {
     cat > "$LOCK_DIR/owner.json" <<EOF
-{"host":"$(hostname)","pid":$$,"started_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","tool":"install_aris_codex.sh"}
+{"host":"$(hostname)","pid":$$,"started_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","tool":"install_labline_codex.sh"}
 EOF
     echo "$$" > "$LOCK_DIR/owner.pid"
     echo "$(hostname)" > "$LOCK_DIR/owner.host"
@@ -262,7 +262,7 @@ release_lock() {
 }
 
 acquire_lock() {
-    mkdir -p "$PROJECT_ARIS_DIR"
+    mkdir -p "$PROJECT_LABLINE_DIR"
     if mkdir "$LOCK_DIR" 2>/dev/null; then
         write_lock_metadata
         trap release_lock EXIT INT TERM
@@ -278,7 +278,7 @@ acquire_lock() {
     fi
     local owner=""
     [[ -f "$LOCK_DIR/owner.json" ]] && owner="$(cat "$LOCK_DIR/owner.json")"
-    die "another install_aris_codex.sh appears to be running (lock: $LOCK_DIR, owner: $owner)"
+    die "another install_labline_codex.sh appears to be running (lock: $LOCK_DIR, owner: $owner)"
 }
 
 compute_plan() {
@@ -289,7 +289,7 @@ compute_plan() {
     while IFS='|' read -r kind name source_rel; do
         [[ -z "$name" ]] && continue
         target_path="$PROJECT_SKILLS_DIR/$name"
-        expected_target="$ARIS_REPO/$source_rel"
+        expected_target="$LABLINE_REPO/$source_rel"
         in_manifest=false
         [[ -n "$(manifest_lookup_target "$manifest_data" "$name")" ]] && in_manifest=true
 
@@ -348,7 +348,7 @@ write_manifest_tmp() {
     local plan="$1" out="$2"
     {
         printf "version\t%s\n" "$MANIFEST_VERSION"
-        printf "repo_root\t%s\n" "$ARIS_REPO"
+        printf "repo_root\t%s\n" "$LABLINE_REPO"
         printf "project_root\t%s\n" "$PROJECT_PATH"
         printf "generated\t%s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         printf "packages\t%s\n" "$(selected_packages | paste -sd, -)"
@@ -367,7 +367,7 @@ apply_plan() {
     while IFS='|' read -r action kind name source_rel extra; do
         [[ -z "$name" ]] && continue
         target_path="$PROJECT_SKILLS_DIR/$name"
-        expected_target="$ARIS_REPO/$source_rel"
+        expected_target="$LABLINE_REPO/$source_rel"
         case "$action" in
             REUSE|ADOPT)
                 :
@@ -435,7 +435,7 @@ commit_manifest() {
         log "  (dry-run) would commit manifest"
         return 0
     fi
-    mkdir -p "$PROJECT_ARIS_DIR"
+    mkdir -p "$PROJECT_LABLINE_DIR"
     if [[ -f "$MANIFEST_PATH" ]]; then
         cp -p "$MANIFEST_PATH" "$MANIFEST_PREV.tmp"
         mv -f "$MANIFEST_PREV.tmp" "$MANIFEST_PREV"
@@ -452,21 +452,21 @@ update_agents_doc() {
     count="$(wc -l < "$installed_names_file" | tr -d ' ')"
     packages_csv="$(selected_packages | paste -sd, -)"
     local repo_lookup_cmd
-    repo_lookup_cmd="ARIS_REPO=\$(awk -F'\\t' '\$1==\"repo_root\"{print \$2; exit}' \"$PROJECT_PATH/$ARIS_DIR_NAME/$MANIFEST_NAME\")"
+    repo_lookup_cmd="LABLINE_REPO=\$(awk -F'\\t' '\$1==\"repo_root\"{print \$2; exit}' \"$PROJECT_PATH/$LABLINE_DIR_NAME/$MANIFEST_NAME\")"
     new_block="$BLOCK_BEGIN
-## ARIS Codex Skill Scope
-ARIS Codex packages installed in this project: $packages_csv
+## Labline Codex Skill Scope
+Labline Codex packages installed in this project: $packages_csv
 Managed entries: $count
-Manifest: \`$ARIS_DIR_NAME/$MANIFEST_NAME\`
-ARIS repo root: \`$ARIS_REPO\`
+Manifest: \`$LABLINE_DIR_NAME/$MANIFEST_NAME\`
+Labline repo root: \`$LABLINE_REPO\`
 Project skill path: \`$SKILLS_REL/<skill-name>\`
-For ARIS Codex workflows, prefer the project-local skills under \`$SKILLS_REL/\`.
-When a skill needs ARIS helper scripts, resolve the repo root from the manifest or set it explicitly:
+For Labline Codex workflows, prefer the project-local skills under \`$SKILLS_REL/\`.
+When a skill needs LABLINE helper scripts, resolve the repo root from the manifest or set it explicitly:
 \`$repo_lookup_cmd\`
 Do not edit or delete symlinked skills in place; update upstream or rerun:
-\`bash $ARIS_REPO/tools/install_aris_codex.sh \"$PROJECT_PATH\" --reconcile\`
+\`bash $LABLINE_REPO/tools/install_labline_codex.sh \"$PROJECT_PATH\" --reconcile\`
 For copied Codex installs, use:
-\`bash $ARIS_REPO/tools/smart_update_codex.sh --project \"$PROJECT_PATH\"\`
+\`bash $LABLINE_REPO/tools/smart_update_codex.sh --project \"$PROJECT_PATH\"\`
 $BLOCK_END"
 
     if printf '%s' "$original" | grep -qF "$BLOCK_BEGIN"; then
@@ -480,7 +480,7 @@ text = pathlib.Path(path).read_text() if pathlib.Path(path).exists() else ""
 pattern = re.compile(re.escape(begin) + r".*?" + re.escape(end), re.DOTALL)
 matches = pattern.findall(text)
 if len(matches) > 1:
-    sys.stderr.write("ARIS-CODEX:WARN multiple managed blocks found; skipping update\n")
+    sys.stderr.write("LABLINE-CODEX:WARN multiple managed blocks found; skipping update\n")
     sys.stdout.write(text)
 else:
     sys.stdout.write(pattern.sub(body, text))
@@ -497,7 +497,7 @@ PYEOF
         return 0
     fi
 
-    tmp="$DOC_FILE.aris-codex-tmp.$$"
+    tmp="$DOC_FILE.labline-codex-tmp.$$"
     printf '%s' "$new_content" > "$tmp"
     current=""
     [[ -f "$DOC_FILE" ]] && current="$(cat "$DOC_FILE")"
@@ -530,7 +530,7 @@ text = pathlib.Path(path).read_text()
 pattern = re.compile(r"\n?" + re.escape(begin) + r".*?" + re.escape(end) + r"\n?", re.DOTALL)
 matches = pattern.findall(text)
 if len(matches) > 1:
-    sys.stderr.write("ARIS-CODEX:WARN multiple managed blocks found; skipping removal\n")
+    sys.stderr.write("LABLINE-CODEX:WARN multiple managed blocks found; skipping removal\n")
     sys.stdout.write(text)
 else:
     updated = pattern.sub("\n", text)
@@ -543,7 +543,7 @@ PYEOF
         return 0
     fi
 
-    tmp="$DOC_FILE.aris-codex-tmp.$$"
+    tmp="$DOC_FILE.labline-codex-tmp.$$"
     printf '%s' "$new_content" > "$tmp"
     current="$(cat "$DOC_FILE")"
     if [[ "$current" != "$original" ]]; then
@@ -558,7 +558,7 @@ PYEOF
 do_uninstall() {
     [[ -f "$MANIFEST_PATH" ]] || die "no manifest at $MANIFEST_PATH; nothing to uninstall"
     local manifest_data
-    manifest_data="$(mktemp -t aris-codex-manifest.XXXX)"
+    manifest_data="$(mktemp -t labline-codex-manifest.XXXX)"
     load_manifest "$MANIFEST_PATH" "$manifest_data"
     log ""
     log "Uninstall plan:"
@@ -603,9 +603,9 @@ do_uninstall() {
 }
 
 log ""
-log "ARIS Codex Project Install"
+log "Labline Codex Project Install"
 log "  Project:   $PROJECT_PATH"
-log "  Repo:      $ARIS_REPO"
+log "  Repo:      $LABLINE_REPO"
 log "  Packages:  $(selected_packages | paste -sd, -)"
 log "  Action:    $ACTION$($DRY_RUN && echo ' (dry-run)')"
 log ""
@@ -625,13 +625,13 @@ if [[ "$ACTION" == "reconcile" && ! -f "$MANIFEST_PATH" ]]; then
     die "--reconcile requires existing manifest; none found at $MANIFEST_PATH"
 fi
 
-UPSTREAM_FILE="$(mktemp -t aris-codex-upstream.XXXX)"
-build_upstream_inventory "$ARIS_REPO" "$UPSTREAM_FILE"
+UPSTREAM_FILE="$(mktemp -t labline-codex-upstream.XXXX)"
+build_upstream_inventory "$LABLINE_REPO" "$UPSTREAM_FILE"
 
-MANIFEST_DATA="$(mktemp -t aris-codex-manifest.XXXX)"
+MANIFEST_DATA="$(mktemp -t labline-codex-manifest.XXXX)"
 load_manifest "$MANIFEST_PATH" "$MANIFEST_DATA"
 
-PLAN_FILE="$(mktemp -t aris-codex-plan.XXXX)"
+PLAN_FILE="$(mktemp -t labline-codex-plan.XXXX)"
 compute_plan "$UPSTREAM_FILE" "$MANIFEST_DATA" "$PLAN_FILE"
 print_plan "$PLAN_FILE"
 
@@ -661,7 +661,7 @@ log "Applying:"
 apply_plan "$PLAN_FILE"
 commit_manifest "$MANIFEST_TMP"
 
-INSTALLED_NAMES="$(mktemp -t aris-codex-names.XXXX)"
+INSTALLED_NAMES="$(mktemp -t labline-codex-names.XXXX)"
 awk -F'|' '$1=="REUSE"||$1=="ADOPT"||$1=="CREATE"||$1=="UPDATE_TARGET"{print $3}' "$PLAN_FILE" > "$INSTALLED_NAMES"
 update_agents_doc "$INSTALLED_NAMES"
 
@@ -670,7 +670,7 @@ if ! $DRY_RUN; then
     while IFS=$'\t' read -r kind name source_rel target_rel mode; do
         [[ -z "$name" ]] && continue
         target_path="$PROJECT_PATH/$target_rel"
-        expected_target="$ARIS_REPO/$source_rel"
+        expected_target="$LABLINE_REPO/$source_rel"
         if [[ ! -L "$target_path" ]]; then
             warn "verify: missing symlink $target_path"
             local_bad=$((local_bad + 1))

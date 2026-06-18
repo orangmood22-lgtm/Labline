@@ -1,13 +1,13 @@
-# ARIS Research Framework — GPU Container Image
+# LABLINE Research Framework — GPU Container Image
 # Full GPU support: CUDA 12.8 + PyTorch + Claude Code + Codex CLI
 # Base: nvidia/cuda:12.8.0-devel-ubuntu22.04
 #
-# Build:  docker build -f deploy/Dockerfile.gpu -t aris-gpu .
-# Run:    docker run --gpus all -it aris-gpu
+# Build:  docker build -f deploy/Dockerfile.gpu -t labline-gpu .
+# Run:    docker run --gpus all -it labline-gpu
 
 FROM nvidia/cuda:12.8.0-devel-ubuntu22.04
 
-LABEL maintainer="ARIS Framework"
+LABEL maintainer="LABLINE Framework"
 LABEL description="AI Research Infrastructure — GPU-enabled container"
 
 # Avoid interactive prompts
@@ -147,7 +147,7 @@ RUN export http_proxy="${BUILD_HTTP_PROXY}" \
     einops timm transformers accelerate
 
 # ─── Directory structure ─────────────────────────────────────────────────────
-RUN mkdir -p /aris/framework /aris/projects /aris/shared/datasets /aris/shared/pretrained
+RUN mkdir -p /labline/framework /labline/projects /labline/shared/datasets /labline/shared/pretrained
 
 # ─── User setup (non-root) ───────────────────────────────────────────────────
 ARG USERNAME=researcher
@@ -161,9 +161,9 @@ RUN groupadd -g ${GID} ${USERNAME} 2>/dev/null || true \
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
-# ─── ARIS framework clone ────────────────────────────────────────────────────
-ARG ARIS_REPO=https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
-ARG ARIS_BRANCH=orangmood-tripartite-night-20260512
+# ─── LABLINE framework clone ────────────────────────────────────────────────────
+ARG LABLINE_REPO=https://github.com/orangmood22-lgtm/Labline.git
+ARG LABLINE_BRANCH=orangmood-tripartite-night-20260512
 
 RUN export http_proxy="${BUILD_HTTP_PROXY}" \
     && export https_proxy="${BUILD_HTTPS_PROXY}" \
@@ -171,14 +171,14 @@ RUN export http_proxy="${BUILD_HTTP_PROXY}" \
     && export HTTPS_PROXY="${BUILD_HTTPS_PROXY}" \
     && export all_proxy= \
     && export ALL_PROXY= \
-    && git clone --depth 1 -b ${ARIS_BRANCH} ${ARIS_REPO} /aris/framework || true
+    && git clone --depth 1 -b ${LABLINE_BRANCH} ${LABLINE_REPO} /labline/framework || true
 
 # ─── Config directories ─────────────────────────────────────────────────────
-RUN mkdir -p ~/.claude ~/.codex ~/.aris ~/.ssh \
+RUN mkdir -p ~/.claude ~/.codex ~/.labline ~/.ssh \
     && chmod 700 ~/.ssh
 
 # ─── Default API config ─────────────────────────────────────────────────────
-COPY templates/api-config.yaml.tmpl /home/${USERNAME}/.aris/api.yaml
+COPY templates/api-config.yaml.tmpl /home/${USERNAME}/.labline/api.yaml
 
 # ─── Entrypoint ──────────────────────────────────────────────────────────────
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -1,6 +1,6 @@
 # Codex + Claude 审稿人指南
 
-让 ARIS 以以下方式运行：
+让 Labline 以以下方式运行：
 
 - **Codex** 作为主执行者
 - **Claude Code CLI** 作为审稿人

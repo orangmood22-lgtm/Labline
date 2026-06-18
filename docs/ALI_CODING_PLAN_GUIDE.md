@@ -1,6 +1,6 @@
 # 阿里百炼 Coding Plan 接入指南
 
-本文档说明如何使用阿里百炼 Coding Plan 的一套 API Key 驱动 ARIS 全流程，无需 Claude 或 OpenAI API。
+本文档说明如何使用阿里百炼 Coding Plan 的一套 API Key 驱动 Labline 全流程，无需 Claude 或 OpenAI API。
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### 为什么不能直接用 Codex MCP
 
-原版 ARIS 的审查器使用 Codex MCP，而 Codex CLI 硬编码调用 OpenAI 专有的 **Responses API** (`/v1/responses`)，第三方 API 提供商（包括 Coding Plan）均不支持该接口。
+原版 Labline 的审查器使用 Codex MCP，而 Codex CLI 硬编码调用 OpenAI 专有的 **Responses API** (`/v1/responses`)，第三方 API 提供商（包括 Coding Plan）均不支持该接口。
 
 **解决方案**：使用项目内置的 `llm-chat` MCP 服务器，它调用标准 **Chat Completions API** (`/v1/chat/completions`)，兼容所有 OpenAI 兼容端点，包括 Coding Plan。
 
@@ -50,7 +50,7 @@
 
 ## 双层架构
 
-Coding Plan 提供两套 API 端点，分别对应 ARIS 的两个角色：
+Coding Plan 提供两套 API 端点，分别对应 Labline 的两个角色：
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -169,7 +169,7 @@ Claude Code 会自动：
 | 备选：速度优先 | `qwen3.5-plus` | `MiniMax-M2.7` | 两者出词最快，适合快速迭代和调试 |
 | 备选：测试阶段 | `qwen3.5-plus` | `glm-5` | 执行轻量省请求次数，审查保持质量 |
 
-> **关于跨模型优势**：ARIS 的核心设计是执行器和审查器使用不同模型，互不审自己的输出，形成真正的反馈循环。如果两端用同一模型（如都用 kimi-k2.5），会部分削弱这一优势。
+> **关于跨模型优势**：Labline 的核心设计是执行器和审查器使用不同模型，互不审自己的输出，形成真正的反馈循环。如果两端用同一模型（如都用 kimi-k2.5），会部分削弱这一优势。
 
 ---
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Feishu Bridge Server — provides HTTP API for ARIS skills to send messages
+Feishu Bridge Server — provides HTTP API for Labline skills to send messages
 to Feishu and poll for user replies.
 
 Endpoints:
@@ -47,8 +47,8 @@ ENABLE_WS = os.environ.get("FEISHU_ENABLE_WS", "").lower() in {"1", "true", "yes
 SEND_QUEUE_ACK = os.environ.get("FEISHU_SEND_QUEUE_ACK", "").lower() in {"1", "true", "yes", "on"}
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FEISHU_CONTROL = REPO_ROOT / "tools" / "feishu_control.py"
-CONTROL_ROOT = os.environ.get("ARIS_FEISHU_CONTROL_ROOT", "")
-PROJECT_ROOT = os.environ.get("ARIS_PROJECT_ROOT", str(REPO_ROOT))
+CONTROL_ROOT = os.environ.get("LABLINE_FEISHU_CONTROL_ROOT", "")
+PROJECT_ROOT = os.environ.get("LABLINE_PROJECT_ROOT", str(REPO_ROOT))
 
 if not APP_ID or not APP_SECRET:
     print("Error: FEISHU_APP_ID and FEISHU_APP_SECRET are required", file=sys.stderr)
@@ -236,7 +236,7 @@ def handle_inbound_message_event(data) -> dict:
 
     if code == 0 and SEND_QUEUE_ACK:
         try:
-            send_text(sender_open_id, f"ARIS received: {payload.get('status', 'ok')}")
+            send_text(sender_open_id, f"Labline received: {payload.get('status', 'ok')}")
         except Exception as exc:
             payload["ack_error"] = str(exc)
     return payload
@@ -305,7 +305,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 return
 
             msg_type = body.get("type", "card")
-            title = body.get("title", "ARIS Notification")
+            title = body.get("title", "Labline Notification")
             content = body.get("body", body.get("content", ""))
             color = body.get("color", "blue")
 
@@ -334,7 +334,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 self._json_response({"error": "only card update is supported"}, 400)
                 return
 
-            title = body.get("title", "ARIS Notification")
+            title = body.get("title", "Labline Notification")
             content = body.get("body", body.get("content", ""))
             color = body.get("color", "blue")
 

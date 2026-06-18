@@ -17,7 +17,7 @@ find_project_root() {
         [ -f "$dir/project.yaml" ] && echo "$dir" && return 0
         dir="$(dirname "$dir")"
     done
-    echo "ERROR: No project.yaml found. Not in ARIS project." >&2
+    echo "ERROR: No project.yaml found. Not in Labline project." >&2
     exit 1
 }
 

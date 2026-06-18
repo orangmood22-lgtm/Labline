@@ -1,6 +1,6 @@
-# ARIS 部署指南
+# Labline 部署指南
 
-> 面向组长/管理员。从零开始在一台服务器上部署 ARIS 多人研究环境。
+> 面向组长/管理员。从零开始在一台服务器上部署 Labline 多人研究环境。
 
 ## 前置要求
 
@@ -60,11 +60,11 @@ git config --global --unset https.proxy || true
 
 | 资源 | 隔离/共享方式 |
 |------|---------------|
-| 用户运行环境 | 每人一个容器，例如 `aris-zhangsan`、`aris-lisi` |
-| framework | 每人一份宿主机目录，挂到 `/aris/framework` |
-| 项目目录 | 每人一份宿主机目录，挂到 `/aris/projects` |
-| 数据集 | 共享宿主机目录，挂到 `/aris/shared/datasets` |
-| 预训练模型/下载缓存 | 共享宿主机目录，挂到 `/aris/shared/pretrained` 和 `/aris/shared/downloads` |
+| 用户运行环境 | 每人一个容器，例如 `labline-zhangsan`、`labline-lisi` |
+| framework | 每人一份宿主机目录，挂到 `/labline/framework` |
+| 项目目录 | 每人一份宿主机目录，挂到 `/labline/projects` |
+| 数据集 | 共享宿主机目录，挂到 `/labline/shared/datasets` |
+| 预训练模型/下载缓存 | 共享宿主机目录，挂到 `/labline/shared/pretrained` 和 `/labline/shared/downloads` |
 | SSH key、git 身份、个人 API 覆盖 | 每个容器单独配置 |
 
 也就是说，组里不是所有人挤进同一个容器；管理员每加一个用户，就在 `.env` 和 `docker-compose.yaml` 中增加一组 researcher 配置。每个用户有自己的 framework copy，可以独立更新和回退；数据集、预训练模型、下载缓存是组内共享资源。
@@ -73,38 +73,38 @@ git config --global --unset https.proxy || true
 
 ```text
 Host Server
-└── [你的ARIS总目录]/
+└── [你的Labline总目录]/
     ├── users/
     │   ├── zhangsan/
-    │   │   ├── framework/         # 挂到 aris-zhangsan:/aris/framework
-    │   │   ├── projects/          # 挂到 aris-zhangsan:/aris/projects
-    │   │   └── .aris/             # 挂到 aris-zhangsan:~/.aris
+    │   │   ├── framework/         # 挂到 labline-zhangsan:/labline/framework
+    │   │   ├── projects/          # 挂到 labline-zhangsan:/labline/projects
+    │   │   └── .labline/             # 挂到 labline-zhangsan:~/.labline
     │   └── lisi/
-    │       ├── framework/         # 挂到 aris-lisi:/aris/framework
-    │       ├── projects/          # 挂到 aris-lisi:/aris/projects
-    │       └── .aris/             # 挂到 aris-lisi:~/.aris
+    │       ├── framework/         # 挂到 labline-lisi:/labline/framework
+    │       ├── projects/          # 挂到 labline-lisi:/labline/projects
+    │       └── .labline/             # 挂到 labline-lisi:~/.labline
     └── shared/
-        ├── datasets/              # 挂到 /aris/shared/datasets，只读
-        ├── pretrained/            # 挂到 /aris/shared/pretrained
-        └── downloads/             # 挂到 /aris/shared/downloads
+        ├── datasets/              # 挂到 /labline/shared/datasets，只读
+        ├── pretrained/            # 挂到 /labline/shared/pretrained
+        └── downloads/             # 挂到 /labline/shared/downloads
 ```
 
 管理员只管宿主机和 compose；普通用户只进入自己的容器。
 
 ```bash
 # 1. 管理员准备一份部署用 framework
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git [你的ARIS总目录]/admin/framework
-cd [你的ARIS总目录]/admin/framework/deploy
+git clone https://github.com/orangmood22-lgtm/Labline.git [你的Labline总目录]/admin/framework
+cd [你的Labline总目录]/admin/framework/deploy
 
 # 2. 配置环境变量
 cp .env.example .env
-vim .env   # 填写 ARIS_ROOT、用户名、API key、共享数据路径
+vim .env   # 填写 LABLINE_ROOT、用户名、API key、共享数据路径
 
 # 3. 启动
 docker compose up -d
 
 # 4. 进入容器
-docker exec -it aris-zhangsan bash
+docker exec -it labline-zhangsan bash
 ```
 
 ## 详细步骤
@@ -120,14 +120,14 @@ sudo usermod -aG docker $USER
 
 ### Step 2: 准备目录结构
 
-管理员先指定一个 `ARIS_ROOT`，所有用户 workspace 和共享资产都放在这个根目录下，方便备份、迁移和权限管理。
+管理员先指定一个 `LABLINE_ROOT`，所有用户 workspace 和共享资产都放在这个根目录下，方便备份、迁移和权限管理。
 
 ```bash
-export ARIS_ROOT="[你的ARIS总目录]"
+export LABLINE_ROOT="[你的Labline总目录]"
 
-mkdir -p "$ARIS_ROOT"/admin
-mkdir -p "$ARIS_ROOT"/users/{zhangsan,lisi}/{framework,projects,.aris}
-mkdir -p "$ARIS_ROOT"/shared/{datasets,pretrained,downloads}
+mkdir -p "$LABLINE_ROOT"/admin
+mkdir -p "$LABLINE_ROOT"/users/{zhangsan,lisi}/{framework,projects,.labline}
+mkdir -p "$LABLINE_ROOT"/shared/{datasets,pretrained,downloads}
 # 如果用户还没有 SSH 目录，就为每个用户建好
 mkdir -p /home/zhangsan/.ssh /home/lisi/.ssh
 ```
@@ -135,9 +135,9 @@ mkdir -p /home/zhangsan/.ssh /home/lisi/.ssh
 给每个用户准备初始 framework copy：
 
 ```bash
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_ROOT/admin/framework"
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_ROOT/users/zhangsan/framework"
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_ROOT/users/lisi/framework"
+git clone https://github.com/orangmood22-lgtm/Labline.git "$LABLINE_ROOT/admin/framework"
+git clone https://github.com/orangmood22-lgtm/Labline.git "$LABLINE_ROOT/users/zhangsan/framework"
+git clone https://github.com/orangmood22-lgtm/Labline.git "$LABLINE_ROOT/users/lisi/framework"
 ```
 
 如果这些目录归 root 或其他用户所有，按你的服务器权限模型调整 owner/group；不要直接照抄 `chmod 777`。
@@ -145,7 +145,7 @@ git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git "$ARIS_
 ### Step 3: 配置 .env
 
 ```bash
-cd [你的ARIS总目录]/admin/framework/deploy
+cd [你的Labline总目录]/admin/framework/deploy
 cp .env.example .env
 ```
 
@@ -156,16 +156,16 @@ cp .env.example .env
 USER1_NAME=zhangsan
 USER1_UID=1001
 USER1_SSH=/home/zhangsan/.ssh    # 宿主机上该用户的 SSH 目录
-USER1_FRAMEWORK_PATH=[你的ARIS总目录]/users/zhangsan/framework
-USER1_PROJECTS_PATH=[你的ARIS总目录]/users/zhangsan/projects
-USER1_STATE_PATH=[你的ARIS总目录]/users/zhangsan/.aris
+USER1_FRAMEWORK_PATH=[你的Labline总目录]/users/zhangsan/framework
+USER1_PROJECTS_PATH=[你的Labline总目录]/users/zhangsan/projects
+USER1_STATE_PATH=[你的Labline总目录]/users/zhangsan/.labline
 
 USER2_NAME=lisi
 USER2_UID=1002
 USER2_SSH=/home/lisi/.ssh
-USER2_FRAMEWORK_PATH=[你的ARIS总目录]/users/lisi/framework
-USER2_PROJECTS_PATH=[你的ARIS总目录]/users/lisi/projects
-USER2_STATE_PATH=[你的ARIS总目录]/users/lisi/.aris
+USER2_FRAMEWORK_PATH=[你的Labline总目录]/users/lisi/framework
+USER2_PROJECTS_PATH=[你的Labline总目录]/users/lisi/projects
+USER2_STATE_PATH=[你的Labline总目录]/users/lisi/.labline
 
 # API（组统一，用户可在容器内覆盖）
 ANTHROPIC_API_KEY=sk-ant-xxx     # 或中转站 key
@@ -173,10 +173,10 @@ ANTHROPIC_BASE_URL=              # 留空=官方, 填中转站 URL
 OPENAI_API_KEY=sk-xxx            # Codex 用
 
 # 共享资源（宿主机路径）
-ARIS_ROOT=[你的ARIS总目录]
-DATASETS_PATH=[你的ARIS总目录]/shared/datasets
-PRETRAINED_PATH=[你的ARIS总目录]/shared/pretrained
-DOWNLOADS_PATH=[你的ARIS总目录]/shared/downloads
+LABLINE_ROOT=[你的Labline总目录]
+DATASETS_PATH=[你的Labline总目录]/shared/datasets
+PRETRAINED_PATH=[你的Labline总目录]/shared/pretrained
+DOWNLOADS_PATH=[你的Labline总目录]/shared/downloads
 
 # 代理（可选）
 HTTP_PROXY=http://192.168.1.1:7890
@@ -191,9 +191,9 @@ GIT_HTTP_PROXY=
 GIT_HTTPS_PROXY=
 
 # framework 更新检查（默认只检查，不自动更新）
-ARIS_AUTO_CHECK_UPDATE=1
-ARIS_UPDATE_CHECK_INTERVAL=1d
-ARIS_UPDATE_CHECK_TIMEOUT=10s
+LABLINE_AUTO_CHECK_UPDATE=1
+LABLINE_UPDATE_CHECK_INTERVAL=1d
+LABLINE_UPDATE_CHECK_TIMEOUT=10s
 ```
 
 ### Step 4: 启动服务
@@ -205,17 +205,17 @@ docker compose up -d
 docker compose ps
 
 # 预期输出:
-# aris-gitea       running  0.0.0.0:3000->3000/tcp, 0.0.0.0:2222->22/tcp
-# aris-zhangsan    running
-# aris-lisi        running
+# labline-gitea       running  0.0.0.0:3000->3000/tcp, 0.0.0.0:2222->22/tcp
+# labline-zhangsan    running
+# labline-lisi        running
 ```
 
-首次启动前，每个用户的 `framework/` 目录必须已经是可用的 ARIS checkout。管理员可以从 admin framework 克隆或同步一份初始版本给每个用户；之后用户在自己的容器内用 `aris framework check-update` / `aris framework update` / `aris framework rollback` 管理自己的 framework 版本。
+首次启动前，每个用户的 `framework/` 目录必须已经是可用的 Labline checkout。管理员可以从 admin framework 克隆或同步一份初始版本给每个用户；之后用户在自己的容器内用 `lane framework check-update` / `lane framework update` / `lane framework rollback` 管理自己的 framework 版本。
 
-容器启动、进入交互 shell、打开 tmux pane 时默认都会触发检查入口，但 `ARIS_UPDATE_CHECK_INTERVAL=1d` 会让同一用户每天最多联网检查一次；`--notify` 的状态记录会让同一用户每天最多看到一次提醒。检查不会自动 `git pull`。如果实验期不想自动检查，在 `.env` 里设：
+容器启动、进入交互 shell、打开 tmux pane 时默认都会触发检查入口，但 `LABLINE_UPDATE_CHECK_INTERVAL=1d` 会让同一用户每天最多联网检查一次；`--notify` 的状态记录会让同一用户每天最多看到一次提醒。检查不会自动 `git pull`。如果实验期不想自动检查，在 `.env` 里设：
 
 ```env
-ARIS_AUTO_CHECK_UPDATE=0
+LABLINE_AUTO_CHECK_UPDATE=0
 ```
 
 ### Step 5: 初始化 Gitea
@@ -228,7 +228,7 @@ ARIS_AUTO_CHECK_UPDATE=0
 
 ```bash
 # 进入容器
-docker exec -it aris-zhangsan bash
+docker exec -it labline-zhangsan bash
 
 # 配置 git 身份
 git config --global user.name "zhangsan"
@@ -242,19 +242,19 @@ echo "export GITEA_TOKEN=your_token_here" >> ~/.bashrc
 
 ```bash
 # 进入自己的容器，不要进入别人的容器
-docker exec -it aris-zhangsan bash
+docker exec -it labline-zhangsan bash
 
-# 在自己的 /aris/projects 下创建项目
-cd /aris/projects
-aris project init ./freq-detection --direction "基于频域特征的增量目标检测"
+# 在自己的 /labline/projects 下创建项目
+cd /labline/projects
+lane project init ./freq-detection --direction "基于频域特征的增量目标检测"
 
 # 同步代码
 $sync push                    # 保存到 Gitea
 $sync deploy --server 4090x4  # 部署到 GPU 服务器
 
 # 更新框架
-aris framework check-update
-aris framework update
+lane framework check-update
+lane framework update
 
 # 启动研究 pipeline
 $leader "频域增量检测"
@@ -281,9 +281,9 @@ bash add-user.sh --name wangwu --uid 1003
 每台小组服务器独立部署一套:
 
 ```
-服务器 A (小组1): aris-framework + Gitea + 容器x3
-服务器 B (小组2): aris-framework + 容器x3 (Gitea 指向 A 的)
-服务器 C (小组3): aris-framework + 容器x3 (Gitea 指向 A 的)
+服务器 A (小组1): labline-framework + Gitea + 容器x3
+服务器 B (小组2): labline-framework + 容器x3 (Gitea 指向 A 的)
+服务器 C (小组3): labline-framework + 容器x3 (Gitea 指向 A 的)
 ```
 
 Gitea 只需部署一份。其他服务器的容器 `GITEA_URL` 指向 Gitea 所在服务器:
@@ -378,10 +378,10 @@ no_proxy=127.0.0.1,localhost,gitea
 容器内验证：
 
 ```bash
-docker exec -it aris-zhangsan bash
+docker exec -it labline-zhangsan bash
 env | grep -i proxy
 curl -I https://github.com
-git ls-remote https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git HEAD
+git ls-remote https://github.com/orangmood22-lgtm/Labline.git HEAD
 ```
 
 如果 `curl` 能通但 `git ls-remote` 失败，再设置 git 专用代理：
@@ -407,7 +407,7 @@ git config --global https.proxy "$GIT_HTTPS_PROXY"
 如果之后切回直连，记得清理容器里的 git 代理：
 
 ```bash
-docker exec -it aris-zhangsan bash -lc '
+docker exec -it labline-zhangsan bash -lc '
 git config --global --unset http.proxy || true
 git config --global --unset https.proxy || true
 '
@@ -415,7 +415,7 @@ git config --global --unset https.proxy || true
 
 ## 飞书远程控制部署
 
-Codex + Claude Code 的飞书/Lark 远程控制默认推荐使用外部桥接器 `lark-channel-bridge`。它只是消息传输适配器：飞书负责收发消息，真正执行仍发生在本机或容器里的 Codex/Claude Code session；它不是 ARIS Leader，不接管 workflow，也不是远程 shell。
+Codex + Claude Code 的飞书/Lark 远程控制默认推荐使用外部桥接器 `lark-channel-bridge`。它只是消息传输适配器：飞书负责收发消息，真正执行仍发生在本机或容器里的 Codex/Claude Code session；它不是 Labline Leader，不接管 workflow，也不是远程 shell。
 
 前置要求：
 
@@ -464,18 +464,18 @@ lark-channel-bridge run \
 | `/ws` | 管理已保存 workspace |
 | `/status` | 查看 profile、agent、工作目录、session 和运行状态 |
 
-如果启动时没传 `--workspace`，或者要切到另一个 ARIS 项目，在飞书里执行 `/cd [你的project位置]`。
+如果启动时没传 `--workspace`，或者要切到另一个 Labline 项目，在飞书里执行 `/cd [你的project位置]`。
 
-### 旧版 ARIS-managed runner
+### 旧版 Labline-managed runner
 
 仓库内仍保留旧版 fallback 路径：
 
 | 组件 | 路径 | 职责 |
 |------|------|------|
 | Feishu bridge | `mcp-servers/feishu-bridge/server.py` | HTTP 发送/更新卡片、长连接接收飞书消息、写入 session inbox |
-| Feishu session runner | `tools/aris_feishu_session.py` | 消费 inbox，启动/恢复 Codex Session，把最终回复发回飞书 |
+| Feishu session runner | `tools/labline_feishu_session.py` | 消费 inbox，启动/恢复 Codex Session，把最终回复发回飞书 |
 
-只有在你需要 ARIS 管理的 inbox/outbox 文件、phone-session merge report、或 tmux live-TUI 注入时，才优先使用这条路径。
+只有在你需要 Labline 管理的 inbox/outbox 文件、phone-session merge report、或 tmux live-TUI 注入时，才优先使用这条路径。
 
 `.env` 里增加：
 
@@ -486,29 +486,29 @@ FEISHU_USER_ID=ou_xxx
 FEISHU_RECEIVE_ID_TYPE=open_id
 FEISHU_ENABLE_WS=1
 BRIDGE_PORT=5000
-ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
-ARIS_FEISHU_CONTROL_ROOT=
+LABLINE_PROJECT_ROOT=[你的Labline总目录]/admin/framework
+LABLINE_FEISHU_CONTROL_ROOT=
 ```
 
 启动 bridge：
 
 ```bash
-cd [你的ARIS总目录]/admin/framework
+cd [你的Labline总目录]/admin/framework
 python3 -m venv .venv-feishu
 .venv-feishu/bin/pip install -r mcp-servers/feishu-bridge/requirements.txt
 set -a; source deploy/.env; set +a
 export FEISHU_ENABLE_WS=1
-export ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
+export LABLINE_PROJECT_ROOT=[你的Labline总目录]/admin/framework
 .venv-feishu/bin/python mcp-servers/feishu-bridge/server.py
 ```
 
 再启动受控 Codex session：
 
 ```bash
-.venv-feishu/bin/python tools/aris_feishu_session.py \
+.venv-feishu/bin/python tools/labline_feishu_session.py \
   --session-id leader-phone \
   --role leader \
-  --project-root [你的ARIS总目录]/admin/framework \
+  --project-root [你的Labline总目录]/admin/framework \
   --profile leader \
   --bridge-url http://127.0.0.1:5000 \
   --resume-last \
@@ -517,7 +517,7 @@ export ARIS_PROJECT_ROOT=[你的ARIS总目录]/admin/framework
 
 部署注意：
 
-- 默认优先使用 `lark-channel-bridge`；旧版 in-repo runner 是 fallback/ARIS-managed runner。
+- 默认优先使用 `lark-channel-bridge`；旧版 in-repo runner 是 fallback/Labline-managed runner。
 - `BRIDGE_PORT` 默认是 `5000`；如果旧版 bridge 报 `Address already in use`，换端口并同步修改 `--bridge-url`。
 - 飞书长连接需要服务器能访问飞书开放平台；如果连接不上，按上面的大小写 proxy 规则同时设置 `HTTP_PROXY/HTTPS_PROXY/http_proxy/https_proxy`。
 - bridge 不执行 shell、tools、skills；真正执行发生在 opt-in 的本地 Codex/Claude session 或旧版 Codex session runner。

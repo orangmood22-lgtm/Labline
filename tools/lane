@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Beginner-facing ARIS CLI."""
+"""Beginner-facing Labline CLI."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -15,6 +16,12 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+LARK_CHANNEL_BRIDGE_BIN = "lark-channel-bridge"
+DEFAULT_FEISHU_PROFILE = "labline-codex"
+DEFAULT_FEISHU_AGENT = "codex"
+DEFAULT_FEISHU_NODE_PREFIX_REL = "node"
+STATE_DIR_NAME = ".labline"
+LEGACY_STATE_DIR_NAME = ".aris"
 
 
 def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
@@ -69,6 +76,7 @@ def write_gitignore(project: Path) -> None:
                 ".idea/",
                 "*.swp",
                 ".DS_Store",
+                ".labline/",
                 ".aris/",
                 ".claude/",
                 ".agents/",
@@ -87,8 +95,8 @@ def write_manifest(project: Path, name: str, direction: str, clients: list[str])
         "clients": clients,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
-    (project / ".aris").mkdir(parents=True, exist_ok=True)
-    (project / ".aris" / "manifest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (project / STATE_DIR_NAME).mkdir(parents=True, exist_ok=True)
+    (project / STATE_DIR_NAME / "manifest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def git_output(cwd: Path, args: list[str], fallback: str = "") -> str:
@@ -104,24 +112,24 @@ def git_has_commits(cwd: Path) -> bool:
     return result.returncode == 0 and result.stdout.strip() not in {"", "0"}
 
 
-def resolve_aris_repo(args: argparse.Namespace) -> Path:
-    repo = getattr(args, "aris_repo", None)
+def resolve_labline_repo(args: argparse.Namespace) -> Path:
+    repo = getattr(args, "labline_repo", None)
     if repo is None:
         workspace = discover_workspace(required=False)
         if workspace and (workspace / "framework").exists():
             repo = workspace / "framework"
-        elif Path("/aris/framework").exists():
-            repo = Path("/aris/framework")
+        elif Path("/labline/framework").exists():
+            repo = Path("/labline/framework")
         else:
             repo = REPO_ROOT
     repo = Path(repo).expanduser().resolve()
     if not (repo / "tools").is_dir() or not (repo / "templates").is_dir():
-        raise SystemExit(f"invalid ARIS repo: {repo}")
+        raise SystemExit(f"invalid Labline repo: {repo}")
     return repo
 
 
 def discover_workspace(required: bool = True) -> Path | None:
-    env = os.environ.get("ARIS_WORKSPACE")
+    env = os.environ.get("LABLINE_WORKSPACE")
     if env:
         return Path(env).expanduser().resolve()
 
@@ -132,9 +140,9 @@ def discover_workspace(required: bool = True) -> Path | None:
 
 def state_root() -> Path:
     workspace = discover_workspace()
-    if os.environ.get("ARIS_WORKSPACE"):
-        return workspace / ".aris"
-    return workspace / ".aris"
+    if os.environ.get("LABLINE_WORKSPACE"):
+        return workspace / STATE_DIR_NAME
+    return workspace / STATE_DIR_NAME
 
 
 def registry_path() -> Path:
@@ -216,7 +224,7 @@ def runtime_provider_api_key_env(provider_name: str) -> str:
     suffix = "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_name).strip("_")
     while "__" in suffix:
         suffix = suffix.replace("__", "_")
-    return f"ARIS_DEV_RT_{suffix or 'PROVIDER'}_API_KEY"
+    return f"LABLINE_DEV_RT_{suffix or 'PROVIDER'}_API_KEY"
 
 
 def runtime_api_key(api_key_env: str) -> str:
@@ -339,15 +347,36 @@ def project_from_arg(path: str | None) -> Path:
 
 def install_clients(project: Path, framework: Path) -> list[str]:
     clients: list[str] = []
-    install = framework / "tools" / "install_aris.sh"
-    codex = framework / "tools" / "install_aris_codex.sh"
+    install = framework / "tools" / "install_labline.sh"
+    codex = framework / "tools" / "install_labline_codex.sh"
     if install.exists():
-        run(["bash", str(install), str(project), "--aris-repo", str(framework), "--quiet", "--no-doc"])
+        run(["bash", str(install), str(project), "--labline-repo", str(framework), "--quiet", "--no-doc"])
         clients.append("claude")
     if codex.exists():
-        run(["bash", str(codex), str(project), "--aris-repo", str(framework), "--quiet", "--no-doc"])
+        run(["bash", str(codex), str(project), "--labline-repo", str(framework), "--quiet", "--no-doc"])
         clients.append("codex")
     return clients
+
+
+def migrate_legacy_project_manifest(project: Path, framework: Path) -> bool:
+    target = project / STATE_DIR_NAME / "manifest.json"
+    if target.exists():
+        return False
+    legacy = project / LEGACY_STATE_DIR_NAME / "manifest.json"
+    if not legacy.exists():
+        return False
+    try:
+        payload = json.loads(legacy.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        payload = {"schema_version": 1}
+    payload.setdefault("schema_version", 1)
+    payload["migrated_from"] = "ARIS"
+    payload["migrated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["framework_path"] = str(framework)
+    project_state = project / STATE_DIR_NAME
+    project_state.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return True
 
 
 def init_project(args: argparse.Namespace, project: Path, name: str) -> None:
@@ -356,7 +385,7 @@ def init_project(args: argparse.Namespace, project: Path, name: str) -> None:
     write_gitignore(project)
     if not (project / ".git").exists():
         run(["git", "init"], cwd=project)
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     clients = install_clients(project, framework)
     repl = {
         "{PROJECT_NAME}": name,
@@ -382,7 +411,7 @@ def init_project(args: argparse.Namespace, project: Path, name: str) -> None:
     status = run(["git", "status", "--porcelain"], cwd=project)
     if status.stdout:
         run(["git", "add", "-A"], cwd=project)
-        run(["git", "-c", "user.name=ARIS CLI", "-c", "user.email=aris@example.invalid", "commit", "-m", f"init: {name} ({args.direction})"], cwd=project)
+        run(["git", "-c", "user.name=Labline CLI", "-c", "user.email=lane@example.invalid", "commit", "-m", f"init: {name} ({args.direction})"], cwd=project)
 
 
 def cmd_project_init(args: argparse.Namespace) -> int:
@@ -394,17 +423,19 @@ def cmd_project_init(args: argparse.Namespace) -> int:
 
 def cmd_project_doctor(args: argparse.Namespace) -> int:
     project = project_from_arg(args.path)
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     checks = []
     checks.append(("project.yaml", (project / "project.yaml").exists()))
     checks.append(("AGENTS.md", (project / "AGENTS.md").exists()))
     checks.append(("CLAUDE.md", (project / "CLAUDE.md").exists()))
-    checks.append((".aris", (project / ".aris").exists()))
+    checks.append((".labline", (project / STATE_DIR_NAME).exists()))
     checks.append(("framework", framework.exists()))
     yaml_text = (project / "project.yaml").read_text(encoding="utf-8") if (project / "project.yaml").exists() else ""
     checks.append(("project.yaml.schema_version", yaml_text.count("schema_version:") == 1))
     checks.append(("project.yaml.framework.path", f'path: "{framework}"' in yaml_text))
-    checks.append((".aris.manifest", (project / ".aris" / "manifest.json").exists()))
+    checks.append((".labline.manifest", (project / STATE_DIR_NAME / "manifest.json").exists()))
+    if (project / LEGACY_STATE_DIR_NAME / "manifest.json").exists() and not (project / STATE_DIR_NAME / "manifest.json").exists():
+        checks.append((".aris.legacy_manifest", True))
     checks.append((".claude.skills", (project / ".claude" / "skills").exists() or not (project / ".claude").exists()))
     checks.append((".agents.skills", (project / ".agents" / "skills").exists() or not (project / ".agents").exists()))
     status = 0
@@ -417,23 +448,26 @@ def cmd_project_doctor(args: argparse.Namespace) -> int:
 
 def cmd_project_update(args: argparse.Namespace) -> int:
     project = project_from_arg(args.path)
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
+    migrated = migrate_legacy_project_manifest(project, framework)
     install_clients(project, framework)
     register_project(project)
+    if migrated:
+        print("legacy: migrated .aris/manifest.json -> .labline/manifest.json")
     return 0
 
 
 def cmd_project_detach(args: argparse.Namespace) -> int:
     project = project_from_arg(args.path)
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     uninstallers = [
-        (project / ".aris" / "installed-skills.txt", framework / "tools" / "install_aris.sh"),
-        (project / ".aris" / "installed-skills-codex.txt", framework / "tools" / "install_aris_codex.sh"),
+        (project / STATE_DIR_NAME / "installed-skills.txt", framework / "tools" / "install_labline.sh"),
+        (project / STATE_DIR_NAME / "installed-skills-codex.txt", framework / "tools" / "install_labline_codex.sh"),
     ]
     for manifest, installer in uninstallers:
         if manifest.exists() and installer.exists():
-            run(["bash", str(installer), str(project), "--aris-repo", str(framework), "--quiet", "--uninstall"])
-    for rel in [".aris/manifest.json", ".aris/installed-skills.txt", ".aris/installed-skills-codex.txt"]:
+            run(["bash", str(installer), str(project), "--labline-repo", str(framework), "--quiet", "--uninstall"])
+    for rel in [f"{STATE_DIR_NAME}/manifest.json", f"{STATE_DIR_NAME}/installed-skills.txt", f"{STATE_DIR_NAME}/installed-skills-codex.txt"]:
         path = project / rel
         if path.exists():
             path.unlink()
@@ -443,7 +477,7 @@ def cmd_project_detach(args: argparse.Namespace) -> int:
 
 def cmd_project_version(args: argparse.Namespace) -> int:
     project = project_from_arg(args.path)
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     print(f"project: {project}")
     print(f"framework_path: {framework}")
     print(f"framework_version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
@@ -453,6 +487,15 @@ def cmd_project_version(args: argparse.Namespace) -> int:
 
 def cmd_dev_runtime_config(args: argparse.Namespace) -> int:
     data = load_dev_runtime_config(init=args.init)
+    if getattr(args, "json_output", False):
+        payload = {
+            "config": str(dev_runtime_config_path()),
+            "defaults": data.get("defaults", {}),
+            "providers": data.get("providers", {}),
+            "roles": data.get("roles", {}),
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", end="")
+        return 0
     defaults = data["defaults"]
     print(f"config: {dev_runtime_config_path()}")
     print(f"default_provider: {defaults.get('provider', 'codex_subagent')}")
@@ -543,13 +586,13 @@ def cmd_dev_runtime_use(args: argparse.Namespace) -> int:
 def cmd_dev_runtime_load(args: argparse.Namespace) -> int:
     env_file = Path(args.env_file).expanduser().resolve()
     values = parse_dotenv(env_file)
-    role_name = dotenv_get(values, "agent", "agent_name", "ARIS_AGENT", "ARIS_AGENT_NAME")
-    provider_name = dotenv_get(values, "provider", "provider_name", "ARIS_PROVIDER", "ARIS_PROVIDER_NAME")
-    base_url = dotenv_get(values, "base_url", "ARIS_BASE_URL")
-    model = dotenv_get(values, "model_name", "model", "ARIS_MODEL_NAME", "ARIS_MODEL")
-    transport = dotenv_get(values, "transport", "ARIS_TRANSPORT") or "openai_compatible"
-    api_key = dotenv_get(values, "api_key", "ARIS_API_KEY")
-    api_key_env = dotenv_get(values, "api_key_env", "ARIS_API_KEY_ENV") or runtime_provider_api_key_env(provider_name)
+    role_name = dotenv_get(values, "agent", "agent_name", "LABLINE_AGENT", "LABLINE_AGENT_NAME")
+    provider_name = dotenv_get(values, "provider", "provider_name", "LABLINE_PROVIDER", "LABLINE_PROVIDER_NAME")
+    base_url = dotenv_get(values, "base_url", "LABLINE_BASE_URL")
+    model = dotenv_get(values, "model_name", "model", "LABLINE_MODEL_NAME", "LABLINE_MODEL")
+    transport = dotenv_get(values, "transport", "LABLINE_TRANSPORT") or "openai_compatible"
+    api_key = dotenv_get(values, "api_key", "LABLINE_API_KEY")
+    api_key_env = dotenv_get(values, "api_key_env", "LABLINE_API_KEY_ENV") or runtime_provider_api_key_env(provider_name)
 
     missing = []
     for key, value in [
@@ -622,7 +665,7 @@ def runtime_system_guardrails(
     api_key_env: str | None,
     effort: str | None,
 ) -> str:
-    return f"""# ARIS Dev Runtime Guardrails
+    return f"""# Labline Dev Runtime Guardrails
 
 role: {role}
 provider: {provider}
@@ -676,7 +719,7 @@ def write_runtime_run_artifacts(run_dir: Path, task_text: str, request_payload: 
 
 
 def cmd_dev_runtime_prompt(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     data = load_dev_runtime_config(init=True)
     defaults = data["defaults"]
     role = data.get("roles", {}).get(args.role, data["roles"].get("dev-worker", {}))
@@ -691,7 +734,7 @@ def cmd_dev_runtime_prompt(args: argparse.Namespace) -> int:
     task_file = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug}.md"
     files = args.file or []
     file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
-    prompt = f"""# ARIS Dev Worker Task
+    prompt = f"""# Labline Dev Worker Task
 
 created_at: {utc_stamp()}
 role: {args.role}
@@ -734,7 +777,7 @@ reasoning_effort: {effort}
 
 
 def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     data = load_dev_runtime_config(init=True)
     defaults = data["defaults"]
     role = data.get("roles", {}).get(args.role, data["roles"].get("dev-worker", {}))
@@ -795,8 +838,8 @@ def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
 
 
 def cmd_dev_skills(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
-    installer = framework / "tools" / "install_aris_dev_skills.sh"
+    framework = resolve_labline_repo(args)
+    installer = framework / "tools" / "install_labline_dev_skills.sh"
     if not installer.exists():
         raise SystemExit(f"missing dev skill installer: {installer}")
     extra: list[str] = []
@@ -809,7 +852,7 @@ def cmd_dev_skills(args: argparse.Namespace) -> int:
             "bash",
             str(installer),
             args.dev_skills_action,
-            "--aris-repo",
+            "--labline-repo",
             str(framework),
             *extra,
         ],
@@ -818,7 +861,7 @@ def cmd_dev_skills(args: argparse.Namespace) -> int:
 
 
 def cmd_dev_user_surface_update(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     commands = [
         [sys.executable, "tools/generate_skill_dag.py"],
         [sys.executable, "tools/generate_skill_dag.py", "--mermaid"],
@@ -834,7 +877,7 @@ def cmd_dev_user_surface_update(args: argparse.Namespace) -> int:
 
 
 def cmd_dev_user_surface_check(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     rc = run_relay([sys.executable, "tools/generate_skill_dag.py", "--check-only"], cwd=framework)
     if rc != 0:
         return rc
@@ -844,6 +887,231 @@ def cmd_dev_user_surface_check(args: argparse.Namespace) -> int:
         if not path.exists():
             rc = 1
     return rc
+
+
+def shlex_quote(value: str) -> str:
+    if not value:
+        return "''"
+    safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-"
+    if all(ch in safe for ch in value):
+        return value
+    return "'" + value.replace("'", "'\"'\"'") + "'"
+
+
+def print_shell_command(cmd: list[str]) -> None:
+    print("command: " + " ".join(shlex_quote(part) for part in cmd))
+
+
+def feishu_home(args: argparse.Namespace) -> Path:
+    home = getattr(args, "home", None)
+    if home:
+        return Path(home).expanduser().resolve()
+    env_home = os.environ.get("LARK_CHANNEL_HOME")
+    if env_home:
+        return Path(env_home).expanduser().resolve()
+    return Path.home() / ".lark-channel"
+
+
+def feishu_env(args: argparse.Namespace) -> dict[str, str]:
+    env = os.environ.copy()
+    if getattr(args, "no_proxy", False):
+        for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"]:
+            env.pop(key, None)
+    home = getattr(args, "home", None)
+    if home:
+        env["LARK_CHANNEL_HOME"] = str(Path(home).expanduser().resolve())
+    prefix = feishu_node_prefix(args)
+    prefix_bin = prefix / "bin"
+    env["PATH"] = str(prefix_bin) + os.pathsep + env.get("PATH", "")
+    # lark-channel-bridge may auto-install @larksuite/cli during first-run setup.
+    # Keep that child npm install user-local on shared servers.
+    env.setdefault("NPM_CONFIG_PREFIX", str(prefix))
+    env.setdefault("npm_config_prefix", str(prefix))
+    return env
+
+
+def feishu_node_prefix(args: argparse.Namespace) -> Path:
+    prefix = getattr(args, "prefix", None)
+    if prefix:
+        return Path(prefix).expanduser().resolve()
+    return state_root() / DEFAULT_FEISHU_NODE_PREFIX_REL
+
+
+def feishu_bridge_bin(args: argparse.Namespace) -> str:
+    override = os.environ.get("LABLINE_LARK_CHANNEL_BRIDGE_BIN")
+    if override:
+        return override
+    prefix_bin = feishu_node_prefix(args) / "bin" / LARK_CHANNEL_BRIDGE_BIN
+    if prefix_bin.exists():
+        return str(prefix_bin)
+    found = shutil.which(LARK_CHANNEL_BRIDGE_BIN, path=feishu_env(args).get("PATH"))
+    return found or LARK_CHANNEL_BRIDGE_BIN
+
+
+def feishu_command(args: argparse.Namespace, action: str) -> list[str]:
+    cmd = [feishu_bridge_bin(args), action]
+    profile = getattr(args, "profile", None)
+    if profile:
+        cmd.extend(["--profile", profile])
+    agent = getattr(args, "agent", None)
+    if agent:
+        cmd.extend(["--agent", agent])
+    workspace = getattr(args, "workspace", None)
+    if not getattr(args, "no_workspace", False):
+        workspace_path = Path(workspace).expanduser().resolve() if workspace else Path.cwd().resolve()
+        cmd.extend(["--workspace", str(workspace_path)])
+    app_id = getattr(args, "app_id", None)
+    if app_id:
+        cmd.extend(["--app-id", app_id])
+    tenant = getattr(args, "tenant", None)
+    if tenant:
+        cmd.extend(["--tenant", tenant])
+    config = getattr(args, "config", None)
+    if config:
+        cmd.extend(["-c", config])
+    extra_args = getattr(args, "extra_args", None) or []
+    if extra_args and extra_args[0] == "--":
+        extra_args = extra_args[1:]
+    cmd.extend(extra_args)
+    return cmd
+
+
+def cmd_feishu_install(args: argparse.Namespace) -> int:
+    prefix = feishu_node_prefix(args)
+    if args.scope == "system":
+        cmd = ["pnpm", "add", "-g", "lark-channel-bridge"] if args.manager == "pnpm" else ["npm", "i", "-g", "lark-channel-bridge"]
+    elif args.manager == "pnpm":
+        cmd = ["pnpm", "add", "-g", "--global-bin-dir", str(prefix / "bin"), "lark-channel-bridge"]
+    else:
+        cmd = ["npm", "i", "-g", "--prefix", str(prefix), "lark-channel-bridge"]
+    if args.dry_run:
+        print_shell_command(cmd)
+        if args.scope == "user":
+            print(f"bin_dir: {prefix / 'bin'}")
+        return 0
+    rc = run_relay(cmd)
+    if rc == 0 and args.scope == "user":
+        print(f"installed_bin_dir: {prefix / 'bin'}")
+        print("Labline will add this directory to PATH when running `lane feishu ...`.")
+    return rc
+
+
+def parse_node_version(raw: str) -> tuple[int, int, int] | None:
+    text = raw.strip().lstrip("v")
+    parts = text.split(".")
+    if len(parts) < 2:
+        return None
+    try:
+        major = int(parts[0])
+        minor = int(parts[1])
+        patch = int(parts[2]) if len(parts) > 2 else 0
+    except ValueError:
+        return None
+    return major, minor, patch
+
+
+def version_at_least(value: tuple[int, int, int] | None, minimum: tuple[int, int, int]) -> bool:
+    return value is not None and value >= minimum
+
+
+def command_version(cmd: list[str]) -> tuple[int, str]:
+    try:
+        result = run(cmd, check=False)
+    except FileNotFoundError:
+        return 127, ""
+    output = (result.stdout or result.stderr).strip()
+    return result.returncode, output
+
+
+def redact_proxy_url(value: str) -> str:
+    if "@" not in value or "://" not in value:
+        return value
+    scheme, rest = value.split("://", 1)
+    if "@" not in rest:
+        return value
+    return f"{scheme}://<redacted>@{rest.split('@', 1)[1]}"
+
+
+def proxy_diagnostics() -> list[str]:
+    lines = []
+    for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]:
+        value = os.environ.get(key, "")
+        if value:
+            lines.append(f"proxy.{key}: {redact_proxy_url(value)}")
+    lower_http = os.environ.get("http_proxy", "")
+    upper_http = os.environ.get("HTTP_PROXY", "")
+    lower_https = os.environ.get("https_proxy", "")
+    upper_https = os.environ.get("HTTPS_PROXY", "")
+    if lower_http and upper_http and lower_http != upper_http:
+        lines.append("proxy.warning: http_proxy and HTTP_PROXY differ; curl/npm child installers may prefer lowercase")
+    if lower_https and upper_https and lower_https != upper_https:
+        lines.append("proxy.warning: https_proxy and HTTPS_PROXY differ; curl/npm child installers may prefer lowercase")
+    return lines
+
+
+def cmd_feishu_doctor(args: argparse.Namespace) -> int:
+    node_path = shutil.which("node")
+    bridge_path = feishu_bridge_bin(args)
+    bridge_exists = Path(bridge_path).exists() if "/" in bridge_path else shutil.which(bridge_path, path=feishu_env(args).get("PATH")) is not None
+    agent_path = shutil.which(args.agent)
+    node_status = "missing"
+    if node_path:
+        _, node_raw = command_version(["node", "--version"])
+        node_version = parse_node_version(node_raw)
+        node_status = "ok" if version_at_least(node_version, (20, 12, 0)) else f"too_old ({node_raw or 'unknown'})"
+    bridge_status = "missing"
+    if bridge_exists:
+        code, version = command_version([bridge_path, "--version"])
+        bridge_status = f"ok ({version})" if code == 0 and version else "ok"
+    agent_status = "ok" if agent_path else "missing"
+
+    home = feishu_home(args)
+    print(f"node: {node_status}")
+    print(f"lark-channel-bridge: {bridge_status}")
+    print(f"lark-channel-bridge_bin: {bridge_path}")
+    print(f"agent.{args.agent}: {agent_status}")
+    print(f"profile: {args.profile}")
+    print(f"home: {home}")
+    print(f"config: {home / 'config.json'}")
+    print(f"logs: {home / 'profiles' / args.profile / 'logs'}")
+    for line in proxy_diagnostics():
+        print(line)
+    return 0 if node_status == "ok" and bridge_exists and agent_path else 1
+
+
+def cmd_feishu_bridge(args: argparse.Namespace) -> int:
+    cmd = feishu_command(args, args.feishu_bridge_command)
+    if args.dry_run:
+        print_shell_command(cmd)
+        if getattr(args, "no_proxy", False):
+            print("proxy: disabled")
+        return 0
+    result = subprocess.run(cmd, env=feishu_env(args))
+    return result.returncode
+
+
+def cmd_feishu_logs(args: argparse.Namespace) -> int:
+    logs = feishu_home(args) / "profiles" / args.profile / "logs"
+    print(f"logs: {logs}")
+    if not args.tail:
+        return 0 if logs.exists() else 1
+    if not logs.exists():
+        print("log status: missing")
+        return 1
+    candidates = sorted(
+        [p for p in logs.rglob("*") if p.is_file() and p.suffix in {".log", ".jsonl", ".txt"}],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        print("log status: empty")
+        return 1
+    latest = candidates[0]
+    print(f"tailing: {latest}")
+    lines = latest.read_text(encoding="utf-8", errors="replace").splitlines()
+    for line in lines[-args.tail :]:
+        print(line)
+    return 0
 
 
 def history_dir() -> Path:
@@ -954,7 +1222,7 @@ def sync_registered_projects(args: argparse.Namespace, framework: Path) -> tuple
 
 
 def cmd_framework_version(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     print(f"framework: {framework}")
     print(f"version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
     print(f"commit: {git_output(framework, ['rev-parse', 'HEAD'], 'unknown')}")
@@ -965,7 +1233,7 @@ def cmd_framework_version(args: argparse.Namespace) -> int:
 
 
 def cmd_framework_check_update(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     cached = load_framework_update_status(framework)
     if args.if_stale and is_recent(cached.get("last_checked_at"), parse_duration(args.if_stale)):
         return emit_framework_update_status(args, framework, cached)
@@ -1053,16 +1321,16 @@ def notify_framework_update_once_per_day(framework: Path, data: dict, returncode
 
     local = data.get("local_commit", "unknown")[:7]
     remote = data.get("upstream_commit", "unknown")[:7]
-    print(f"[ARIS] framework update available: local {local} -> upstream {remote}")
-    print("       run: aris framework update")
-    print("       rollback: aris framework rollback")
+    print(f"[Labline] framework update available: local {local} -> upstream {remote}")
+    print("       run: lane framework update")
+    print("       rollback: lane framework rollback")
     data["last_notified_at"] = utc_stamp()
     save_framework_update_status(framework, data)
     return returncode
 
 
 def cmd_framework_update(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     before = record_previous_commit(framework)
     result = run(["git", "pull", "--ff-only"], cwd=framework, check=False)
     after = git_output(framework, ["rev-parse", "HEAD"], "unknown")
@@ -1084,7 +1352,7 @@ def cmd_framework_update(args: argparse.Namespace) -> int:
 
 
 def cmd_framework_rollback(args: argparse.Namespace) -> int:
-    framework = resolve_aris_repo(args)
+    framework = resolve_labline_repo(args)
     prev = previous_commit()
     if not prev:
         print("no rollback commit recorded")
@@ -1104,12 +1372,12 @@ def cmd_framework_rollback(args: argparse.Namespace) -> int:
 
 
 def add_common(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--aris-repo", type=Path)
+    p.add_argument("--labline-repo", type=Path)
     p.add_argument("--quiet", action="store_true")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="aris")
+    p = argparse.ArgumentParser(prog="lane")
     add_common(p)
     sub = p.add_subparsers(dest="scope", required=True)
 
@@ -1147,6 +1415,59 @@ def build_parser() -> argparse.ArgumentParser:
     framework.add_argument("--version", action="store_true")
     framework_sub = framework.add_subparsers(dest="framework_command")
 
+    feishu = sub.add_parser("feishu")
+    add_common(feishu)
+    feishu_sub = feishu.add_subparsers(dest="feishu_command", required=True)
+
+    feishu_install = feishu_sub.add_parser("install")
+    add_common(feishu_install)
+    feishu_install.add_argument("--manager", choices=["npm", "pnpm"], default="npm")
+    feishu_install.add_argument("--scope", choices=["user", "system"], default="user")
+    feishu_install.add_argument("--prefix", type=Path)
+    feishu_install.add_argument("--dry-run", action="store_true")
+    feishu_install.set_defaults(func=cmd_feishu_install)
+
+    feishu_doctor = feishu_sub.add_parser("doctor")
+    add_common(feishu_doctor)
+    feishu_doctor.add_argument("--profile", default=DEFAULT_FEISHU_PROFILE)
+    feishu_doctor.add_argument("--agent", choices=["codex", "claude"], default=DEFAULT_FEISHU_AGENT)
+    feishu_doctor.add_argument("--home", type=Path)
+    feishu_doctor.add_argument("--prefix", type=Path)
+    feishu_doctor.set_defaults(func=cmd_feishu_doctor)
+
+    def add_feishu_bridge_common(parser: argparse.ArgumentParser, include_runtime: bool) -> None:
+        add_common(parser)
+        parser.add_argument("--profile", default=DEFAULT_FEISHU_PROFILE)
+        parser.add_argument("--home", type=Path)
+        parser.add_argument("--prefix", type=Path)
+        parser.add_argument("--no-proxy", action="store_true")
+        parser.add_argument("--dry-run", action="store_true")
+        if include_runtime:
+            parser.add_argument("--agent", choices=["codex", "claude"], default=DEFAULT_FEISHU_AGENT)
+            parser.add_argument("--workspace", type=Path)
+            parser.add_argument("--no-workspace", action="store_true")
+            parser.add_argument("--app-id")
+            parser.add_argument("--tenant", choices=["feishu", "lark"])
+            parser.add_argument("-c", "--config")
+        parser.add_argument("extra_args", nargs=argparse.REMAINDER)
+
+    for action in ["run", "start"]:
+        bridge = feishu_sub.add_parser(action)
+        add_feishu_bridge_common(bridge, include_runtime=True)
+        bridge.set_defaults(func=cmd_feishu_bridge, feishu_bridge_command=action)
+
+    for action in ["status", "stop", "restart"]:
+        bridge = feishu_sub.add_parser(action)
+        add_feishu_bridge_common(bridge, include_runtime=False)
+        bridge.set_defaults(func=cmd_feishu_bridge, feishu_bridge_command=action)
+
+    feishu_logs = feishu_sub.add_parser("logs")
+    add_common(feishu_logs)
+    feishu_logs.add_argument("--profile", default=DEFAULT_FEISHU_PROFILE)
+    feishu_logs.add_argument("--home", type=Path)
+    feishu_logs.add_argument("--tail", type=int, default=0)
+    feishu_logs.set_defaults(func=cmd_feishu_logs)
+
     dev = sub.add_parser("dev")
     add_common(dev)
     dev_sub = dev.add_subparsers(dest="dev_command", required=True)
@@ -1178,6 +1499,7 @@ def build_parser() -> argparse.ArgumentParser:
         runtime_config = runtime_sub.add_parser("config")
         add_common(runtime_config)
         runtime_config.add_argument("--init", action="store_true")
+        runtime_config.add_argument("--json", dest="json_output", action="store_true")
         runtime_config.set_defaults(func=cmd_dev_runtime_config)
 
         runtime_provider = runtime_sub.add_parser("provider")

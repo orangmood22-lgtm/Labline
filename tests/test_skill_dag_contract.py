@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
-from generate_skill_dag import build_graph
+from generate_skill_dag import assert_no_inferred_mentions, build_graph, collect_inferred_mentions
 
 
 def write_skill(root: Path, name: str, frontmatter: str, body: str = "") -> None:
@@ -35,6 +35,7 @@ def test_body_mentions_do_not_create_formal_edges():
 
         assert graph["alpha"].get("invokes", []) == []
         assert graph["alpha"].get("inferred_mentions") == ["beta"]
+        assert collect_inferred_mentions(graph) == [("alpha", ["beta"])]
     finally:
         shutil.rmtree(tmp)
 
@@ -55,6 +56,30 @@ def test_frontmatter_invokes_create_formal_edges():
 
         assert graph["alpha"].get("invokes") == ["beta"]
         assert graph["alpha"].get("inferred_mentions") == ["gamma"]
+        assert collect_inferred_mentions(graph) == [("alpha", ["gamma"])]
+    finally:
+        shutil.rmtree(tmp)
+
+
+def test_fail_on_inferred_mentions_helper_reports_offenders():
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        write_skill(
+            tmp,
+            "alpha",
+            "caller: any\n",
+            "Compare with /beta, but do not invoke it.",
+        )
+        write_skill(tmp, "beta", "caller: any\n")
+
+        graph = build_graph(tmp)
+
+        try:
+            assert_no_inferred_mentions(graph)
+        except ValueError as exc:
+            assert str(exc) == "Inferred mentions detected:\n  alpha: beta"
+        else:
+            raise AssertionError("expected inferred mention validation to fail")
     finally:
         shutil.rmtree(tmp)
 
@@ -80,6 +105,7 @@ if __name__ == "__main__":
     tests = [
         test_body_mentions_do_not_create_formal_edges,
         test_frontmatter_invokes_create_formal_edges,
+        test_fail_on_inferred_mentions_helper_reports_offenders,
         test_platform_metadata_does_not_declare_dead_end_compatibility,
     ]
     failed = 0

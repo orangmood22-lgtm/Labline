@@ -1,13 +1,34 @@
 # API 配置机制
 # 优先级: 个人 > 项目 > 组默认
-# 位置: ~/.aris/api.yaml (个人) 或 /aris/framework/deploy/api-default.yaml (组默认)
+# 位置: ~/.labline/api.yaml (个人) 或 /lane/framework/deploy/api-default.yaml (组默认)
 
-# 支持多 provider，切换靠 active 字段
-active: "anthropic"
+# Codex-first 默认。Claude Code 仅作为兼容客户端。
+active: "openai"
 
 providers:
+  openai:
+    # Codex 主入口 / Leader 默认
+    base_url: "https://api.openai.com/v1"
+    api_key: ""             # 留空 = 读 OPENAI_API_KEY
+    model: "gpt-5.5"
+    wire_api: "responses"
+
+  openai-gpt54:
+    # Planner / Writer / Reviewer 默认
+    base_url: "https://api.openai.com/v1"
+    api_key: ""
+    model: "gpt-5.4"
+    wire_api: "responses"
+
+  openai-gpt54-mini:
+    # Coder / Deployer 默认
+    base_url: "https://api.openai.com/v1"
+    api_key: ""
+    model: "gpt-5.4-mini"
+    wire_api: "responses"
+
   anthropic:
-    # Coding plan (官方)
+    # Claude Code 兼容
     base_url: "https://api.anthropic.com"
     api_key: ""             # 留空 = 读环境变量 ANTHROPIC_API_KEY
     model: "claude-sonnet-4-20250514"
@@ -18,19 +39,32 @@ providers:
     api_key: ""
     model: "claude-sonnet-4-20250514"
 
-  openai:
-    # Codex CLI 用
-    base_url: "https://api.openai.com/v1"
-    api_key: ""             # 留空 = 读 OPENAI_API_KEY
-    model: "gpt-5.5"
-    wire_api: "responses"
-
   openai-proxy:
     # 中转 (如 how88.top)
     base_url: "https://how88.top/v1"
     api_key: ""
     model: "gpt-5.5"
     wire_api: "responses"
+
+role_defaults:
+  leader:
+    provider: "openai"
+    model: "gpt-5.5"
+  planner:
+    provider: "openai-gpt54"
+    model: "gpt-5.4"
+  reviewer:
+    provider: "openai-gpt54"
+    model: "gpt-5.4"
+  writer:
+    provider: "openai-gpt54"
+    model: "gpt-5.4"
+  coder:
+    provider: "openai-gpt54-mini"
+    model: "gpt-5.4-mini"
+  deployer:
+    provider: "openai-gpt54-mini"
+    model: "gpt-5.4-mini"
 
 # VPN/代理 — 容器内自动设
 proxy:

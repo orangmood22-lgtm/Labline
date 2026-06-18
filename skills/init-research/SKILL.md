@@ -35,9 +35,9 @@ examples:
 ## 定位路径
 
 ```
-FRAMEWORK_DIR = 找到当前 ARIS 框架 repo 根目录（含 skills/ 和 tools/install_aris.sh 的目录）
+FRAMEWORK_DIR = 找到当前 Labline 框架 repo 根目录（含 skills/ 和 tools/install_labline.sh 的目录）
 PROJECTS_DIR  = FRAMEWORK_DIR 的上一级（和框架平级）
-                如果在容器内 /aris/framework，则 PROJECTS_DIR=/aris/projects
+                如果在容器内 /labline/framework，则 PROJECTS_DIR=/labline/projects
 PROJECT_DIR   = PROJECTS_DIR/{项目名}
 ```
 
@@ -95,21 +95,21 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# ARIS local
-.aris/
+# Labline local
+.labline/
 .claude/
 .agents/
 ```
 
-## Step 3: 安装 ARIS skills
+## Step 3: 安装 Labline skills
 
 ```bash
-bash {FRAMEWORK_DIR}/tools/install_aris.sh {PROJECT_DIR} --aris-repo {FRAMEWORK_DIR}
+bash {FRAMEWORK_DIR}/tools/install_labline.sh {PROJECT_DIR} --labline-repo {FRAMEWORK_DIR}
 ```
 
-如果 `install_aris_codex.sh` 也存在，同时跑:
+如果 `install_labline_codex.sh` 也存在，同时跑:
 ```bash
-bash {FRAMEWORK_DIR}/tools/install_aris_codex.sh {PROJECT_DIR} --aris-repo {FRAMEWORK_DIR}
+bash {FRAMEWORK_DIR}/tools/install_labline_codex.sh {PROJECT_DIR} --labline-repo {FRAMEWORK_DIR}
 ```
 
 ## Step 4: 生成 project.yaml
