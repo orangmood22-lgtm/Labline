@@ -1,41 +1,52 @@
-# Feishu / Lark Integration
+# 飞书 / Lark 集成
 
-For Codex + Claude Code remote control from Feishu/Lark, Labline recommends
-[`lark-channel-bridge`](https://github.com/zarazhangrui/lark-coding-agent-bridge) as the default bridge. It is an external transport adapter for local Codex CLI or Claude Code sessions, with streaming cards, per-chat sessions, workspace switching, and first-run QR setup.
+本文说明如何用飞书 / Lark 远程控制本地的 Codex CLI 或 Claude Code 会话。
 
-The older in-repo path, `mcp-servers/feishu-bridge` plus `tools/labline_feishu_session.py`, remains documented below as a legacy/fallback Labline-managed runner. Use it when you specifically need Labline inbox/outbox files, report generation, or tmux injection behavior.
+默认推荐使用 [`lark-channel-bridge`](https://github.com/zarazhangrui/lark-coding-agent-bridge)。它是一个外部传输适配器，可以把飞书 / Lark 消息转发给本地 Codex CLI 或 Claude Code，支持流式卡片、按聊天隔离会话、工作区切换，以及首次运行时的二维码配置。
 
-## Recommended Path: `lark-channel-bridge`
+仓库内旧方案 `mcp-servers/feishu-bridge` 加 `tools/labline_feishu_session.py` 仍保留在本文后半部分，作为 legacy / fallback 路径。只有在你明确需要 Labline 的 inbox/outbox 文件、报告生成，或者 tmux 注入已有 TUI 会话时，才使用旧方案。
 
-`lark-channel-bridge` forwards Feishu/Lark messages to a local `codex` or `claude` process. It does not make Feishu a remote shell, does not become the Labline Leader, and does not own workflow decisions. Execution still happens in the local Codex/Claude Code session, under that agent's normal permissions and the selected workspace.
+## 推荐方案：`lark-channel-bridge`
 
-Labline wraps the external bridge with `lane feishu ...` so users do not need to remember the long bridge command. The wrapper does not vendor or reimplement `lark-channel-bridge`; it installs, launches, checks, and locates logs for the external CLI.
+`lark-channel-bridge` 负责把飞书 / Lark 消息转发到本地 `codex` 或 `claude` 进程。它不会把飞书变成远程 shell，不会成为 Labline Leader，也不会替你做 workflow 决策。真正执行仍发生在本地 Codex / Claude Code 会话中，并遵守该 agent 的正常权限和当前工作区。
 
-Prerequisites:
+Labline 用 `lane feishu ...` 包了一层外部 bridge，避免用户记很长的命令。这个 wrapper 不 vendor、不重写 `lark-channel-bridge`，只负责安装、启动、检查和定位日志。
+
+前置条件：
 
 - Node.js >= 20.12
-- Codex CLI or Claude Code installed and logged in locally
-- A Feishu/Lark PersonalAgent app; the first-run QR wizard can create and bind one
+- 本地已安装并登录 Codex CLI 或 Claude Code
+- 一个飞书 / Lark PersonalAgent 应用；首次运行的二维码向导可以创建并绑定
 
-Install:
+安装：
 
 ```bash
 lane feishu install
 lane feishu doctor
 ```
 
-`lane feishu install` defaults to a user-local npm prefix under `~/.labline/node`, so it works for non-root users on shared servers. Labline automatically adds that prefix's `bin` directory when running `lane feishu ...`. Administrators who intentionally want a system-wide install can use `lane feishu install --scope system`.
+`lane feishu install` 默认使用 `~/.labline/node` 作为用户级 npm prefix，所以普通用户在共享服务器上也能安装。Labline 运行 `lane feishu ...` 时会自动把该 prefix 的 `bin` 目录加入路径。管理员如果明确想装到系统级，可以用：
 
-First-run foreground setup for the current project directory:
+```bash
+lane feishu install --scope system
+```
+
+在当前项目目录做首次前台配置：
 
 ```bash
 cd [你的project位置]
 lane feishu run
 ```
 
-This starts `lark-channel-bridge run --profile lane-codex --agent codex --workspace [当前目录]`. The first run opens the bridge QR wizard if the PersonalAgent app is not configured yet.
+这会启动：
 
-After the QR setup works, run the Codex profile as a background service:
+```text
+lark-channel-bridge run --profile lane-codex --agent codex --workspace [当前目录]
+```
+
+如果 PersonalAgent 应用还没配置好，首次运行会打开 bridge 的二维码向导。
+
+二维码配置成功后，把 Codex profile 作为后台服务运行：
 
 ```bash
 cd [你的project位置]
@@ -43,14 +54,14 @@ lane feishu start
 lane feishu status
 ```
 
-For Claude Code, use a separate profile:
+Claude Code 建议使用单独 profile：
 
 ```bash
 cd [你的project位置]
 lane feishu run --profile lane-claude --agent claude
 ```
 
-Useful local commands:
+常用本地命令：
 
 ```bash
 lane feishu stop
@@ -58,83 +69,94 @@ lane feishu restart
 lane feishu logs --tail 50
 ```
 
-If startup fails with `could not resolve bot identity` and the log shows `Request failed with status code 502`, retry without proxy. Some local HTTP proxies do not handle the Node SDK's Feishu API requests correctly, while direct access still works:
+如果启动时报 `could not resolve bot identity`，并且日志里有 `Request failed with status code 502`，可以绕过代理再试。部分本地 HTTP 代理无法正确处理 Node SDK 的飞书 API 请求，而直连可用：
 
 ```bash
 lane feishu run --no-proxy
 lane feishu start --no-proxy
 ```
 
-Common Feishu/Lark commands:
+常用飞书 / Lark 命令：
 
-| Command | Effect |
-|---------|--------|
-| `/cd <path>` | Switch the current project/workspace directory |
-| `/ws` | Manage saved workspaces, such as list/save/use |
-| `/status` | Show profile, agent, working directory, session, identity, and run state |
+| 命令 | 作用 |
+|------|------|
+| `/cd <path>` | 切换当前项目 / 工作区目录 |
+| `/ws` | 管理已保存工作区，例如 list/save/use |
+| `/status` | 显示 profile、agent、工作目录、session、身份和运行状态 |
 
-Use `/cd [你的project位置]` after startup if you did not pass `--workspace`, or when moving a chat thread to another Labline project.
+如果启动时没有传 `--workspace`，或者想把一个聊天线程切到另一个 Labline 项目，用：
 
-## Labline Boundary
+```text
+/cd [你的project位置]
+```
 
-Feishu/Lark integration is a Transport Adapter Skill boundary in Labline terms. The bridge transports messages, status, approvals, files, or reports between chat and a local agent process. It is not a Leader, not a workflow runtime, and not a remote shell. Research orchestration remains in the active Codex/Claude Code session and the Labline skills it invokes.
+## Labline 边界
 
-## Legacy / Fallback: Labline-Managed Runner
+飞书 / Lark 集成在 Labline 里属于 Transport Adapter Skill 边界。bridge 只负责在聊天和本地 agent 进程之间传输消息、状态、审批、文件或报告。
 
-The sections below describe the older Labline-managed path:
+它不是 Leader，不是 workflow runtime，也不是远程 shell。研究编排仍由当前 Codex / Claude Code 会话和其调用的 Labline skills 负责。
+
+## 旧方案 / Fallback：Labline 托管 Runner
+
+下面是旧的 Labline 托管路径：
 
 ```text
 mcp-servers/feishu-bridge/server.py + tools/labline_feishu_session.py
 ```
 
-Keep using this path only when you need Labline-managed runtime files, explicit inbox/outbox inspection, phone-session merge reports, or the tmux live-TUI injection flow.
+只有在需要以下能力时继续使用旧方案：
 
-## What Works
+- Labline 管理的运行时文件
+- 显式查看 inbox/outbox
+- 手机会话合并报告
+- tmux live TUI 注入
 
-| Direction | Status | Path |
-|-----------|--------|------|
-| Local to Feishu | Supported | `POST /send`, `POST /update` for card updates |
-| Feishu to local | Supported | Feishu long connection -> `/control/message` |
-| Feishu message to Codex | Legacy/fallback | `tools/labline_feishu_session.py` consumes inbox and runs `codex exec` |
-| Codex response to Feishu | Legacy/fallback | runner writes outbox and calls `/send` |
-| Already-open Codex TUI takeover | Legacy/fallback | `--tmux-pane <target>` injects Feishu text into the live pane |
+## 功能状态
 
-The bridge does not execute shell commands, tools, or skills itself. It only records messages and approvals. Codex execution happens inside the opt-in session runner.
+| 方向 | 状态 | 路径 |
+|------|------|------|
+| 本地到飞书 | 支持 | `POST /send`、`POST /update` 更新卡片 |
+| 飞书到本地 | 支持 | 飞书长连接 -> `/control/message` |
+| 飞书消息到 Codex | Legacy/fallback | `tools/labline_feishu_session.py` 消费 inbox 并运行 `codex exec` |
+| Codex 回复到飞书 | Legacy/fallback | runner 写 outbox 并调用 `/send` |
+| 接管已打开的 Codex TUI | Legacy/fallback | `--tmux-pane <target>` 把飞书文本注入 live pane |
 
-## Terms
+bridge 本身不执行 shell 命令、tools 或 skills。它只记录消息和审批。Codex 执行发生在用户主动启动的 session runner 中。
 
-- **Recommended Bridge**: `lark-channel-bridge`, external Feishu/Lark transport adapter for local Codex CLI or Claude Code.
-- **Legacy Feishu Bridge**: `mcp-servers/feishu-bridge/server.py`, local HTTP + Feishu long-connection process.
-- **Remote Session Inbox**: `.labline/feishu-control/inbox/<session_id>.jsonl`.
-- **Feishu-Controlled Session**: a legacy registered session consumed by `tools/labline_feishu_session.py`.
-- **Control Lease**: input ownership marker. Feishu messages can take remote priority; `/release` returns control to local.
+## 术语
 
-See [CONTEXT.md](../CONTEXT.md) for stable terminology. Detailed ADRs are kept in the dev checkout and are not part of stable releases.
+- **推荐 Bridge**：`lark-channel-bridge`，外部飞书 / Lark 传输适配器，连接本地 Codex CLI 或 Claude Code。
+- **Legacy Feishu Bridge**：`mcp-servers/feishu-bridge/server.py`，本地 HTTP 加飞书长连接进程。
+- **Remote Session Inbox**：`.labline/feishu-control/inbox/<session_id>.jsonl`。
+- **Feishu-Controlled Session**：旧方案里由 `tools/labline_feishu_session.py` 消费的注册会话。
+- **Control Lease**：输入所有权标记。飞书消息可以临时取得远程优先权；`/release` 交还给本地。
 
-## Legacy Feishu App Setup
+稳定术语见 [CONTEXT.md](../CONTEXT.md)。详细 ADR 保存在 dev checkout 中，不属于稳定发布文档。
 
-Create an internal app at <https://open.feishu.cn/app>.
+## Legacy 飞书应用配置
 
-Required app capability:
+在 <https://open.feishu.cn/app> 创建内部应用。
+
+需要启用的应用能力：
 
 - Bot
 
-Required permissions:
+需要的权限：
 
 - `im:message`
 - `im:message:send_as_bot`
 - `im:message.p2p_msg:readonly`
 - `im:message.group_at_msg:readonly`
 
-Required event:
+需要订阅的事件：
 
 - `im.message.receive_v1`
 
-Use long connection mode for local/server deployment. After changing permissions or events, create and publish a new app version. Ensure app visibility includes your account.
+本地 / 服务器部署时使用长连接模式。修改权限或事件后，创建并发布一个新应用版本。确认应用可见范围包含你的账号。
 
-## Legacy Local Config
+## Legacy 本地配置
 
-Create `.env` in the framework or project root. Do not commit it.
+在 framework 或项目根目录创建 `.env`。不要提交这个文件。
 
 ```bash
 FEISHU_APP_ID=cli_xxx
@@ -147,22 +169,22 @@ LABLINE_PROJECT_ROOT=/lane/lane-dev
 LABLINE_FEISHU_CONTROL_ROOT=
 ```
 
-`FEISHU_USER_ID` must match `FEISHU_RECEIVE_ID_TYPE`:
+`FEISHU_USER_ID` 必须和 `FEISHU_RECEIVE_ID_TYPE` 匹配：
 
-| ID value | `FEISHU_RECEIVE_ID_TYPE` |
-|----------|---------------------------|
+| ID 值 | `FEISHU_RECEIVE_ID_TYPE` |
+|-------|---------------------------|
 | `ou_...` | `open_id` |
 | tenant user id | `user_id` |
 | union id | `union_id` |
 
-Install Python deps:
+安装 Python 依赖：
 
 ```bash
 python3 -m venv .venv-feishu
 .venv-feishu/bin/pip install -r mcp-servers/feishu-bridge/requirements.txt
 ```
 
-If network fails because of proxy mismatch, make upper/lower proxy env vars consistent:
+如果因为代理不一致导致网络失败，把大小写 proxy 环境变量设成一致：
 
 ```bash
 export HTTP_PROXY=http://127.0.0.1:7897
@@ -173,11 +195,11 @@ export NO_PROXY=127.0.0.1,localhost
 export no_proxy=127.0.0.1,localhost
 ```
 
-Adjust port to your local proxy.
+端口按你的本地代理实际配置调整。
 
-## Start Legacy Bridge
+## 启动 Legacy Bridge
 
-Terminal 1:
+终端 1：
 
 ```bash
 cd /lane/lane-dev
@@ -187,14 +209,14 @@ export LABLINE_PROJECT_ROOT=/lane/lane-dev
 .venv-feishu/bin/python mcp-servers/feishu-bridge/server.py
 ```
 
-Expected output includes:
+预期输出包含：
 
 ```text
 Feishu WS receiver enabled
 connected to wss://msg-frontier.feishu.cn/ws/v2...
 ```
 
-Smoke test:
+Smoke test：
 
 ```bash
 curl -sS http://127.0.0.1:5000/health
@@ -203,9 +225,9 @@ curl -sS -X POST http://127.0.0.1:5000/send \
   -d '{"type":"text","content":"Labline Feishu bridge live test"}'
 ```
 
-## Start Legacy Codex Runner
+## 启动 Legacy Codex Runner
 
-Terminal 2:
+终端 2：
 
 ```bash
 cd /lane/lane-dev
@@ -217,9 +239,13 @@ cd /lane/lane-dev
   --bridge-url http://127.0.0.1:5000
 ```
 
-Codex replies are sent back to Feishu as interactive cards by default, so basic Markdown renders in Feishu. Use `--feishu-format text` to send plain text instead.
+Codex 回复默认以飞书交互卡片发送，所以基础 Markdown 可以在飞书里渲染。需要纯文本时使用：
 
-YOLO mode passes Codex `--dangerously-bypass-approvals-and-sandbox`:
+```bash
+--feishu-format text
+```
+
+YOLO 模式会给 Codex 传入 `--dangerously-bypass-approvals-and-sandbox`：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -232,23 +258,25 @@ YOLO mode passes Codex `--dangerously-bypass-approvals-and-sandbox`:
   --yolo
 ```
 
-Use YOLO only on a trusted machine and trusted project. In this mode, Codex can run commands without approval prompts.
+只在可信机器和可信项目中使用 YOLO。该模式下 Codex 可以不经过审批提示直接运行命令。
 
-Then send a private message to the Feishu bot. Flow:
+然后给飞书 bot 发私聊消息。流程是：
 
 ```text
 Feishu -> bridge -> Remote Session Inbox -> codex exec -> outbox -> Feishu
 ```
 
-## Live TUI Takeover
+## Live TUI 接管
 
-If the Codex CLI you are looking at is inside tmux, Feishu can inject messages into that exact live thread:
+如果你正在看的 Codex CLI 位于 tmux 内，飞书可以把消息注入到这个正在运行的 live thread。
+
+先列出 tmux pane：
 
 ```bash
 tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_pid} #{pane_current_command}'
 ```
 
-Start the runner in live injection mode:
+用 live injection 模式启动 runner：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -260,9 +288,9 @@ Start the runner in live injection mode:
   --feishu-status-interval-seconds 15
 ```
 
-This sends Feishu messages directly into the active Codex TUI, waits 0.5 seconds, then submits with `Enter` by default. The bridge silently queues inbound messages by default; the runner updates one status card while Codex is processing and sends the final `task_complete.last_agent_message` back to Feishu.
+这个模式会把飞书消息直接输入到当前 Codex TUI，等待 0.5 秒，然后默认用 `Enter` 提交。bridge 默认静默排队入站消息；runner 会在 Codex 处理期间更新一张状态卡，最后把 `task_complete.last_agent_message` 发回飞书。
 
-Status card body is intentionally minimal:
+状态卡正文刻意保持很短：
 
 ```text
 `leader-phone` · 已收到信息 · 0s
@@ -271,58 +299,58 @@ Status card body is intentionally minimal:
 `leader-phone` · 已完成 · 61s
 ```
 
-Use plain status text explicitly:
+显式使用纯文本状态：
 
 ```bash
 --feishu-status-style plain
 ```
 
-Timeout updates the same card:
+超时时会更新同一张卡：
 
 ```text
 `leader-phone` · 超时，未收到最终回复
 ```
 
-To restore the old extra queue acknowledgement message, set:
+如果想恢复旧的额外队列确认消息，设置：
 
 ```bash
 FEISHU_SEND_QUEUE_ACK=1
 ```
 
-If your TUI still inserts a newline instead of submitting, increase the delay or try a different submit key:
+如果你的 TUI 仍然换行而不是提交，增加延迟或换一个提交键：
 
 ```bash
 --tmux-submit-delay-seconds 1.0
 --tmux-submit-key Enter
 ```
 
-If the runner cannot locate the right Codex transcript automatically, bind it explicitly:
+如果 runner 无法自动定位正确的 Codex transcript，显式绑定：
 
 ```bash
 --codex-transcript ~/.codex/sessions/YYYY/MM/DD/rollout-....jsonl
 ```
 
-Disable transcript mirroring if you only want injection acknowledgements:
+如果只需要注入确认，不想镜像 transcript 回复：
 
 ```bash
 --no-watch-codex-response
 ```
 
-Disable heartbeat cards:
+关闭 heartbeat 卡片：
 
 ```bash
 --no-feishu-status-updates
 ```
 
-Force old behavior that sends a new status message each interval:
+强制使用旧行为：每次状态间隔发送一条新消息：
 
 ```bash
 --feishu-status-mode send
 ```
 
-Do not run live injection and fresh `codex exec` runner for the same `--session-id` at the same time; they will compete for the same inbox.
+不要对同一个 `--session-id` 同时运行 live injection 和 fresh `codex exec` runner；它们会竞争同一个 inbox。
 
-Continue newest saved Codex conversation:
+继续最新保存的 Codex 对话：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -332,9 +360,9 @@ Continue newest saved Codex conversation:
   --resume-last
 ```
 
-Do not use `--resume-last` while the newest Codex session is an active TUI you are currently using. `codex exec resume --last` can attach to that live session, while `--output-last-message` remains empty; the runner will then report that Codex produced no final message. Prefer fresh exec mode, or bind a specific inactive session with `--codex-session-id`.
+如果最新 Codex session 是你正在使用的活跃 TUI，不要用 `--resume-last`。`codex exec resume --last` 可能附着到这个 live session，而 `--output-last-message` 仍为空；runner 会报告 Codex 没有产生最终回复。此时优先使用 fresh exec 模式，或通过 `--codex-session-id` 绑定一个明确的非活跃 session。
 
-If the inbox already contains old messages and you do not want to replay them:
+如果 inbox 里已有旧消息，并且你不想重放：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -345,7 +373,7 @@ If the inbox already contains old messages and you do not want to replay them:
   --once
 ```
 
-Bind a specific saved Codex conversation:
+绑定指定的已保存 Codex 对话：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -355,32 +383,32 @@ Bind a specific saved Codex conversation:
   --codex-session-id <codex-session-id>
 ```
 
-## Legacy Feishu Commands
+## Legacy 飞书命令
 
-| Message | Effect |
-|---------|--------|
-| plain text | Sent to active session inbox |
-| `$skill ...` | Sent to Codex runner as normal text; Codex decides skill/tool use |
-| `/sessions` | List registered sessions |
-| `/use <session_id>` | Switch active session |
-| `@<session_id> message` | Route one message to a specific session |
-| `/release` | Release Feishu Control Lease back to local |
-| `/interrupt` | Interrupt the current live Codex TUI task with tmux `C-c` |
-| `/btw <question>` | Ask a side-channel question using current transcript context; status updates in Feishu; answer returns to Feishu and does not enter the main CLI thread |
-| `/approve <code>` | Approve one pending action |
-| `/reject <code>` | Reject one pending action |
-| `/resume <target>` | Record resume intent |
+| 消息 | 作用 |
+|------|------|
+| 普通文本 | 发送到活跃 session inbox |
+| `$skill ...` | 作为普通文本发给 Codex runner；是否调用 skill/tool 由 Codex 判断 |
+| `/sessions` | 列出已注册 session |
+| `/use <session_id>` | 切换活跃 session |
+| `@<session_id> message` | 将一条消息路由给指定 session |
+| `/release` | 把 Feishu Control Lease 交还给本地 |
+| `/interrupt` | 用 tmux `C-c` 中断当前 live Codex TUI 任务 |
+| `/btw <question>` | 用当前 transcript 上下文问一个旁路问题；状态在飞书更新；答案回到飞书但不进入主 CLI thread |
+| `/approve <code>` | 批准一个 pending action |
+| `/reject <code>` | 拒绝一个 pending action |
+| `/resume <target>` | 记录 resume 意图 |
 
-Rejected commands:
+被拒绝的命令：
 
 - `/run ...`
 - `/tool ...`
 
-These are intentionally not executed by the legacy bridge.
+旧 bridge 会刻意拒绝执行这些命令。
 
-## Legacy Runtime Files
+## Legacy 运行时文件
 
-Default root:
+默认根目录：
 
 ```text
 .labline/feishu-control/
@@ -393,13 +421,13 @@ Default root:
   responses/<session_id>/*.txt
 ```
 
-These files are project runtime state and are ignored by Git.
+这些文件是项目运行时状态，已被 Git 忽略。
 
-## Legacy Phone Session Merge
+## Legacy 手机会话合并
 
-Phone control is treated as a fork. Do not rely on hidden Codex context moving from phone runner back into the local TUI. Merge only auditable state.
+手机控制会话视为一个 fork。不要假设手机 runner 的隐藏 Codex 上下文会自动回到本地 TUI。只合并可审计状态。
 
-Generate a report:
+生成报告：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -408,7 +436,7 @@ Generate a report:
   --write-report
 ```
 
-Generate a report and print a local merge prompt:
+生成报告并打印本地合并 prompt：
 
 ```bash
 .venv-feishu/bin/python tools/labline_feishu_session.py \
@@ -417,13 +445,13 @@ Generate a report and print a local merge prompt:
   --merge-prompt
 ```
 
-The report includes inbox messages, outbox responses, runner state, `git status --short`, and `git diff --stat`. Use the printed prompt in the local Codex thread after returning to the computer.
+报告包含 inbox 消息、outbox 回复、runner 状态、`git status --short` 和 `git diff --stat`。回到电脑后，把打印出的 prompt 用在本地 Codex thread 里。
 
-The same fallback workflow is exposed as the `feishu-session` skill.
+同一 fallback workflow 也暴露为 `feishu-session` skill。
 
-## Testing
+## 测试
 
-Run focused tests:
+运行聚焦测试：
 
 ```bash
 .venv-feishu/bin/python -m pytest \
@@ -433,46 +461,46 @@ Run focused tests:
   tests/test_agent_status.py -q
 ```
 
-Manual live checks:
+手动 live 检查：
 
 ```bash
 curl -sS http://127.0.0.1:5000/health
 curl -sS http://127.0.0.1:5000/control/sessions
 ```
 
-Send a private message to the bot and check:
+给 bot 发私聊消息，然后检查：
 
 ```bash
 tail -5 .labline/feishu-control/inbox/<session_id>.jsonl
 tail -5 .labline/feishu-control/outbox/<session_id>.jsonl
 ```
 
-## Troubleshooting
+## 排障
 
-**Local can send to Feishu, but Feishu cannot message bot**
+**本地能发到飞书，但飞书不能发消息给 bot**
 
-- Bot capability not enabled.
-- App version not published.
-- App visibility does not include your account.
-- Missing `im:message.p2p_msg:readonly`.
-- Missing `im.message.receive_v1` event.
-- Long connection not running.
+- Bot 能力未启用。
+- 应用版本未发布。
+- 应用可见范围不包含你的账号。
+- 缺少 `im:message.p2p_msg:readonly`。
+- 缺少 `im.message.receive_v1` 事件。
+- 长连接没有运行。
 
 **`Invalid ids`**
 
-`FEISHU_USER_ID` does not match `FEISHU_RECEIVE_ID_TYPE`. For `ou_...`, use `open_id`.
+`FEISHU_USER_ID` 和 `FEISHU_RECEIVE_ID_TYPE` 不匹配。`ou_...` 使用 `open_id`。
 
-**No inbound messages**
+**收不到入站消息**
 
-Confirm bridge output says connected to `msg-frontier.feishu.cn`. If not, check app event mode and published version.
+确认 bridge 输出里有连接到 `msg-frontier.feishu.cn`。如果没有，检查应用事件模式和已发布版本。
 
 **Proxy connection refused**
 
-Uppercase and lowercase proxy env vars may point to different ports. Make them consistent.
+大小写 proxy 环境变量可能指向不同端口。把它们设成一致。
 
-## Legacy Limitations
+## Legacy 限制
 
-- The legacy fresh runner path invokes `codex exec` or `codex exec resume` for each Feishu message.
-- Approval UI cards/buttons are backend-ready but not yet polished as interactive cards.
-- The legacy bridge executes no tools. This is deliberate.
-- The legacy path is Codex-oriented; use `lark-channel-bridge` for the default Codex + Claude Code remote-control bridge.
+- legacy fresh runner 路径会对每条飞书消息调用一次 `codex exec` 或 `codex exec resume`。
+- 审批 UI 卡片 / 按钮后端已就绪，但交互卡片体验尚未打磨。
+- legacy bridge 不执行 tools。这是有意设计。
+- legacy 路径偏 Codex；默认 Codex + Claude Code 远控请使用 `lark-channel-bridge`。
