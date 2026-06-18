@@ -156,7 +156,7 @@ Locate the fetch script and search arXiv directly:
 ```bash
 # Try to find arxiv_fetch.py
 SCRIPT=$(find tools/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
-# If not found, check ARIS install
+# If not found, check Labline install
 [ -z "$SCRIPT" ] && SCRIPT=$(find ~/.claude/skills/arxiv/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
 
 # Search arXiv API for structured results (title, abstract, authors, categories)
@@ -376,12 +376,12 @@ chain documented in
 
 ```bash
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills.txt 2>/dev/null)}"
-WIKI_SCRIPT=".aris/tools/research_wiki.py"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills.txt 2>/dev/null)}"
+WIKI_SCRIPT=".labline/tools/research_wiki.py"
 [ -f "$WIKI_SCRIPT" ] || WIKI_SCRIPT="tools/research_wiki.py"
-[ -f "$WIKI_SCRIPT" ] || { [ -n "${ARIS_REPO:-}" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"; }
+[ -f "$WIKI_SCRIPT" ] || { [ -n "${LABLINE_REPO:-}" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"; }
 [ -f "$WIKI_SCRIPT" ] || {
-  echo "WARN: research_wiki.py not found; literature synthesis will be reported but wiki ingest will be skipped. Fix: bash tools/install_aris.sh, export ARIS_REPO, or cp <ARIS-repo>/tools/research_wiki.py tools/." >&2
+  echo "WARN: research_wiki.py not found; literature synthesis will be reported but wiki ingest will be skipped. Fix: bash tools/install_labline.sh, export LABLINE_REPO, or cp <Labline-repo>/tools/research_wiki.py tools/." >&2
   WIKI_SCRIPT=""
 }
 ```
@@ -409,7 +409,7 @@ WIKI_SCRIPT=".aris/tools/research_wiki.py"
 (skips an existing paper by arXiv id), page rendering, `index.md`
 rebuild, `query_pack.md` rebuild, and log append in a single call —
 **do not manually write `papers/<slug>.md`**. If the helper is
-unavailable (e.g., offline on a non-ARIS machine, or `$WIKI_SCRIPT`
+unavailable (e.g., offline on a non-Labline machine, or `$WIKI_SCRIPT`
 empty), log the gap and let `/research-wiki sync --arxiv-ids …`
 backfill later.
 

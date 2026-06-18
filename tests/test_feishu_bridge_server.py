@@ -358,7 +358,7 @@ class TestHttpHandlerRouting(unittest.TestCase):
         responses = self._make_handler(
             "POST",
             "/update",
-            body=json.dumps({"message_id": "om_1", "title": "ARIS 状态", "body": "处理中 30s"}),
+            body=json.dumps({"message_id": "om_1", "title": "Labline 状态", "body": "处理中 30s"}),
         )
         self.assertEqual(len(responses), 1)
         status, data = responses[0]
@@ -368,7 +368,7 @@ class TestHttpHandlerRouting(unittest.TestCase):
 
     def test_control_register_and_message_routes_to_inbox(self):
         with tempfile.TemporaryDirectory() as tmp:
-            env = {"ARIS_FEISHU_CONTROL_ROOT": tmp}
+            env = {"LABLINE_FEISHU_CONTROL_ROOT": tmp}
             register_body = json.dumps(
                 {
                     "session_id": "leader-1",
@@ -398,7 +398,7 @@ class TestHttpHandlerRouting(unittest.TestCase):
 
     def test_control_message_rejects_bridge_shell_execution(self):
         with tempfile.TemporaryDirectory() as tmp:
-            env = {"ARIS_FEISHU_CONTROL_ROOT": tmp}
+            env = {"LABLINE_FEISHU_CONTROL_ROOT": tmp}
             self._make_handler(
                 "POST",
                 "/control/register",
@@ -418,7 +418,7 @@ class TestHttpHandlerRouting(unittest.TestCase):
 
     def test_control_respond_records_session_outbox_message(self):
         with tempfile.TemporaryDirectory() as tmp:
-            env = {"ARIS_FEISHU_CONTROL_ROOT": tmp}
+            env = {"LABLINE_FEISHU_CONTROL_ROOT": tmp}
             self._make_handler(
                 "POST",
                 "/control/register",

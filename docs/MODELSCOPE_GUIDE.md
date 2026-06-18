@@ -1,6 +1,6 @@
 # ModelScope（魔搭社区）接入指南
 
-本文档说明如何使用 [ModelScope](https://www.modelscope.cn/) 的免费 API 驱动 ARIS 全流程，无需 Claude 或 OpenAI API。
+本文档说明如何使用 [ModelScope](https://www.modelscope.cn/) 的免费 API 驱动 Labline 全流程，无需 Claude 或 OpenAI API。
 
 ---
 
@@ -10,7 +10,7 @@
 
 [ModelScope（魔搭社区）](https://www.modelscope.cn/) 是阿里达摩院推出的开源模型即服务（MaaS）平台，提供 1000+ 开源模型的免费 API 推理服务，同时兼容 OpenAI 和 Anthropic 两大主流 API 协议。
 
-### 为什么适合 ARIS
+### 为什么适合 Labline
 
 - **免费**：注册即送每日 2000 次 API 调用，无需付费套餐
 - **一个 Key 双协议**：同一个 `ms-xxx` API Key 同时支持 Anthropic 和 OpenAI 兼容端点
@@ -30,7 +30,7 @@
 
 ### 为什么不能直接用 Codex MCP
 
-原版 ARIS 的审查器使用 Codex MCP，而 Codex CLI 硬编码调用 OpenAI 专有的 **Responses API** (`/v1/responses`)，第三方 API 提供商（包括 ModelScope）均不支持该接口。
+原版 Labline 的审查器使用 Codex MCP，而 Codex CLI 硬编码调用 OpenAI 专有的 **Responses API** (`/v1/responses`)，第三方 API 提供商（包括 ModelScope）均不支持该接口。
 
 **解决方案**：使用项目内置的 `llm-chat` MCP 服务器，它调用标准 **Chat Completions API** (`/v1/chat/completions`)，兼容所有 OpenAI 兼容端点，包括 ModelScope。
 
@@ -38,7 +38,7 @@
 
 ## 双层架构
 
-ModelScope 同时提供两套 API 端点，分别对应 ARIS 的两个角色：
+ModelScope 同时提供两套 API 端点，分别对应 Labline 的两个角色：
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -161,7 +161,7 @@ Claude Code 会自动扫描并改写所有相关 skill。
 | 备选：速度优先 | `Qwen/Qwen3-Coder-30B-A3B-Instruct` | `Qwen/Qwen3-235B-A22B-Instruct` | Qwen 系列，代码能力优秀 |
 | 备选：跨模型 | `deepseek-ai/DeepSeek-V3.1` | `Qwen/Qwen3-235B-A22B-Instruct` | 不同模型族，更强对抗性 |
 
-> **关于跨模型优势**：ARIS 的核心设计是执行器和审查器使用不同模型，形成真正的反馈循环。推荐使用不同模型族（如 DeepSeek 执行 + Qwen 审查）以最大化对抗性。
+> **关于跨模型优势**：Labline 的核心设计是执行器和审查器使用不同模型，形成真正的反馈循环。推荐使用不同模型族（如 DeepSeek 执行 + Qwen 审查）以最大化对抗性。
 
 ---
 
@@ -249,7 +249,7 @@ claude
 | API Key 数量 | 2 个 | 1 个 | **1 个** | 2 个 |
 | 配置指南 | README | ALI_CODING_PLAN_GUIDE | **本文档** | LLM_API_MIX_MATCH_GUIDE |
 
-**ModelScope 的独特优势**：免费 + 无自动化限制 + 一个 Key，是最低门槛的 ARIS 接入方式。
+**ModelScope 的独特优势**：免费 + 无自动化限制 + 一个 Key，是最低门槛的 Labline 接入方式。
 
 ---
 

@@ -1,4 +1,4 @@
-# ARIS Agent Guide
+# Labline Agent Guide
 
 > **给 AI agent 看的工具手册。** 人类用户请看 [QUICK_START.md](../../QUICK_START.md) 和 [docs/OPERATIONS_GUIDE.md](../../docs/OPERATIONS_GUIDE.md)。
 
@@ -39,7 +39,7 @@
 
 - Agent 启动、进入长任务、遇阻塞、完成时更新自己的 Agent Status File
 - 长训练、下载、队列、远程部署必须写 job handle（tmux/screen/watchdog/queue/log/result path）
-- 不手写 JSON；优先用 `.aris/tools/agent_status.py`
+- 不手写 JSON；优先用 `.labline/tools/agent_status.py`
 - Leader 只读状态摘要，不把状态流当任务队列或 agent 聊天室
 
 ### 5. 角色边界
@@ -47,7 +47,7 @@
 详见 `role-contracts.md`（同目录）。
 
 - **Leader** 只读/判/派。不写代码、不跑命令、不画图
-- **Executor** → 三种专用角色：Coder / Deployer / Writer
+- **Executor** → 三种主执行角色：Coder / Deployer / Writer
 - **Reviewer** 只看原始文件，不看 Executor 转述
 
 ### 6. Executor 角色分层

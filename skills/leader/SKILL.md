@@ -1,6 +1,6 @@
 ---
 name: leader
-description: "三边架构总编排：自动用 Agent 工具派生 Executor、Codex MCP 调 Reviewer。一个窗口全流程。"
+description: "三边架构总编排：自动派生 Coder/Deployer/Writer，并调独立 Reviewer。一个窗口全流程。"
 argument-hint: [research-direction-or-plan-path]
 allowed-tools: Read, Grep, Glob, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply, WebSearch, WebFetch
 caller: leader
@@ -8,6 +8,9 @@ platform: both
 status: active
 invokes:
   - experiment-plan
+  - coder
+  - deployer
+  - writer
   - tdd
   - diagnose
   - run-experiment
@@ -39,6 +42,8 @@ examples:
 | Writer | `gpt-5.4` | `model: "gpt-5.4"` |
 | Reviewer | `gpt-5.4` | 独立 reviewer agent / review transport |
 
+备用切换：`cc-switch provider switch deepseek`（会话级，整体切）。
+
 ## 核心规则
 
 ### Leader 只做三件事
@@ -47,7 +52,7 @@ examples:
 |------|------|
 | **读** — 读代码、读输出、读日志，了解状态 | Read, Grep, Glob |
 | **判** — 判断 gate 是否通过、方向是否继续、权限是否就绪 | 大脑 + Reviewer |
-| **派** — 把实现/实验/画图/写作分发给 Executor Agent | Agent, Skill |
+| **派** — 把实现/实验/画图/写作任务分发给专用 agent | Agent, Skill |
 
 **除此之外一律不做。** 不管 Agent 有没有权限、有没有能力，Leader 都不替代执行。
 
@@ -79,7 +84,7 @@ examples:
 
 - 通过独立 reviewer agent 或 review transport 调用 GPT-5.4 做独立审查。
 - 维护 `PIPELINE_STATE.json`，每个 stage 完成后更新。
-- 读取 `.aris/status/agents/*.json` 或 `.aris/tools/agent_status.py summary` 获取运行中 agent 状态；Leader 不编辑 agent-owned status file。
+- 读取 `.labline/status/agents/*.json` 或 `.labline/tools/agent_status.py summary` 获取运行中 agent 状态；Leader 不编辑 agent-owned status file。
 - `MAX_CONSECUTIVE_FAILURES=3`，超过触发止损审查。
 - `AUTO_PROCEED=true`，Gate 自动通过。
 
@@ -102,7 +107,7 @@ examples:
 所有派生 agent 遵循 `skills/shared-references/agent-status-stream.md`：
 
 - Leader 派发任务时给出 `agent_id`
-- Agent 启动、进入长任务、阻塞、完成时用 `.aris/tools/agent_status.py` 写自己的状态文件
+- Agent 启动、进入长任务、阻塞、完成时用 `.labline/tools/agent_status.py` 写自己的状态文件
 - 长运行任务必须写 job handle（tmux/screen/watchdog/queue/log/result path）
 - Leader 到达 `next_expected_update` 后可自动做只读检查
 - Leader 不通过状态流重启任务、杀进程、部署代码、改配置或修改产物
@@ -130,7 +135,7 @@ mcp__codex__codex:
 | 本地工具可用 | `git`、`python`、`tmux`、`ssh`、`rsync`、`scp` 按任务需要检查 `command -v` |
 | GPU 可见性 | 本地任务检查 `nvidia-smi`；远程任务让 Deployer 检查目标机 |
 | 远程配置 | `project.yaml` / `CLAUDE.md` 中是否有目标服务器、数据路径、输出路径 |
-| ARIS 状态目录 | 项目 `.aris/` 与框架级 `~/.aris/` 可写 |
+| Labline 状态目录 | 项目 `.labline/` 与框架级 `~/.labline/` 可写 |
 
 缺失项 → **不自己修。** 输出“缺什么、为什么需要、用户可执行的最小命令”，等确认后继续。不要让 Codex 用户修改 Claude Code 权限文件。
 
@@ -141,7 +146,7 @@ mcp__codex__codex:
 完成后告诉我，我继续。
 ```
 
-Claude Code 兼容模式：只有当用户明确在 Claude Code 中运行 ARIS，才额外检查 `.claude/settings.local.json` 的 `permissions.allow`。这属于兼容层提示，不是 Codex 默认阻塞条件。
+Claude Code 兼容模式：只有当用户明确在 Claude Code 中运行 Labline，才额外检查 `.claude/settings.local.json` 的 `permissions.allow`。这属于兼容层提示，不是 Codex 默认阻塞条件。
 
 ---
 
@@ -181,7 +186,7 @@ Agent:
 
     ## 约束
     - caveman 模式开启
-    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=coder-${pipeline_id}-phase2 的状态
+    - 用 .labline/tools/agent_status.py start/update/finish 写 agent_id=coder-${pipeline_id}-phase2 的状态
     - 遵循 executor-blocked-protocol：遇阻塞先自行尝试 2 种绕过，全失败写 BLOCKED_REPORT.md 后停止
     - 不走自审、偏离计划写 IMPLEMENTATION_DEVIATIONS.json、无偏离写 no-deviation 声明
     - 只写代码不部署。完成后列出所有文件路径
@@ -220,7 +225,7 @@ Agent:
 
     ## 约束
     - caveman 模式开启
-    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=deployer-${pipeline_id}-sanity 的状态
+    - 用 .labline/tools/agent_status.py start/update/finish 写 agent_id=deployer-${pipeline_id}-sanity 的状态
     - 启动远程训练后必须写 job handle 和 next_expected_update
     - 遵循 executor-blocked-protocol
     - 禁止 tail -f 轮询，用 Monitor 或 run_in_background
@@ -254,7 +259,7 @@ Agent:
 
     ## 约束
     - caveman 模式开启
-    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=deployer-${pipeline_id}-full 的状态
+    - 用 .labline/tools/agent_status.py start/update/finish 写 agent_id=deployer-${pipeline_id}-full 的状态
     - 每个长运行任务必须写 job handle 和 next_expected_update；正式训练前 20 分钟每 +5m 更新/检查一次，稳定后 +30m 到 +60m
     - 遵循 executor-blocked-protocol
     - 禁止 tail 轮询
@@ -305,7 +310,7 @@ Agent:
     用 /paper-writing 或直接写论文。
 
     ## 约束
-    - 用 .aris/tools/agent_status.py start/update/finish 写 agent_id=writer-${pipeline_id}-paper 的状态
+    - 用 .labline/tools/agent_status.py start/update/finish 写 agent_id=writer-${pipeline_id}-paper 的状态
     - 学术严谨：claim 必须有实验结果支撑，不夸大
     - 数据一致：论文中的数字必须与实验结果文件一致
 ```

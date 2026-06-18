@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end drill: simulate the full ARIS experiment chain.
+"""End-to-end drill: simulate the full Labline experiment chain.
 
 Walks through plan → bridge → audit → result-to-claim using the toy
 CIFAR-10 scenario with two deliberately injected failures:
@@ -538,7 +538,7 @@ def run_drill():
     """Execute the full e2e drill and return (audit, claim_verdict)."""
 
     print("=" * 70)
-    print("  ARIS End-to-End Drill: ToyClassifier on CIFAR-10")
+    print("  Labline End-to-End Drill: ToyClassifier on CIFAR-10")
     print("  Injected failures: wrong split + dead code path")
     print("=" * 70)
 

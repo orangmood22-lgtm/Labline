@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check whether ARIS is ready to create a framework release tag."""
+"""Check whether Labline is ready to create a framework release tag."""
 
 from __future__ import annotations
 
@@ -107,6 +107,14 @@ def changelog_has_version(repo: Path, version: str) -> bool:
     return re.search(pattern, text, flags=re.MULTILINE) is not None
 
 
+def development_log_ready(repo: Path) -> bool:
+    path = repo / "to-developer" / "20260613-DEVELOPMENT_LOG.md"
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8")
+    return "## [Unreleased]" in text and "- Pending." not in text
+
+
 def minor_release_files_exist(repo: Path) -> List[str]:
     required = [
         "docs/SKILL_CATALOG.md",
@@ -147,6 +155,8 @@ def collect_errors(repo: Path, version: str, release_kind: str, skip_git_state: 
     if not changelog_has_version(repo, version):
         today = date.today().isoformat()
         errors.append(f"CHANGELOG.md must contain: ## [{version}] - {today}")
+    if not development_log_ready(repo):
+        errors.append("to-developer/20260613-DEVELOPMENT_LOG.md must exist and contain non-placeholder Unreleased entries")
     if release_kind == "minor":
         missing = minor_release_files_exist(repo)
         if missing:

@@ -19,14 +19,14 @@ examples:
    - Any reference materials to include?
 
 2. **DAG dependency check** - BEFORE drafting:
-   - Resolve `ARIS_REPO` from `.aris/installed-skills-codex.txt`
-   - Run `python3 "$ARIS_REPO/tools/generate_skill_dag.py" --check-only` to load current DAG
+   - Resolve `LABLINE_REPO` from `.labline/installed-skills-codex.txt`
+   - Run `python3 "$LABLINE_REPO/tools/generate_skill_dag.py" --check-only` to load current DAG
    - If **modifying** existing skill: check `docs/SKILL_DAG.yaml` for downstream dependents
      - `invoked_by` lists skills that call this one → changes may break them
      - `invokes` lists skills this one depends on → renaming breaks callers
    - If **creating** new skill: ask what skills it will invoke → fill `invokes` field
    - If **removing** skill: warn about all downstream dependents, list them
-   - Run `python3 "$ARIS_REPO/tools/generate_skill_dag.py" --mermaid --html` after changes to update DAG
+   - Run `python3 "$LABLINE_REPO/tools/generate_skill_dag.py" --mermaid --html` after changes to update DAG
 
 3. **Draft the skill** - create:
    - SKILL.md with concise instructions
@@ -141,4 +141,4 @@ After drafting, verify:
 - [ ] `caller` field set (leader/executor/any)
 - [ ] `invokes` field lists all skill invocations (if any)
 - [ ] `produces`/`consumes` fields declare artifacts (if any)
-- [ ] DAG regenerated: `python3 "$ARIS_REPO/tools/generate_skill_dag.py" --mermaid --html`
+- [ ] DAG regenerated: `python3 "$LABLINE_REPO/tools/generate_skill_dag.py" --mermaid --html`

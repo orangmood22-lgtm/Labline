@@ -2,16 +2,16 @@
 
 [中文版](SESSION_RECOVERY_GUIDE_CN.md) | English
 
-> How to maintain project state across sessions and context compaction in ARIS workflows — the core design is **Pipeline Status in your project CLAUDE.md**, with optional Claude Code hooks for automation.
+> How to maintain project state across sessions and context compaction in Labline workflows — the core design is **Pipeline Status in your project CLAUDE.md**, with optional Claude Code hooks for automation.
 
 ## Why Session Recovery Matters
 
-ARIS workflows can run for hours (idea discovery, auto-review loops, overnight training). Two things regularly break state continuity:
+Labline workflows can run for hours (idea discovery, auto-review loops, overnight training). Two things regularly break state continuity:
 
 1. **Context compaction** — when the context window fills up, Claude Code auto-compresses prior messages. After compaction, the LLM only has a compressed summary and may forget which stage you're in, what experiments are running, or what to do next.
 2. **Proactive new sessions** — LLM capability degrades noticeably when context usage exceeds ~50%. Experienced users proactively start fresh sessions to restore full model capability, rather than waiting for auto-compaction. This means the LLM must reconstruct project state from disk.
 
-ARIS already persists some state to files (`review-stage/REVIEW_STATE.json`, `review-stage/AUTO_REVIEW.md`), but **there is no systematic mechanism to ensure the LLM reads those files on recovery**. After compaction, it often doesn't.
+Labline already persists some state to files (`review-stage/REVIEW_STATE.json`, `review-stage/AUTO_REVIEW.md`), but **there is no systematic mechanism to ensure the LLM reads those files on recovery**. After compaction, it often doesn't.
 
 ## The Core Solution: Pipeline Status
 
@@ -141,13 +141,13 @@ cat > ~/.claude/hooks/session-restore.sh << 'HOOKEOF'
 # Fires once per session (first tool call only).
 # Customize RESEARCH_ROOT to your project parent directory.
 
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
 
 # Once per session (PID-based flag)
-FLAG="/tmp/aris-session-restore-$$"
+FLAG="/tmp/labline-session-restore-$$"
 [ -f "$FLAG" ] && exit 0
 touch "$FLAG"
 
@@ -226,12 +226,12 @@ cat > ~/.claude/hooks/context-refresh.sh << 'HOOKEOF'
 # Throttled to once every 30 tool calls.
 
 INPUT=$(cat)
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
 
-COUNTER_FILE="/tmp/aris-context-refresh-counter"
+COUNTER_FILE="/tmp/labline-context-refresh-counter"
 COUNT=0
 [ -f "$COUNTER_FILE" ] && COUNT=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 COUNT=$((COUNT + 1))
@@ -266,7 +266,7 @@ cat > ~/.claude/hooks/pre-compact-remind.sh << 'HOOKEOF'
 #!/bin/bash
 # PreCompact hook: remind LLM to save state before context compaction.
 
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
@@ -297,7 +297,7 @@ case "$TOOL_NAME" in
   *) exit 0 ;;
 esac
 
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
 
@@ -307,7 +307,7 @@ case "$FILE_PATH" in
     exit 0 ;;
 esac
 
-COUNTER_FILE="/tmp/aris-progress-remind-counter"
+COUNTER_FILE="/tmp/labline-progress-remind-counter"
 COUNT=0
 [ -f "$COUNTER_FILE" ] && COUNT=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 COUNT=$((COUNT + 1))
@@ -374,7 +374,7 @@ Add to `~/.claude/settings.json` (merge with existing hooks):
 #### 4. Set your research root (optional)
 
 ```bash
-export ARIS_RESEARCH_ROOT="$HOME/my-projects"  # default: ~/research
+export LABLINE_RESEARCH_ROOT="$HOME/my-projects"  # default: ~/research
 ```
 
 ## How It All Fits Together

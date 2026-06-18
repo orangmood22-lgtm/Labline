@@ -1,8 +1,8 @@
-# Antigravity Adaptation Guide (ARIS Workflows)
+# Antigravity Adaptation Guide (Labline Workflows)
 
-> Use ARIS research workflows in **Google Antigravity** — the agent-first AI IDE from Google DeepMind.
+> Use Labline research workflows in **Google Antigravity** — the agent-first AI IDE from Google DeepMind.
 
-Antigravity natively supports `SKILL.md` files with the same YAML frontmatter + Markdown body format used by ARIS, making it one of the most natural hosts for ARIS workflows.
+Antigravity natively supports `SKILL.md` files with the same YAML frontmatter + Markdown body format used by Labline, making it one of the most natural hosts for Labline workflows.
 
 ## 1. Key Differences: Claude Code vs Antigravity
 
@@ -19,7 +19,7 @@ Antigravity natively supports `SKILL.md` files with the same YAML frontmatter + 
 
 ## 2. Model Selection
 
-Antigravity supports multiple models as the **executor** (the model that runs ARIS workflows):
+Antigravity supports multiple models as the **executor** (the model that runs Labline workflows):
 
 | Model | Best for | Configuration |
 |-------|----------|---------------|
@@ -32,7 +32,7 @@ Antigravity supports multiple models as the **executor** (the model that runs AR
 
 **For Claude Opus 4.6 (Thinking):**
 - Extended thinking mode is enabled by default — ideal for complex research reasoning
-- ARIS skill instructions will be followed very faithfully
+- Labline skill instructions will be followed very faithfully
 - May be slower on long review prompts but more thorough
 
 **For Gemini 3.1 Pro (high):**
@@ -68,7 +68,7 @@ cp -r skills/* /path/to/your/project/.agents/skills/
 
 ### 3.2 Set up Codex MCP in Antigravity (for review skills)
 
-ARIS uses an external LLM (GPT-5.4 via Codex) as a critical reviewer. To enable this in Antigravity:
+Labline uses an external LLM (GPT-5.4 via Codex) as a critical reviewer. To enable this in Antigravity:
 
 1. Install Codex CLI and authenticate:
    ```bash
@@ -157,7 +157,7 @@ Antigravity uses `GEMINI.md` (equivalent to Claude Code's `CLAUDE.md`) for proje
 
 ## 4. How to Invoke Skills
 
-Antigravity discovers ARIS skills via the YAML `description` field in each `SKILL.md`. There are three approaches:
+Antigravity discovers Labline skills via the YAML `description` field in each `SKILL.md`. There are three approaches:
 
 ### Approach A: Natural language (recommended — Antigravity auto-discovers)
 
@@ -167,7 +167,7 @@ Simply describe what you want in the chat. Antigravity matches your intent to in
 Run the auto review loop for "factorized gap in discrete diffusion LMs".
 ```
 
-If ARIS skills are installed (§3.1), Antigravity will automatically discover and activate the `auto-review-loop` skill.
+If Labline skills are installed (§3.1), Antigravity will automatically discover and activate the `auto-review-loop` skill.
 
 ### Approach B: Explicit skill reference
 
@@ -280,9 +280,9 @@ Each stage reads the previous stage's output files, so context carries forward a
 
 ## 6. MCP Tool Calls
 
-ARIS skills reference MCP tools by name. These work identically in Antigravity once configured:
+Labline skills reference MCP tools by name. These work identically in Antigravity once configured:
 
-| ARIS MCP tool | What it does | Required MCP server |
+| Labline MCP tool | What it does | Required MCP server |
 |--------------|-------------|-------------------|
 | `mcp__codex__codex` | Send prompt to GPT-5.4 | Codex |
 | `mcp__codex__codex-reply` | Continue conversation thread | Codex |
@@ -292,7 +292,7 @@ ARIS skills reference MCP tools by name. These work identically in Antigravity o
 
 ## 7. State Files & Recovery
 
-ARIS workflows persist state to files for crash recovery. These work identically in Antigravity:
+Labline workflows persist state to files for crash recovery. These work identically in Antigravity:
 
 | File | Purpose | Written by |
 |------|---------|----|
@@ -335,10 +335,10 @@ Deploy the training script to the remote GPU server.
 
 ## 9. Antigravity-Specific Advantages
 
-Antigravity provides several unique capabilities that enhance ARIS workflows:
+Antigravity provides several unique capabilities that enhance Labline workflows:
 
 ### Multi-Agent Orchestration
-Use Antigravity's **Manager View** to run multiple ARIS stages simultaneously:
+Use Antigravity's **Manager View** to run multiple Labline stages simultaneously:
 - Agent 1: Literature survey (Workflow 1, Stage 1)
 - Agent 2: Running experiments on GPU (Workflow 1.5)
 - Agent 3: Reviewing and iterating on prior results (Workflow 2)
@@ -350,7 +350,7 @@ Antigravity includes a built-in browser. Useful for:
 - Viewing compiled PDF from `/paper-compile`
 
 ### Artifact System
-Antigravity's artifact system (implementation plans, walkthroughs) maps naturally to ARIS outputs:
+Antigravity's artifact system (implementation plans, walkthroughs) maps naturally to Labline outputs:
 - `idea-stage/IDEA_REPORT.md` → implementation plan artifact
 - `review-stage/AUTO_REVIEW.md` → walkthrough artifact
 - `PAPER_PLAN.md` → implementation plan artifact

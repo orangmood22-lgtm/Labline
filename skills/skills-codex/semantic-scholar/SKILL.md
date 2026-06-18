@@ -23,7 +23,7 @@ This skill is the **published venue** counterpart to `/arxiv`:
 ## Constants
 
 - **MAX_RESULTS = 10** — Default number of search results.
-- **FETCH_SCRIPT** — `$ARIS_REPO/tools/semantic_scholar_fetch.py` from the ARIS repo recorded by the Codex install manifest. Fall back to inline Python if not found.
+- **FETCH_SCRIPT** — `$LABLINE_REPO/tools/semantic_scholar_fetch.py` from the Labline repo recorded by the Codex install manifest. Fall back to inline Python if not found.
 - **DEFAULT_FILTERS** — For general research queries, apply these by default to reduce noise:
   - `--fields-of-study "Computer Science,Engineering"`
   - `--publication-types JournalArticle,Conference`
@@ -63,9 +63,9 @@ If the argument matches a DOI pattern (`10.XXXX/...`), a Semantic Scholar ID (40
 Locate the fetch script:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/semantic_scholar_fetch.py" ] && SCRIPT="$ARIS_REPO/tools/semantic_scholar_fetch.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/semantic_scholar_fetch.py" ] && SCRIPT="$LABLINE_REPO/tools/semantic_scholar_fetch.py"
 [ -z "$SCRIPT" ] && SCRIPT=$(find tools/ -name "semantic_scholar_fetch.py" 2>/dev/null | head -1)
 [ -z "$SCRIPT" ] && SCRIPT=$(find ~/.codex/skills/semantic-scholar/ -name "semantic_scholar_fetch.py" 2>/dev/null | head -1)
 ```
@@ -164,7 +164,7 @@ arXiv mirror — common for IEEE/ACM), fall back to manual metadata:
 ```
 if [ -d research-wiki/ ]:
     WIKI_SCRIPT=""
-    [ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"
+    [ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"
     [ -z "$WIKI_SCRIPT" ] && [ -f tools/research_wiki.py ] && WIKI_SCRIPT="tools/research_wiki.py"
     [ -z "$WIKI_SCRIPT" ] && [ -f ~/.codex/skills/research-wiki/research_wiki.py ] && WIKI_SCRIPT="$HOME/.codex/skills/research-wiki/research_wiki.py"
     for each paper in results:

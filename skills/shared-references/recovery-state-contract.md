@@ -1,6 +1,6 @@
 # Recovery State Contract
 
-Long-running ARIS workflows need a **small, explicit recovery contract** so transient failures and resumability are handled consistently instead of ad hoc. This document defines the minimum shared state shape, retry semantics, and stage-checkpoint expectations for recovery-sensitive tooling.
+Long-running Labline workflows need a **small, explicit recovery contract** so transient failures and resumability are handled consistently instead of ad hoc. This document defines the minimum shared state shape, retry semantics, and stage-checkpoint expectations for recovery-sensitive tooling.
 
 This contract is intentionally narrow:
 - it does **not** replace markdown-first workflow artifacts
@@ -143,7 +143,7 @@ This recovery contract complements the experiment-chain contract:
 - recovery state explains **continuity across interruption / retry / restart**
 - audits and claim gates may use recovery state as context, but should not replace their own integrity checks with it
 
-## Recommended ARIS adoption points
+## Recommended Labline adoption points
 
 Current best-fit adopters:
 - `tools/semantic_scholar_fetch.py` — retry classification and backoff receipts when useful

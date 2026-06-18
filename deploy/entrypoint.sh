@@ -1,5 +1,5 @@
 #!/bin/bash
-# ARIS container entrypoint
+# Labline container entrypoint
 # Sets up API config, SSH, and framework symlinks on first boot
 
 set -e
@@ -63,43 +63,43 @@ if [ -d /run/secrets/ssh ]; then
 fi
 
 # ─── Framework update check on boot/shell (if network available) ─────────────
-mkdir -p ~/.aris ~/.local/bin
-if [ -x /aris/framework/tools/aris ]; then
-    ln -sf /aris/framework/tools/aris ~/.local/bin/aris
+mkdir -p ~/.labline ~/.local/bin
+if [ -x /labline/framework/tools/lane ]; then
+    ln -sf /labline/framework/tools/lane ~/.local/bin/lane
 fi
 
-cat > ~/.aris/aris-shell-hook.sh <<'EOF'
-if [ "${ARIS_AUTO_CHECK_UPDATE:-1}" != "0" ] && [ -x /aris/framework/tools/aris ]; then
+cat > ~/.labline/labline-shell-hook.sh <<'EOF'
+if [ "${LABLINE_AUTO_CHECK_UPDATE:-1}" != "0" ] && [ -x /labline/framework/tools/lane ]; then
     (
-        timeout "${ARIS_UPDATE_CHECK_TIMEOUT:-10s}" \
-            /aris/framework/tools/aris framework check-update \
-            --aris-repo /aris/framework \
-            --if-stale "${ARIS_UPDATE_CHECK_INTERVAL:-1d}" \
+        timeout "${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}" \
+            /labline/framework/tools/lane framework check-update \
+            --labline-repo /labline/framework \
+            --if-stale "${LABLINE_UPDATE_CHECK_INTERVAL:-1d}" \
             --notify 2>/dev/null || true
     ) &
 fi
 EOF
 
-if ! grep -q "ARIS shell hook" ~/.bashrc 2>/dev/null; then
+if ! grep -q "Labline shell hook" ~/.bashrc 2>/dev/null; then
     {
         echo ""
-        echo "# ARIS shell hook"
-        echo "[ -f ~/.aris/aris-shell-hook.sh ] && . ~/.aris/aris-shell-hook.sh"
+        echo "# Labline shell hook"
+        echo "[ -f ~/.labline/labline-shell-hook.sh ] && . ~/.labline/labline-shell-hook.sh"
     } >> ~/.bashrc
 fi
 
-if [ "${ARIS_AUTO_CHECK_UPDATE:-1}" != "0" ] && [ -x /aris/framework/tools/aris ]; then
-    timeout "${ARIS_UPDATE_CHECK_TIMEOUT:-10s}" \
-        /aris/framework/tools/aris framework check-update \
-        --aris-repo /aris/framework \
-        --if-stale "${ARIS_UPDATE_CHECK_INTERVAL:-1d}" \
+if [ "${LABLINE_AUTO_CHECK_UPDATE:-1}" != "0" ] && [ -x /labline/framework/tools/lane ]; then
+    timeout "${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}" \
+        /labline/framework/tools/lane framework check-update \
+        --labline-repo /labline/framework \
+        --if-stale "${LABLINE_UPDATE_CHECK_INTERVAL:-1d}" \
         --notify 2>/dev/null || true
 fi
 
 # ─── First boot: create default project dir ──────────────────────────────────
-if [ ! -d /aris/projects/.initialized ]; then
-    mkdir -p /aris/projects/.initialized
-    echo "ARIS container first boot: $(date -Iseconds)" > /aris/projects/.initialized/boot.log
+if [ ! -d /labline/projects/.initialized ]; then
+    mkdir -p /labline/projects/.initialized
+    echo "Labline container first boot: $(date -Iseconds)" > /labline/projects/.initialized/boot.log
 fi
 
 # ─── Execute CMD ─────────────────────────────────────────────────────────────

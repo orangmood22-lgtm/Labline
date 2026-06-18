@@ -1,0 +1,1590 @@
+#!/usr/bin/env python3
+"""Beginner-facing Labline CLI."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LARK_CHANNEL_BRIDGE_BIN = "lark-channel-bridge"
+DEFAULT_FEISHU_PROFILE = "labline-codex"
+DEFAULT_FEISHU_AGENT = "codex"
+DEFAULT_FEISHU_NODE_PREFIX_REL = "node"
+STATE_DIR_NAME = ".labline"
+LEGACY_STATE_DIR_NAME = ".aris"
+
+
+def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=check, capture_output=True, text=True)
+
+
+def run_relay(cmd: list[str], cwd: Path | None = None) -> int:
+    result = run(cmd, cwd=cwd, check=False)
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+    return result.returncode
+
+
+def copy_text(src: Path, dst: Path, replacements: dict[str, str]) -> None:
+    if dst.exists():
+        return
+    text = src.read_text(encoding="utf-8")
+    for key, value in replacements.items():
+        text = text.replace(key, value)
+    dst.write_text(text, encoding="utf-8")
+
+
+def ensure_dirs(project: Path, size: str) -> None:
+    common = ["code", "data", "outputs", "refine-logs", "idea-stage", "paper", "discussions", "figures", "overrides"]
+    small = ["code", "data", "outputs"]
+    for rel in (common if size == "full" else small):
+        (project / rel).mkdir(parents=True, exist_ok=True)
+
+
+def write_gitignore(project: Path) -> None:
+    if (project / ".gitignore").exists():
+        return
+    (project / ".gitignore").write_text(
+        "\n".join(
+            [
+                "outputs/",
+                "wandb/",
+                "*.pth",
+                "*.pt",
+                "*.onnx",
+                "*.tar.gz",
+                "datasets/",
+                "data/*.tar*",
+                "data/*.zip",
+                "__pycache__/",
+                "*.pyc",
+                "*.pyo",
+                ".pytest_cache/",
+                ".vscode/",
+                ".idea/",
+                "*.swp",
+                ".DS_Store",
+                ".labline/",
+                ".aris/",
+                ".claude/",
+                ".agents/",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_manifest(project: Path, name: str, direction: str, clients: list[str]) -> None:
+    payload = {
+        "schema_version": 1,
+        "project_name": name,
+        "direction": direction,
+        "clients": clients,
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    (project / STATE_DIR_NAME).mkdir(parents=True, exist_ok=True)
+    (project / STATE_DIR_NAME / "manifest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def git_output(cwd: Path, args: list[str], fallback: str = "") -> str:
+    try:
+        result = run(["git", *args], cwd=cwd)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return fallback
+    return result.stdout.strip() or fallback
+
+
+def git_has_commits(cwd: Path) -> bool:
+    result = run(["git", "rev-list", "--count", "HEAD"], cwd=cwd, check=False)
+    return result.returncode == 0 and result.stdout.strip() not in {"", "0"}
+
+
+def resolve_labline_repo(args: argparse.Namespace) -> Path:
+    repo = getattr(args, "labline_repo", None)
+    if repo is None:
+        workspace = discover_workspace(required=False)
+        if workspace and (workspace / "framework").exists():
+            repo = workspace / "framework"
+        elif Path("/labline/framework").exists():
+            repo = Path("/labline/framework")
+        else:
+            repo = REPO_ROOT
+    repo = Path(repo).expanduser().resolve()
+    if not (repo / "tools").is_dir() or not (repo / "templates").is_dir():
+        raise SystemExit(f"invalid Labline repo: {repo}")
+    return repo
+
+
+def discover_workspace(required: bool = True) -> Path | None:
+    env = os.environ.get("LABLINE_WORKSPACE")
+    if env:
+        return Path(env).expanduser().resolve()
+
+    if required:
+        return Path.home()
+    return None
+
+
+def state_root() -> Path:
+    workspace = discover_workspace()
+    if os.environ.get("LABLINE_WORKSPACE"):
+        return workspace / STATE_DIR_NAME
+    return workspace / STATE_DIR_NAME
+
+
+def registry_path() -> Path:
+    return state_root() / "project-registry.json"
+
+
+def load_registry() -> dict:
+    path = registry_path()
+    if not path.exists():
+        return {"schema_version": 1, "projects": []}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "projects" not in data or not isinstance(data["projects"], list):
+        data["projects"] = []
+    data.setdefault("schema_version", 1)
+    return data
+
+
+def save_registry(data: dict) -> None:
+    path = registry_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    projects = sorted({str(Path(p).expanduser().resolve()) for p in data.get("projects", [])})
+    payload = {"schema_version": 1, "projects": projects}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def dev_runtime_config_path() -> Path:
+    return state_root() / "dev-runtime.json"
+
+
+def dev_runtime_env_path() -> Path:
+    return state_root() / "dev-runtime.env"
+
+
+def parse_dotenv(path: Path) -> dict[str, str]:
+    if not path.exists():
+        raise SystemExit(f"env file not found: {path}")
+    values: dict[str, str] = {}
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            raise SystemExit(f"invalid env line {path}:{lineno}: expected KEY=value")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            raise SystemExit(f"invalid env line {path}:{lineno}: empty key")
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        values[key] = value.replace("\\n", "\n").replace('\\"', '"').replace("\\\\", "\\")
+    return values
+
+
+def write_dotenv(path: Path, values: dict[str, str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    for key, value in sorted(values.items()):
+        escaped = value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+        lines.append(f'{key}="{escaped}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.chmod(0o600)
+
+
+def dotenv_get(values: dict[str, str], *keys: str) -> str:
+    lowered = {key.lower(): value for key, value in values.items()}
+    for key in keys:
+        if key in values and values[key]:
+            return values[key]
+        lower_key = key.lower()
+        if lower_key in lowered and lowered[lower_key]:
+            return lowered[lower_key]
+    return ""
+
+
+def runtime_provider_api_key_env(provider_name: str) -> str:
+    suffix = "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_name).strip("_")
+    while "__" in suffix:
+        suffix = suffix.replace("__", "_")
+    return f"LABLINE_DEV_RT_{suffix or 'PROVIDER'}_API_KEY"
+
+
+def runtime_api_key(api_key_env: str) -> str:
+    value = os.environ.get(api_key_env)
+    if value:
+        return value
+    secrets = dev_runtime_env_path()
+    if secrets.exists():
+        return parse_dotenv(secrets).get(api_key_env, "")
+    return ""
+
+
+def default_dev_runtime_config() -> dict:
+    return {
+        "schema_version": 1,
+        "defaults": {
+            "provider": "codex_subagent",
+            "transport": "codex_subagent",
+            "model": "gpt-5.4-mini",
+            "reasoning_effort": "medium",
+        },
+        "providers": {
+            "codex_subagent": {
+                "transport": "codex_subagent",
+                "model": "gpt-5.4-mini",
+            }
+        },
+        "roles": {
+            "dev-worker": {
+                "provider": "codex_subagent",
+                "transport": "codex_subagent",
+                "model": "gpt-5.4-mini",
+                "allowed_work": [
+                    "batch documentation edits",
+                    "reference/path sweeps",
+                    "test drafts",
+                    "low-risk patch drafts",
+                ],
+                "forbidden_work": [
+                    "final architecture decisions",
+                    "release or promote decisions",
+                    "rollback or destructive git operations",
+                    "credential handling",
+                ],
+            }
+        },
+    }
+
+
+def load_dev_runtime_config(init: bool = False) -> dict:
+    path = dev_runtime_config_path()
+    if not path.exists():
+        data = default_dev_runtime_config()
+        if init:
+            save_dev_runtime_config(data)
+        return data
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        data = default_dev_runtime_config()
+    data.setdefault("schema_version", 1)
+    data.setdefault("defaults", {})
+    data["defaults"].setdefault("provider", "codex_subagent")
+    data["defaults"].setdefault("transport", "codex_subagent")
+    data["defaults"].setdefault("model", "gpt-5.4-mini")
+    data["defaults"].setdefault("reasoning_effort", "medium")
+    data.setdefault("providers", {})
+    data["providers"].setdefault("codex_subagent", default_dev_runtime_config()["providers"]["codex_subagent"])
+    data.setdefault("roles", {})
+    data["roles"].setdefault("dev-worker", default_dev_runtime_config()["roles"]["dev-worker"])
+    if init:
+        save_dev_runtime_config(data)
+    return data
+
+
+def save_dev_runtime_config(data: dict) -> None:
+    path = dev_runtime_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def dev_runtime_log_root(framework: Path, role: str) -> Path:
+    root = framework / "to-developer" / "logs" / "dev-runtime" / role
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def sanitize_slug(value: str, limit: int = 48) -> str:
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in value).strip("-")
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    return (slug or "task")[:limit].strip("-") or "task"
+
+
+def slug_from_text(text: str) -> str:
+    first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if not first_line:
+        return "task"
+    return sanitize_slug(first_line)
+
+
+def register_project(project: Path) -> None:
+    data = load_registry()
+    projects = set(data.get("projects", []))
+    projects.add(str(project.resolve()))
+    data["projects"] = sorted(projects)
+    save_registry(data)
+
+
+def unregister_project(project: Path) -> None:
+    data = load_registry()
+    target = str(project.resolve())
+    data["projects"] = [p for p in data.get("projects", []) if str(Path(p).expanduser().resolve()) != target]
+    save_registry(data)
+
+
+def project_from_arg(path: str | None) -> Path:
+    return Path(path or ".").expanduser().resolve()
+
+
+def install_clients(project: Path, framework: Path) -> list[str]:
+    clients: list[str] = []
+    install = framework / "tools" / "install_labline.sh"
+    codex = framework / "tools" / "install_labline_codex.sh"
+    if install.exists():
+        run(["bash", str(install), str(project), "--labline-repo", str(framework), "--quiet", "--no-doc"])
+        clients.append("claude")
+    if codex.exists():
+        run(["bash", str(codex), str(project), "--labline-repo", str(framework), "--quiet", "--no-doc"])
+        clients.append("codex")
+    return clients
+
+
+def migrate_legacy_project_manifest(project: Path, framework: Path) -> bool:
+    target = project / STATE_DIR_NAME / "manifest.json"
+    if target.exists():
+        return False
+    legacy = project / LEGACY_STATE_DIR_NAME / "manifest.json"
+    if not legacy.exists():
+        return False
+    try:
+        payload = json.loads(legacy.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        payload = {"schema_version": 1}
+    payload.setdefault("schema_version", 1)
+    payload["migrated_from"] = "ARIS"
+    payload["migrated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["framework_path"] = str(framework)
+    project_state = project / STATE_DIR_NAME
+    project_state.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return True
+
+
+def init_project(args: argparse.Namespace, project: Path, name: str) -> None:
+    project.mkdir(parents=True, exist_ok=True)
+    ensure_dirs(project, args.size)
+    write_gitignore(project)
+    if not (project / ".git").exists():
+        run(["git", "init"], cwd=project)
+    framework = resolve_labline_repo(args)
+    clients = install_clients(project, framework)
+    repl = {
+        "{PROJECT_NAME}": name,
+        "{RESEARCH_DIRECTION}": args.direction,
+        "{DATE}": datetime.now().strftime("%Y-%m-%d"),
+        "{USER}": os.environ.get("USER", "unknown"),
+        "{project-name}": name,
+        "{FRAMEWORK_PATH}": str(framework),
+        "{FRAMEWORK_REPO}": git_output(framework, ["config", "--get", "remote.origin.url"], "local"),
+        "{FRAMEWORK_VERSION}": git_output(framework, ["describe", "--tags", "--always"], "unknown"),
+        "{FRAMEWORK_COMMIT}": git_output(framework, ["rev-parse", "HEAD"], "unknown"),
+        "{FRAMEWORK_RECORDED_AT}": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    copy_text(framework / "templates" / "project.yaml.tmpl", project / "project.yaml", repl)
+    copy_text(framework / "templates" / "AGENTS_MD_TEMPLATE.md", project / "AGENTS.md", repl)
+    copy_text(framework / "templates" / "CLAUDE_MD_TEMPLATE.md", project / "CLAUDE.md", repl)
+    write_manifest(project, name, args.direction, clients)
+    register_project(project)
+    if args.no_commit:
+        return
+    if git_has_commits(project):
+        return
+    status = run(["git", "status", "--porcelain"], cwd=project)
+    if status.stdout:
+        run(["git", "add", "-A"], cwd=project)
+        run(["git", "-c", "user.name=Labline CLI", "-c", "user.email=lane@example.invalid", "commit", "-m", f"init: {name} ({args.direction})"], cwd=project)
+
+
+def cmd_project_init(args: argparse.Namespace) -> int:
+    project = Path(args.path).expanduser().resolve()
+    name = args.project_name or project.name
+    init_project(args, project, name)
+    return 0
+
+
+def cmd_project_doctor(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_labline_repo(args)
+    checks = []
+    checks.append(("project.yaml", (project / "project.yaml").exists()))
+    checks.append(("AGENTS.md", (project / "AGENTS.md").exists()))
+    checks.append(("CLAUDE.md", (project / "CLAUDE.md").exists()))
+    checks.append((".labline", (project / STATE_DIR_NAME).exists()))
+    checks.append(("framework", framework.exists()))
+    yaml_text = (project / "project.yaml").read_text(encoding="utf-8") if (project / "project.yaml").exists() else ""
+    checks.append(("project.yaml.schema_version", yaml_text.count("schema_version:") == 1))
+    checks.append(("project.yaml.framework.path", f'path: "{framework}"' in yaml_text))
+    checks.append((".labline.manifest", (project / STATE_DIR_NAME / "manifest.json").exists()))
+    if (project / LEGACY_STATE_DIR_NAME / "manifest.json").exists() and not (project / STATE_DIR_NAME / "manifest.json").exists():
+        checks.append((".aris.legacy_manifest", True))
+    checks.append((".claude.skills", (project / ".claude" / "skills").exists() or not (project / ".claude").exists()))
+    checks.append((".agents.skills", (project / ".agents" / "skills").exists() or not (project / ".agents").exists()))
+    status = 0
+    for key, ok in checks:
+        print(f"{key}: {'ok' if ok else 'missing' if key != 'project.yaml.schema_version' else 'duplicate'}")
+        if not ok:
+            status = 1
+    return status
+
+
+def cmd_project_update(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_labline_repo(args)
+    migrated = migrate_legacy_project_manifest(project, framework)
+    install_clients(project, framework)
+    register_project(project)
+    if migrated:
+        print("legacy: migrated .aris/manifest.json -> .labline/manifest.json")
+    return 0
+
+
+def cmd_project_detach(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_labline_repo(args)
+    uninstallers = [
+        (project / STATE_DIR_NAME / "installed-skills.txt", framework / "tools" / "install_labline.sh"),
+        (project / STATE_DIR_NAME / "installed-skills-codex.txt", framework / "tools" / "install_labline_codex.sh"),
+    ]
+    for manifest, installer in uninstallers:
+        if manifest.exists() and installer.exists():
+            run(["bash", str(installer), str(project), "--labline-repo", str(framework), "--quiet", "--uninstall"])
+    for rel in [f"{STATE_DIR_NAME}/manifest.json", f"{STATE_DIR_NAME}/installed-skills.txt", f"{STATE_DIR_NAME}/installed-skills-codex.txt"]:
+        path = project / rel
+        if path.exists():
+            path.unlink()
+    unregister_project(project)
+    return 0
+
+
+def cmd_project_version(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_labline_repo(args)
+    print(f"project: {project}")
+    print(f"framework_path: {framework}")
+    print(f"framework_version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
+    print(f"framework_commit: {git_output(framework, ['rev-parse', 'HEAD'], 'unknown')}")
+    return 0
+
+
+def cmd_dev_runtime_config(args: argparse.Namespace) -> int:
+    data = load_dev_runtime_config(init=args.init)
+    if getattr(args, "json_output", False):
+        payload = {
+            "config": str(dev_runtime_config_path()),
+            "defaults": data.get("defaults", {}),
+            "providers": data.get("providers", {}),
+            "roles": data.get("roles", {}),
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", end="")
+        return 0
+    defaults = data["defaults"]
+    print(f"config: {dev_runtime_config_path()}")
+    print(f"default_provider: {defaults.get('provider', 'codex_subagent')}")
+    print(f"default_transport: {defaults.get('transport', 'codex_subagent')}")
+    print(f"default_model: {defaults.get('model', 'gpt-5.4-mini')}")
+    print(f"default_reasoning_effort: {defaults.get('reasoning_effort', 'medium')}")
+    for provider, spec in sorted(data.get("providers", {}).items()):
+        parts = [spec.get("transport", "unknown"), spec.get("model", "unknown")]
+        if spec.get("base_url"):
+            parts.append(spec["base_url"])
+        if spec.get("api_key_env"):
+            parts.append(f"api_key_env={spec['api_key_env']}")
+        print(f"provider.{provider}: {'/'.join(parts)}")
+    for role, spec in sorted(data.get("roles", {}).items()):
+        provider = spec.get("provider", defaults.get("provider", "codex_subagent"))
+        transport = spec.get("transport", defaults.get("transport"))
+        model = spec.get("model", defaults.get("model"))
+        print(f"role.{role}: provider={provider} {transport}/{model}")
+    return 0
+
+
+def upsert_runtime_provider(data: dict, name: str, spec: dict) -> dict:
+    providers = data.setdefault("providers", {})
+    providers[name] = {k: v for k, v in spec.items() if v is not None}
+    return providers[name]
+
+
+def resolve_runtime_provider(data: dict, provider_name: str | None, role: dict, defaults: dict) -> tuple[str, dict]:
+    selected = provider_name or role.get("provider") or defaults.get("provider") or "codex_subagent"
+    providers = data.get("providers", {})
+    base = dict(providers.get(selected, {}))
+    if not base:
+        base = {
+            "transport": role.get("transport") or defaults.get("transport", "codex_subagent"),
+            "model": role.get("model") or defaults.get("model", "gpt-5.4-mini"),
+        }
+    base.setdefault("transport", role.get("transport") or defaults.get("transport", "codex_subagent"))
+    base.setdefault("model", role.get("model") or defaults.get("model", "gpt-5.4-mini"))
+    return selected, base
+
+
+def cmd_dev_runtime_provider_set(args: argparse.Namespace) -> int:
+    data = load_dev_runtime_config(init=True)
+    spec = {
+        "transport": args.transport,
+        "model": args.model,
+        "base_url": args.base_url,
+        "api_key_env": args.api_key_env,
+    }
+    if args.name == "deepseek-v4-flash":
+        spec.setdefault("base_url", "https://api.deepseek.com/v1")
+        spec.setdefault("api_key_env", "DEEPSEEK_API_KEY")
+    saved = upsert_runtime_provider(data, args.name, spec)
+    defaults = data.setdefault("defaults", {})
+    if args.set_default:
+        defaults["provider"] = args.name
+        defaults["transport"] = saved.get("transport", defaults.get("transport", "codex_subagent"))
+        defaults["model"] = saved.get("model", defaults.get("model", "gpt-5.4-mini"))
+    save_dev_runtime_config(data)
+    print(f"provider: {args.name}")
+    print(f"transport: {saved.get('transport')}")
+    print(f"model: {saved.get('model')}")
+    if saved.get("base_url"):
+        print(f"base_url: {saved['base_url']}")
+    if saved.get("api_key_env"):
+        print(f"api_key_env: {saved['api_key_env']}")
+    return 0
+
+
+def cmd_dev_runtime_use(args: argparse.Namespace) -> int:
+    data = load_dev_runtime_config(init=True)
+    providers = data.get("providers", {})
+    if args.provider not in providers:
+        raise SystemExit(f"unknown provider: {args.provider}")
+    role = data.setdefault("roles", {}).setdefault(args.role, {})
+    provider = providers[args.provider]
+    role["provider"] = args.provider
+    role["transport"] = provider.get("transport", role.get("transport", "codex_subagent"))
+    role["model"] = provider.get("model", role.get("model", "gpt-5.4-mini"))
+    save_dev_runtime_config(data)
+    print(f"role: {args.role}")
+    print(f"provider: {args.provider}")
+    print(f"transport: {role.get('transport')}")
+    print(f"model: {role.get('model')}")
+    return 0
+
+
+def cmd_dev_runtime_load(args: argparse.Namespace) -> int:
+    env_file = Path(args.env_file).expanduser().resolve()
+    values = parse_dotenv(env_file)
+    role_name = dotenv_get(values, "agent", "agent_name", "LABLINE_AGENT", "LABLINE_AGENT_NAME")
+    provider_name = dotenv_get(values, "provider", "provider_name", "LABLINE_PROVIDER", "LABLINE_PROVIDER_NAME")
+    base_url = dotenv_get(values, "base_url", "LABLINE_BASE_URL")
+    model = dotenv_get(values, "model_name", "model", "LABLINE_MODEL_NAME", "LABLINE_MODEL")
+    transport = dotenv_get(values, "transport", "LABLINE_TRANSPORT") or "openai_compatible"
+    api_key = dotenv_get(values, "api_key", "LABLINE_API_KEY")
+    api_key_env = dotenv_get(values, "api_key_env", "LABLINE_API_KEY_ENV") or runtime_provider_api_key_env(provider_name)
+
+    missing = []
+    for key, value in [
+        ("agent", role_name),
+        ("provider", provider_name),
+        ("base_url", base_url),
+        ("model_name", model),
+    ]:
+        if not value:
+            missing.append(key)
+    if not api_key and not api_key_env:
+        missing.append("api_key or api_key_env")
+    if missing:
+        raise SystemExit(f"missing required env fields: {', '.join(missing)}")
+
+    data = load_dev_runtime_config(init=True)
+    provider = upsert_runtime_provider(
+        data,
+        provider_name,
+        {
+            "transport": transport,
+            "model": model,
+            "base_url": base_url,
+            "api_key_env": api_key_env,
+        },
+    )
+    role = data.setdefault("roles", {}).setdefault(role_name, {})
+    role["provider"] = provider_name
+    role["transport"] = provider.get("transport", transport)
+    role["model"] = provider.get("model", model)
+    save_dev_runtime_config(data)
+
+    secret_file = ""
+    if api_key:
+        secrets = parse_dotenv(dev_runtime_env_path()) if dev_runtime_env_path().exists() else {}
+        secrets[api_key_env] = api_key
+        write_dotenv(dev_runtime_env_path(), secrets)
+        secret_file = str(dev_runtime_env_path())
+
+    print(f"agent: {role_name}")
+    print(f"provider: {provider_name}")
+    print(f"transport: {transport}")
+    print(f"model: {model}")
+    print(f"base_url: {base_url}")
+    print(f"api_key_env: {api_key_env}")
+    if secret_file:
+        print(f"secret_file: {secret_file}")
+    return 0
+
+
+def resolve_runtime_task(args: argparse.Namespace) -> tuple[str, Path | None]:
+    if args.task and args.task_file:
+        raise SystemExit("choose either task or --task-file, not both")
+    if args.task_file:
+        task_path = Path(args.task_file).expanduser().resolve()
+        if not task_path.exists():
+            raise SystemExit(f"task file not found: {task_path}")
+        return task_path.read_text(encoding="utf-8"), task_path
+    if args.task:
+        return args.task, None
+    raise SystemExit("missing task or --task-file")
+
+
+def runtime_system_guardrails(
+    role: str,
+    provider: str,
+    transport: str,
+    model: str,
+    base_url: str | None,
+    api_key_env: str | None,
+    effort: str | None,
+) -> str:
+    return f"""# Labline Dev Runtime Guardrails
+
+role: {role}
+provider: {provider}
+transport: {transport}
+model: {model}
+base_url: {base_url or '<none>'}
+api_key_env: {api_key_env or '<none>'}
+reasoning_effort: {effort or '<none>'}
+
+## Rules
+
+- Stay inside the declared task.
+- Do not apply patches automatically.
+- Do not commit changes automatically.
+- Do not promote or release anything automatically.
+- Do not handle credentials, private keys, or secrets.
+- Do not log API key values.
+- Report concrete files, commands, and results.
+"""
+
+
+def openai_compatible_chat_completion(base_url: str, api_key: str, model: str, messages: list[dict], timeout: int) -> dict:
+    endpoint = base_url.rstrip("/") + "/chat/completions"
+    payload = json.dumps({"model": model, "messages": messages}).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=payload,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read().decode("utf-8")
+            return json.loads(body)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"openai-compatible request failed: HTTP {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"openai-compatible request failed: {exc.reason}") from exc
+
+
+def write_runtime_run_artifacts(run_dir: Path, task_text: str, request_payload: dict, response_text: str, metadata: dict) -> None:
+    run_dir.mkdir(parents=True, exist_ok=False)
+    (run_dir / "task.md").write_text(task_text, encoding="utf-8")
+    (run_dir / "request.json").write_text(json.dumps(request_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (run_dir / "response.md").write_text(response_text, encoding="utf-8")
+    (run_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def cmd_dev_runtime_prompt(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    data = load_dev_runtime_config(init=True)
+    defaults = data["defaults"]
+    role = data.get("roles", {}).get(args.role, data["roles"].get("dev-worker", {}))
+    provider_name, provider = resolve_runtime_provider(data, args.provider, role, defaults)
+    transport = args.transport or provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
+    model = args.model or provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
+    base_url = args.base_url or provider.get("base_url")
+    api_key_env = args.api_key_env or provider.get("api_key_env")
+    effort = args.reasoning_effort or role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    slug = sanitize_slug(args.task)
+    task_file = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug}.md"
+    files = args.file or []
+    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
+    prompt = f"""# Labline Dev Worker Task
+
+created_at: {utc_stamp()}
+role: {args.role}
+provider: {provider_name}
+transport: {transport}
+model: {model}
+base_url: {base_url or '<none>'}
+api_key_env: {api_key_env or '<none>'}
+reasoning_effort: {effort}
+
+## Task
+
+{args.task}
+
+## Write Scope
+
+{file_lines}
+
+## Operating Rules
+
+- You are not alone in the codebase. Do not revert unrelated user or agent changes.
+- Stay inside the declared write scope. If the task requires another file, report it instead of editing silently.
+- Prefer producing a small patch, test draft, doc draft, reference sweep, or concrete finding list.
+- Do not make final architecture, release, promote, or rollback decisions.
+- Do not run destructive git commands.
+- Do not handle credentials, private keys, or secrets.
+- Never log, print, or persist API key values; only record the environment variable name.
+- Report changed files and verification commands.
+"""
+    task_file.write_text(prompt, encoding="utf-8")
+    print(f"task_file: {task_file}")
+    print(f"runtime_provider: {provider_name}")
+    print(f"runtime_transport: {transport}")
+    print(f"runtime_model: {model}")
+    print(f"runtime_base_url: {base_url or '<none>'}")
+    print(f"runtime_api_key_env: {api_key_env or '<none>'}")
+    print(f"runtime_reasoning_effort: {effort}")
+    print("spawn_hint: use this prompt with a low-cost dev runtime role and review its patch before applying")
+    return 0
+
+
+def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    data = load_dev_runtime_config(init=True)
+    defaults = data["defaults"]
+    role = data.get("roles", {}).get(args.role, data["roles"].get("dev-worker", {}))
+    provider_name, provider = resolve_runtime_provider(data, args.provider, role, defaults)
+    transport = args.transport or provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
+    model = args.model or provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
+    base_url = args.base_url or provider.get("base_url")
+    api_key_env = args.api_key_env or provider.get("api_key_env")
+    effort = args.reasoning_effort or role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
+    task_text, task_path = resolve_runtime_task(args)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    slug_source = task_path.name if task_path else task_text
+    run_dir = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug_from_text(slug_source)}"
+
+    if transport == "codex_subagent":
+        raise SystemExit("transport codex_subagent is executed by the current Codex session's subagent tool, not by the CLI runner")
+    if transport != "openai_compatible":
+        raise SystemExit(f"unsupported worker transport: {transport}")
+    if not base_url:
+        raise SystemExit("missing base_url for openai_compatible provider")
+    if not api_key_env:
+        raise SystemExit("missing api_key_env for openai_compatible provider")
+    api_key = runtime_api_key(api_key_env)
+    if not api_key:
+        raise SystemExit(f"missing API key environment variable: {api_key_env}")
+
+    system_prompt = runtime_system_guardrails(args.role, provider_name, transport, model, base_url, api_key_env, effort)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": task_text},
+    ]
+    request_payload = {"model": model, "messages": messages}
+    response = openai_compatible_chat_completion(base_url, api_key, model, messages, timeout=args.timeout)
+    response_text = json.dumps(response, ensure_ascii=False, indent=2)
+    choice_text = ""
+    choices = response.get("choices") or []
+    if choices:
+        message = choices[0].get("message") or {}
+        choice_text = message.get("content") or ""
+    metadata = {
+        "schema_version": 1,
+        "timestamp": utc_stamp(),
+        "provider": provider_name,
+        "transport": transport,
+        "model": model,
+        "base_url": base_url,
+        "api_key_env": api_key_env,
+        "timeout": args.timeout,
+        "task_file": str(task_path) if task_path else "",
+        "response_file": str(run_dir / "response.md"),
+    }
+    write_runtime_run_artifacts(run_dir, task_text, request_payload, choice_text or response_text, metadata)
+    print(f"run_dir: {run_dir}")
+    print(f"provider: {provider_name}")
+    print(f"model: {model}")
+    print(f"response_file: {run_dir / 'response.md'}")
+    return 0
+
+
+def cmd_dev_skills(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    installer = framework / "tools" / "install_labline_dev_skills.sh"
+    if not installer.exists():
+        raise SystemExit(f"missing dev skill installer: {installer}")
+    extra: list[str] = []
+    if getattr(args, "dry_run", False):
+        extra.append("--dry-run")
+    if getattr(args, "quiet", False):
+        extra.append("--quiet")
+    return run_relay(
+        [
+            "bash",
+            str(installer),
+            args.dev_skills_action,
+            "--labline-repo",
+            str(framework),
+            *extra,
+        ],
+        cwd=framework,
+    )
+
+
+def cmd_dev_user_surface_update(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    commands = [
+        [sys.executable, "tools/generate_skill_dag.py"],
+        [sys.executable, "tools/generate_skill_dag.py", "--mermaid"],
+        [sys.executable, "tools/generate_skill_catalog.py"],
+        [sys.executable, "tools/translate_skill_catalog.py"],
+    ]
+    for cmd in commands:
+        rc = run_relay(cmd, cwd=framework)
+        if rc != 0:
+            return rc
+    print("user_surface: updated")
+    return 0
+
+
+def cmd_dev_user_surface_check(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    rc = run_relay([sys.executable, "tools/generate_skill_dag.py", "--check-only"], cwd=framework)
+    if rc != 0:
+        return rc
+    for rel in ["docs/SKILL_DAG.yaml", "docs/SKILL_CATALOG.md", "docs/SKILL_CATALOG_CN.md"]:
+        path = framework / rel
+        print(f"{rel}: {'ok' if path.exists() else 'missing'}")
+        if not path.exists():
+            rc = 1
+    return rc
+
+
+def shlex_quote(value: str) -> str:
+    if not value:
+        return "''"
+    safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-"
+    if all(ch in safe for ch in value):
+        return value
+    return "'" + value.replace("'", "'\"'\"'") + "'"
+
+
+def print_shell_command(cmd: list[str]) -> None:
+    print("command: " + " ".join(shlex_quote(part) for part in cmd))
+
+
+def feishu_home(args: argparse.Namespace) -> Path:
+    home = getattr(args, "home", None)
+    if home:
+        return Path(home).expanduser().resolve()
+    env_home = os.environ.get("LARK_CHANNEL_HOME")
+    if env_home:
+        return Path(env_home).expanduser().resolve()
+    return Path.home() / ".lark-channel"
+
+
+def feishu_env(args: argparse.Namespace) -> dict[str, str]:
+    env = os.environ.copy()
+    if getattr(args, "no_proxy", False):
+        for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"]:
+            env.pop(key, None)
+    home = getattr(args, "home", None)
+    if home:
+        env["LARK_CHANNEL_HOME"] = str(Path(home).expanduser().resolve())
+    prefix = feishu_node_prefix(args)
+    prefix_bin = prefix / "bin"
+    env["PATH"] = str(prefix_bin) + os.pathsep + env.get("PATH", "")
+    # lark-channel-bridge may auto-install @larksuite/cli during first-run setup.
+    # Keep that child npm install user-local on shared servers.
+    env.setdefault("NPM_CONFIG_PREFIX", str(prefix))
+    env.setdefault("npm_config_prefix", str(prefix))
+    return env
+
+
+def feishu_node_prefix(args: argparse.Namespace) -> Path:
+    prefix = getattr(args, "prefix", None)
+    if prefix:
+        return Path(prefix).expanduser().resolve()
+    return state_root() / DEFAULT_FEISHU_NODE_PREFIX_REL
+
+
+def feishu_bridge_bin(args: argparse.Namespace) -> str:
+    override = os.environ.get("LABLINE_LARK_CHANNEL_BRIDGE_BIN")
+    if override:
+        return override
+    prefix_bin = feishu_node_prefix(args) / "bin" / LARK_CHANNEL_BRIDGE_BIN
+    if prefix_bin.exists():
+        return str(prefix_bin)
+    found = shutil.which(LARK_CHANNEL_BRIDGE_BIN, path=feishu_env(args).get("PATH"))
+    return found or LARK_CHANNEL_BRIDGE_BIN
+
+
+def feishu_command(args: argparse.Namespace, action: str) -> list[str]:
+    cmd = [feishu_bridge_bin(args), action]
+    profile = getattr(args, "profile", None)
+    if profile:
+        cmd.extend(["--profile", profile])
+    agent = getattr(args, "agent", None)
+    if agent:
+        cmd.extend(["--agent", agent])
+    workspace = getattr(args, "workspace", None)
+    if not getattr(args, "no_workspace", False):
+        workspace_path = Path(workspace).expanduser().resolve() if workspace else Path.cwd().resolve()
+        cmd.extend(["--workspace", str(workspace_path)])
+    app_id = getattr(args, "app_id", None)
+    if app_id:
+        cmd.extend(["--app-id", app_id])
+    tenant = getattr(args, "tenant", None)
+    if tenant:
+        cmd.extend(["--tenant", tenant])
+    config = getattr(args, "config", None)
+    if config:
+        cmd.extend(["-c", config])
+    extra_args = getattr(args, "extra_args", None) or []
+    if extra_args and extra_args[0] == "--":
+        extra_args = extra_args[1:]
+    cmd.extend(extra_args)
+    return cmd
+
+
+def cmd_feishu_install(args: argparse.Namespace) -> int:
+    prefix = feishu_node_prefix(args)
+    if args.scope == "system":
+        cmd = ["pnpm", "add", "-g", "lark-channel-bridge"] if args.manager == "pnpm" else ["npm", "i", "-g", "lark-channel-bridge"]
+    elif args.manager == "pnpm":
+        cmd = ["pnpm", "add", "-g", "--global-bin-dir", str(prefix / "bin"), "lark-channel-bridge"]
+    else:
+        cmd = ["npm", "i", "-g", "--prefix", str(prefix), "lark-channel-bridge"]
+    if args.dry_run:
+        print_shell_command(cmd)
+        if args.scope == "user":
+            print(f"bin_dir: {prefix / 'bin'}")
+        return 0
+    rc = run_relay(cmd)
+    if rc == 0 and args.scope == "user":
+        print(f"installed_bin_dir: {prefix / 'bin'}")
+        print("Labline will add this directory to PATH when running `lane feishu ...`.")
+    return rc
+
+
+def parse_node_version(raw: str) -> tuple[int, int, int] | None:
+    text = raw.strip().lstrip("v")
+    parts = text.split(".")
+    if len(parts) < 2:
+        return None
+    try:
+        major = int(parts[0])
+        minor = int(parts[1])
+        patch = int(parts[2]) if len(parts) > 2 else 0
+    except ValueError:
+        return None
+    return major, minor, patch
+
+
+def version_at_least(value: tuple[int, int, int] | None, minimum: tuple[int, int, int]) -> bool:
+    return value is not None and value >= minimum
+
+
+def command_version(cmd: list[str]) -> tuple[int, str]:
+    try:
+        result = run(cmd, check=False)
+    except FileNotFoundError:
+        return 127, ""
+    output = (result.stdout or result.stderr).strip()
+    return result.returncode, output
+
+
+def redact_proxy_url(value: str) -> str:
+    if "@" not in value or "://" not in value:
+        return value
+    scheme, rest = value.split("://", 1)
+    if "@" not in rest:
+        return value
+    return f"{scheme}://<redacted>@{rest.split('@', 1)[1]}"
+
+
+def proxy_diagnostics() -> list[str]:
+    lines = []
+    for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]:
+        value = os.environ.get(key, "")
+        if value:
+            lines.append(f"proxy.{key}: {redact_proxy_url(value)}")
+    lower_http = os.environ.get("http_proxy", "")
+    upper_http = os.environ.get("HTTP_PROXY", "")
+    lower_https = os.environ.get("https_proxy", "")
+    upper_https = os.environ.get("HTTPS_PROXY", "")
+    if lower_http and upper_http and lower_http != upper_http:
+        lines.append("proxy.warning: http_proxy and HTTP_PROXY differ; curl/npm child installers may prefer lowercase")
+    if lower_https and upper_https and lower_https != upper_https:
+        lines.append("proxy.warning: https_proxy and HTTPS_PROXY differ; curl/npm child installers may prefer lowercase")
+    return lines
+
+
+def cmd_feishu_doctor(args: argparse.Namespace) -> int:
+    node_path = shutil.which("node")
+    bridge_path = feishu_bridge_bin(args)
+    bridge_exists = Path(bridge_path).exists() if "/" in bridge_path else shutil.which(bridge_path, path=feishu_env(args).get("PATH")) is not None
+    agent_path = shutil.which(args.agent)
+    node_status = "missing"
+    if node_path:
+        _, node_raw = command_version(["node", "--version"])
+        node_version = parse_node_version(node_raw)
+        node_status = "ok" if version_at_least(node_version, (20, 12, 0)) else f"too_old ({node_raw or 'unknown'})"
+    bridge_status = "missing"
+    if bridge_exists:
+        code, version = command_version([bridge_path, "--version"])
+        bridge_status = f"ok ({version})" if code == 0 and version else "ok"
+    agent_status = "ok" if agent_path else "missing"
+
+    home = feishu_home(args)
+    print(f"node: {node_status}")
+    print(f"lark-channel-bridge: {bridge_status}")
+    print(f"lark-channel-bridge_bin: {bridge_path}")
+    print(f"agent.{args.agent}: {agent_status}")
+    print(f"profile: {args.profile}")
+    print(f"home: {home}")
+    print(f"config: {home / 'config.json'}")
+    print(f"logs: {home / 'profiles' / args.profile / 'logs'}")
+    for line in proxy_diagnostics():
+        print(line)
+    return 0 if node_status == "ok" and bridge_exists and agent_path else 1
+
+
+def cmd_feishu_bridge(args: argparse.Namespace) -> int:
+    cmd = feishu_command(args, args.feishu_bridge_command)
+    if args.dry_run:
+        print_shell_command(cmd)
+        if getattr(args, "no_proxy", False):
+            print("proxy: disabled")
+        return 0
+    result = subprocess.run(cmd, env=feishu_env(args))
+    return result.returncode
+
+
+def cmd_feishu_logs(args: argparse.Namespace) -> int:
+    logs = feishu_home(args) / "profiles" / args.profile / "logs"
+    print(f"logs: {logs}")
+    if not args.tail:
+        return 0 if logs.exists() else 1
+    if not logs.exists():
+        print("log status: missing")
+        return 1
+    candidates = sorted(
+        [p for p in logs.rglob("*") if p.is_file() and p.suffix in {".log", ".jsonl", ".txt"}],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        print("log status: empty")
+        return 1
+    latest = candidates[0]
+    print(f"tailing: {latest}")
+    lines = latest.read_text(encoding="utf-8", errors="replace").splitlines()
+    for line in lines[-args.tail :]:
+        print(line)
+    return 0
+
+
+def history_dir() -> Path:
+    path = history_path()
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def history_path() -> Path:
+    return state_root() / "framework-history"
+
+
+def record_previous_commit(framework: Path) -> str:
+    current = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    hist = history_dir()
+    (hist / "previous").write_text(current + "\n", encoding="utf-8")
+    return current
+
+
+def previous_commit() -> str:
+    path = history_path() / "previous"
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8").strip()
+
+
+def framework_update_status_path(framework: Path) -> Path:
+    return state_root() / "framework-update-status.json"
+
+
+def load_framework_update_status(framework: Path) -> dict:
+    path = framework_update_status_path(framework)
+    if not path.exists():
+        return {"schema_version": 1}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {"schema_version": 1}
+    if not isinstance(data, dict):
+        return {"schema_version": 1}
+    data.setdefault("schema_version", 1)
+    return data
+
+
+def save_framework_update_status(framework: Path, data: dict) -> None:
+    path = framework_update_status_path(framework)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data["schema_version"] = 1
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def utc_stamp(value: datetime | None = None) -> str:
+    return (value or utc_now()).isoformat().replace("+00:00", "Z")
+
+
+def parse_utc_stamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def parse_duration(value: str) -> timedelta:
+    units = {
+        "s": "seconds",
+        "m": "minutes",
+        "h": "hours",
+        "d": "days",
+    }
+    if not value:
+        raise argparse.ArgumentTypeError("duration cannot be empty")
+    suffix = value[-1]
+    if suffix in units:
+        raw = value[:-1]
+        if not raw.isdigit():
+            raise argparse.ArgumentTypeError(f"invalid duration: {value}")
+        return timedelta(**{units[suffix]: int(raw)})
+    if value.isdigit():
+        return timedelta(seconds=int(value))
+    raise argparse.ArgumentTypeError(f"invalid duration: {value}")
+
+
+def is_recent(timestamp: str | None, interval: timedelta) -> bool:
+    parsed = parse_utc_stamp(timestamp)
+    if parsed is None:
+        return False
+    return utc_now() - parsed < interval
+
+
+def sync_registered_projects(args: argparse.Namespace, framework: Path) -> tuple[int, int]:
+    updated = 0
+    missing = 0
+    data = load_registry()
+    for raw in data.get("projects", []):
+        project = Path(raw).expanduser()
+        if not project.exists():
+            missing += 1
+            continue
+        install_clients(project, framework)
+        updated += 1
+    return updated, missing
+
+
+def cmd_framework_version(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    print(f"framework: {framework}")
+    print(f"version: {git_output(framework, ['describe', '--tags', '--always'], 'unknown')}")
+    print(f"commit: {git_output(framework, ['rev-parse', 'HEAD'], 'unknown')}")
+    prev = previous_commit()
+    if prev:
+        print(f"rollback_commit: {prev}")
+    return 0
+
+
+def cmd_framework_check_update(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    cached = load_framework_update_status(framework)
+    if args.if_stale and is_recent(cached.get("last_checked_at"), parse_duration(args.if_stale)):
+        return emit_framework_update_status(args, framework, cached)
+
+    upstream = git_output(framework, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], "")
+    local = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    if not upstream:
+        data = {
+            **cached,
+            "last_checked_at": utc_stamp(),
+            "framework": str(framework),
+            "local_commit": local,
+            "upstream": "",
+            "upstream_commit": "",
+            "status": "unknown",
+        }
+        save_framework_update_status(framework, data)
+        return emit_framework_update_status(args, framework, data)
+
+    if not args.no_fetch:
+        result = run(["git", "fetch", "--quiet"], cwd=framework, check=False)
+        if result.returncode != 0:
+            data = {
+                **cached,
+                "last_checked_at": utc_stamp(),
+                "framework": str(framework),
+                "local_commit": local,
+                "upstream": upstream,
+                "upstream_commit": "",
+                "status": "check failed",
+                "error": result.stderr.strip(),
+            }
+            save_framework_update_status(framework, data)
+            return emit_framework_update_status(args, framework, data, returncode=result.returncode)
+
+    remote = git_output(framework, ["rev-parse", upstream], "unknown")
+    base = git_output(framework, ["merge-base", "HEAD", upstream], "")
+    if local == remote:
+        status = "up-to-date"
+    elif local == base:
+        status = "update available"
+    elif remote == base:
+        status = "local ahead"
+    else:
+        status = "diverged"
+    data = {
+        **cached,
+        "last_checked_at": utc_stamp(),
+        "framework": str(framework),
+        "local_commit": local,
+        "upstream": upstream,
+        "upstream_commit": remote,
+        "status": status,
+        "error": "",
+    }
+    save_framework_update_status(framework, data)
+    return emit_framework_update_status(args, framework, data)
+
+
+def emit_framework_update_status(args: argparse.Namespace, framework: Path, data: dict, returncode: int = 0) -> int:
+    if getattr(args, "notify", False):
+        return notify_framework_update_once_per_day(framework, data, returncode)
+
+    local = data.get("local_commit", "unknown")
+    upstream = data.get("upstream", "")
+    remote = data.get("upstream_commit", "")
+    print(f"framework: {data.get('framework') or framework}")
+    print(f"local: {local[:7]}")
+    if upstream:
+        suffix = f" {remote[:7]}" if remote else ""
+        print(f"upstream: {upstream}{suffix}")
+    else:
+        print("upstream: none")
+    print(f"status: {data.get('status', 'unknown')}")
+    if data.get("error"):
+        print(data["error"])
+    return returncode
+
+
+def notify_framework_update_once_per_day(framework: Path, data: dict, returncode: int = 0) -> int:
+    if data.get("status") != "update available":
+        return returncode
+    if is_recent(data.get("last_notified_at"), timedelta(days=1)):
+        return returncode
+
+    local = data.get("local_commit", "unknown")[:7]
+    remote = data.get("upstream_commit", "unknown")[:7]
+    print(f"[Labline] framework update available: local {local} -> upstream {remote}")
+    print("       run: lane framework update")
+    print("       rollback: lane framework rollback")
+    data["last_notified_at"] = utc_stamp()
+    save_framework_update_status(framework, data)
+    return returncode
+
+
+def cmd_framework_update(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    before = record_previous_commit(framework)
+    result = run(["git", "pull", "--ff-only"], cwd=framework, check=False)
+    after = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    if result.returncode != 0:
+        # A local-only test repo has no remote; still record history and continue.
+        if "There is no tracking information" not in result.stderr and "No remote repository" not in result.stderr:
+            print(result.stderr.strip())
+            return result.returncode
+    print(f"framework: {before[:7]} -> {after[:7]}")
+    if args.no_project_sync:
+        print("project sync: skipped")
+        return 0
+    updated, missing = sync_registered_projects(args, framework)
+    msg = f"project sync: {updated} updated"
+    if missing:
+        msg += f", {missing} missing"
+    print(msg)
+    return 0
+
+
+def cmd_framework_rollback(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    prev = previous_commit()
+    if not prev:
+        print("no rollback commit recorded")
+        return 1
+    current = git_output(framework, ["rev-parse", "HEAD"], "unknown")
+    run(["git", "reset", "--hard", prev], cwd=framework)
+    print(f"framework rollback: {current[:7]} -> {prev[:7]}")
+    if args.no_project_sync:
+        print("project sync: skipped")
+        return 0
+    updated, missing = sync_registered_projects(args, framework)
+    msg = f"project sync: {updated} updated"
+    if missing:
+        msg += f", {missing} missing"
+    print(msg)
+    return 0
+
+
+def add_common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--labline-repo", type=Path)
+    p.add_argument("--quiet", action="store_true")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="lane")
+    add_common(p)
+    sub = p.add_subparsers(dest="scope", required=True)
+
+    project = sub.add_parser("project")
+    add_common(project)
+    project.add_argument("--version", action="store_true")
+    project_sub = project.add_subparsers(dest="project_command")
+
+    init = project_sub.add_parser("init")
+    add_common(init)
+    init.add_argument("path")
+    init.add_argument("--name", dest="project_name")
+    init.add_argument("--direction", required=True)
+    init.add_argument("--size", choices=["full", "small"], default="full")
+    init.add_argument("--no-commit", action="store_true")
+    init.set_defaults(func=cmd_project_init)
+
+    update = project_sub.add_parser("update")
+    add_common(update)
+    update.add_argument("path", nargs="?")
+    update.set_defaults(func=cmd_project_update)
+
+    doctor = project_sub.add_parser("doctor")
+    add_common(doctor)
+    doctor.add_argument("path", nargs="?")
+    doctor.set_defaults(func=cmd_project_doctor)
+
+    detach = project_sub.add_parser("detach")
+    add_common(detach)
+    detach.add_argument("path", nargs="?")
+    detach.set_defaults(func=cmd_project_detach)
+
+    framework = sub.add_parser("framework")
+    add_common(framework)
+    framework.add_argument("--version", action="store_true")
+    framework_sub = framework.add_subparsers(dest="framework_command")
+
+    feishu = sub.add_parser("feishu")
+    add_common(feishu)
+    feishu_sub = feishu.add_subparsers(dest="feishu_command", required=True)
+
+    feishu_install = feishu_sub.add_parser("install")
+    add_common(feishu_install)
+    feishu_install.add_argument("--manager", choices=["npm", "pnpm"], default="npm")
+    feishu_install.add_argument("--scope", choices=["user", "system"], default="user")
+    feishu_install.add_argument("--prefix", type=Path)
+    feishu_install.add_argument("--dry-run", action="store_true")
+    feishu_install.set_defaults(func=cmd_feishu_install)
+
+    feishu_doctor = feishu_sub.add_parser("doctor")
+    add_common(feishu_doctor)
+    feishu_doctor.add_argument("--profile", default=DEFAULT_FEISHU_PROFILE)
+    feishu_doctor.add_argument("--agent", choices=["codex", "claude"], default=DEFAULT_FEISHU_AGENT)
+    feishu_doctor.add_argument("--home", type=Path)
+    feishu_doctor.add_argument("--prefix", type=Path)
+    feishu_doctor.set_defaults(func=cmd_feishu_doctor)
+
+    def add_feishu_bridge_common(parser: argparse.ArgumentParser, include_runtime: bool) -> None:
+        add_common(parser)
+        parser.add_argument("--profile", default=DEFAULT_FEISHU_PROFILE)
+        parser.add_argument("--home", type=Path)
+        parser.add_argument("--prefix", type=Path)
+        parser.add_argument("--no-proxy", action="store_true")
+        parser.add_argument("--dry-run", action="store_true")
+        if include_runtime:
+            parser.add_argument("--agent", choices=["codex", "claude"], default=DEFAULT_FEISHU_AGENT)
+            parser.add_argument("--workspace", type=Path)
+            parser.add_argument("--no-workspace", action="store_true")
+            parser.add_argument("--app-id")
+            parser.add_argument("--tenant", choices=["feishu", "lark"])
+            parser.add_argument("-c", "--config")
+        parser.add_argument("extra_args", nargs=argparse.REMAINDER)
+
+    for action in ["run", "start"]:
+        bridge = feishu_sub.add_parser(action)
+        add_feishu_bridge_common(bridge, include_runtime=True)
+        bridge.set_defaults(func=cmd_feishu_bridge, feishu_bridge_command=action)
+
+    for action in ["status", "stop", "restart"]:
+        bridge = feishu_sub.add_parser(action)
+        add_feishu_bridge_common(bridge, include_runtime=False)
+        bridge.set_defaults(func=cmd_feishu_bridge, feishu_bridge_command=action)
+
+    feishu_logs = feishu_sub.add_parser("logs")
+    add_common(feishu_logs)
+    feishu_logs.add_argument("--profile", default=DEFAULT_FEISHU_PROFILE)
+    feishu_logs.add_argument("--home", type=Path)
+    feishu_logs.add_argument("--tail", type=int, default=0)
+    feishu_logs.set_defaults(func=cmd_feishu_logs)
+
+    dev = sub.add_parser("dev")
+    add_common(dev)
+    dev_sub = dev.add_subparsers(dest="dev_command", required=True)
+
+    dev_skills = dev_sub.add_parser("skills")
+    add_common(dev_skills)
+    dev_skills_sub = dev_skills.add_subparsers(dest="dev_skills_action", required=True)
+    for action in ["install", "update", "doctor", "detach"]:
+        dev_skills_action = dev_skills_sub.add_parser(action)
+        add_common(dev_skills_action)
+        dev_skills_action.add_argument("--dry-run", action="store_true")
+        dev_skills_action.set_defaults(func=cmd_dev_skills, dev_skills_action=action)
+
+    user_surface = dev_sub.add_parser("user-surface")
+    add_common(user_surface)
+    user_surface_sub = user_surface.add_subparsers(dest="user_surface_command", required=True)
+    user_surface_check = user_surface_sub.add_parser("check")
+    add_common(user_surface_check)
+    user_surface_check.set_defaults(func=cmd_dev_user_surface_check)
+    user_surface_update = user_surface_sub.add_parser("update")
+    add_common(user_surface_update)
+    user_surface_update.set_defaults(func=cmd_dev_user_surface_update)
+
+    for runtime_name in ["runtime", "rt"]:
+        runtime = dev_sub.add_parser(runtime_name)
+        add_common(runtime)
+        runtime_sub = runtime.add_subparsers(dest=f"{runtime_name}_command", required=True)
+
+        runtime_config = runtime_sub.add_parser("config")
+        add_common(runtime_config)
+        runtime_config.add_argument("--init", action="store_true")
+        runtime_config.add_argument("--json", dest="json_output", action="store_true")
+        runtime_config.set_defaults(func=cmd_dev_runtime_config)
+
+        runtime_provider = runtime_sub.add_parser("provider")
+        add_common(runtime_provider)
+        runtime_provider_sub = runtime_provider.add_subparsers(dest=f"{runtime_name}_provider_command", required=True)
+
+        provider_set = runtime_provider_sub.add_parser("set")
+        add_common(provider_set)
+        provider_set.add_argument("name")
+        provider_set.add_argument("--transport", required=True)
+        provider_set.add_argument("--model", required=True)
+        provider_set.add_argument("--base-url")
+        provider_set.add_argument("--api-key-env")
+        provider_set.add_argument("--set-default", action="store_true")
+        provider_set.set_defaults(func=cmd_dev_runtime_provider_set)
+
+        runtime_use = runtime_sub.add_parser("use")
+        add_common(runtime_use)
+        runtime_use.add_argument("role")
+        runtime_use.add_argument("provider")
+        runtime_use.set_defaults(func=cmd_dev_runtime_use)
+
+        runtime_load = runtime_sub.add_parser("load")
+        add_common(runtime_load)
+        runtime_load.add_argument("env_file")
+        runtime_load.set_defaults(func=cmd_dev_runtime_load)
+
+        runtime_prompt = runtime_sub.add_parser("prompt")
+        add_common(runtime_prompt)
+        runtime_prompt.add_argument("role")
+        runtime_prompt.add_argument("task")
+        runtime_prompt.add_argument("--file", action="append")
+        runtime_prompt.add_argument("--provider")
+        runtime_prompt.add_argument("--transport")
+        runtime_prompt.add_argument("--model")
+        runtime_prompt.add_argument("--base-url")
+        runtime_prompt.add_argument("--api-key-env")
+        runtime_prompt.add_argument("--reasoning-effort")
+        runtime_prompt.set_defaults(func=cmd_dev_runtime_prompt)
+
+        runtime_run = runtime_sub.add_parser("run")
+        add_common(runtime_run)
+        runtime_run.add_argument("role")
+        runtime_run.add_argument("task", nargs="?")
+        runtime_run.add_argument("--task-file")
+        runtime_run.add_argument("--provider")
+        runtime_run.add_argument("--transport")
+        runtime_run.add_argument("--model")
+        runtime_run.add_argument("--base-url")
+        runtime_run.add_argument("--api-key-env")
+        runtime_run.add_argument("--reasoning-effort")
+        runtime_run.add_argument("--timeout", type=int, default=120)
+        runtime_run.set_defaults(func=cmd_dev_runtime_run)
+
+    fw_update = framework_sub.add_parser("update")
+    add_common(fw_update)
+    fw_update.add_argument("--no-project-sync", action="store_true")
+    fw_update.set_defaults(func=cmd_framework_update)
+
+    check_update = framework_sub.add_parser("check-update")
+    add_common(check_update)
+    check_update.add_argument("--no-fetch", action="store_true")
+    check_update.add_argument("--if-stale", metavar="DURATION")
+    check_update.add_argument("--notify", action="store_true")
+    check_update.set_defaults(func=cmd_framework_check_update)
+
+    rollback = framework_sub.add_parser("rollback")
+    add_common(rollback)
+    rollback.add_argument("--no-project-sync", action="store_true")
+    rollback.set_defaults(func=cmd_framework_rollback)
+
+    return p
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    if args.scope == "project" and args.version:
+        args.path = None
+        return cmd_project_version(args)
+    if args.scope == "framework" and args.version:
+        return cmd_framework_version(args)
+    if not hasattr(args, "func"):
+        raise SystemExit("missing command")
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

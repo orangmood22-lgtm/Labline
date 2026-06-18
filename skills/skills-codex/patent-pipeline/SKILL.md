@@ -341,4 +341,4 @@ User describes invention directly ──→ /patent-pipeline
 
 ## Acknowledgements
 
-Built on the ARIS skill architecture. Patent writing principles adapted from MPEP (US), CN Patent Examination Guidelines (CN), and EPO Guidelines for Examination (EP).
+Built on the Labline skill architecture. Patent writing principles adapted from MPEP (US), CN Patent Examination Guidelines (CN), and EPO Guidelines for Examination (EP).

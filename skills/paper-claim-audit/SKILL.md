@@ -249,7 +249,7 @@ Same pattern as `/experiment-audit`:
 
 ## Review Tracing
 
-After each `mcp__codex__codex` or `mcp__codex__codex-reply` reviewer call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.aris/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
+After each `mcp__codex__codex` or `mcp__codex__codex-reply` reviewer call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.labline/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
 
 ## Submission Artifact Emission
 
@@ -273,7 +273,7 @@ The artifact conforms to the schema in `shared-references/assurance-contract.md`
     "sections/5.evidence.tex":               "sha256:...",
     "/abs/path/to/results/run_2026_04_19.json": "sha256:..."
   },
-  "trace_path":       ".aris/traces/paper-claim-audit/<date>_run<NN>/",
+  "trace_path":       ".labline/traces/paper-claim-audit/<date>_run<NN>/",
   "thread_id":        "<codex mcp thread id>",
   "reviewer_model":   "gpt-5.4",
   "reviewer_reasoning": "xhigh",

@@ -38,12 +38,12 @@ Generate publication-quality **architecture diagrams**, **workflow pipelines**, 
 Locate `figure_renderer.py` using the Codex managed install manifest first, then project/global copy-install fallbacks. Invoke via:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 FIGURE_RENDERER=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/figure_renderer.py" ] && FIGURE_RENDERER="$ARIS_REPO/tools/figure_renderer.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/figure_renderer.py" ] && FIGURE_RENDERER="$LABLINE_REPO/tools/figure_renderer.py"
 [ -z "$FIGURE_RENDERER" ] && [ -f tools/figure_renderer.py ] && FIGURE_RENDERER="tools/figure_renderer.py"
 [ -z "$FIGURE_RENDERER" ] && [ -f ~/.codex/skills/figure-spec/figure_renderer.py ] && FIGURE_RENDERER="$HOME/.codex/skills/figure-spec/figure_renderer.py"
-[ -n "$FIGURE_RENDERER" ] || { echo "ERROR: figure_renderer.py not found. Set ARIS_REPO, use install_aris_codex.sh managed install, or copy tools/figure_renderer.py next to this skill."; exit 1; }
+[ -n "$FIGURE_RENDERER" ] || { echo "ERROR: figure_renderer.py not found. Set LABLINE_REPO, use install_labline_codex.sh managed install, or copy tools/figure_renderer.py next to this skill."; exit 1; }
 python3 "$FIGURE_RENDERER" render <spec.json> --output <out.svg>
 python3 "$FIGURE_RENDERER" validate <spec.json>
 python3 "$FIGURE_RENDERER" schema
@@ -152,7 +152,7 @@ spawn_agent:
     Score each axis 1-10 and list specific issues to fix.
 ```
 
-Iterate until all three axes ≥ 7/10. The ARIS tech report figures went through 5 rounds of this loop to reach C:7/R:7/S:8.
+Iterate until all three axes ≥ 7/10. The Labline tech report figures went through 5 rounds of this loop to reach C:7/R:7/S:8.
 
 ## Schema Quick Reference
 
@@ -224,4 +224,4 @@ Three-stage horizontal cascade with inputs feeding in from top, outputs exiting 
 
 ## Review Tracing
 
-After each reviewer agent call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.aris/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
+After each reviewer agent call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.labline/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).

@@ -63,9 +63,9 @@ Examples:
 | 2 | **Obsidian** (via MCP) | `obsidian` | Try calling any `mcp__obsidian-vault__*` tool — if unavailable, skip | Research notes, paper summaries, tagged references, wikilinks |
 | 3 | **Local PDFs** | `local` | `Glob: papers/**/*.pdf, literature/**/*.pdf` | Raw PDF content (first 3 pages) |
 | 4 | **Web search** | `web` | Always available (WebSearch) | arXiv, Semantic Scholar, Google Scholar |
-| 5 | **Semantic Scholar API** | `semantic-scholar` | ARIS `tools/semantic_scholar_fetch.py` helper | Published venue papers (IEEE, ACM, Springer) with structured metadata: citation counts, venue info, TLDR. **Only runs when explicitly requested** |
-| 6 | **DeepXiv CLI** | `deepxiv` | ARIS `tools/deepxiv_fetch.py` helper or installed `deepxiv` CLI | Progressive paper retrieval: search, brief, head, section, trending, web search. **Only runs when explicitly requested** |
-| 7 | **Exa Search** | `exa` | ARIS `tools/exa_search.py` helper or installed `exa-py` SDK | AI-powered broad web search with content extraction (highlights, text, summaries). Covers blogs, docs, news, companies, and research papers beyond arXiv/S2. **Only runs when explicitly requested** |
+| 5 | **Semantic Scholar API** | `semantic-scholar` | Labline `tools/semantic_scholar_fetch.py` helper | Published venue papers (IEEE, ACM, Springer) with structured metadata: citation counts, venue info, TLDR. **Only runs when explicitly requested** |
+| 6 | **DeepXiv CLI** | `deepxiv` | Labline `tools/deepxiv_fetch.py` helper or installed `deepxiv` CLI | Progressive paper retrieval: search, brief, head, section, trending, web search. **Only runs when explicitly requested** |
+| 7 | **Exa Search** | `exa` | Labline `tools/exa_search.py` helper or installed `exa-py` SDK | AI-powered broad web search with content extraction (highlights, text, summaries). Covers blogs, docs, news, companies, and research papers beyond arXiv/S2. **Only runs when explicitly requested** |
 
 > If the user explicitly requests Zotero or Obsidian and that source is not configured, stop and tell the user how to enable it. Only sources that were not requested may be skipped silently.
 
@@ -139,9 +139,9 @@ Before searching online, check if the user already has relevant papers locally:
 
 Locate the fetch script and search arXiv directly:
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/arxiv_fetch.py" ] && SCRIPT="$ARIS_REPO/tools/arxiv_fetch.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/arxiv_fetch.py" ] && SCRIPT="$LABLINE_REPO/tools/arxiv_fetch.py"
 [ -z "$SCRIPT" ] && SCRIPT=$(find tools/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
 [ -z "$SCRIPT" ] && SCRIPT=$(find ~/.codex/skills/arxiv/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
 
@@ -159,7 +159,7 @@ When the user explicitly requests `— sources: semantic-scholar` or `— source
 
 ```bash
 S2_SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/semantic_scholar_fetch.py" ] && S2_SCRIPT="$ARIS_REPO/tools/semantic_scholar_fetch.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/semantic_scholar_fetch.py" ] && S2_SCRIPT="$LABLINE_REPO/tools/semantic_scholar_fetch.py"
 [ -z "$S2_SCRIPT" ] && S2_SCRIPT=$(find tools/ -name "semantic_scholar_fetch.py" 2>/dev/null | head -1)
 [ -z "$S2_SCRIPT" ] && S2_SCRIPT=$(find ~/.codex/skills/semantic-scholar/ -name "semantic_scholar_fetch.py" 2>/dev/null | head -1)
 
@@ -183,7 +183,7 @@ When the user explicitly requests `— sources: deepxiv` (or includes `deepxiv` 
 
 ```bash
 DEEPXIV_SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/deepxiv_fetch.py" ] && DEEPXIV_SCRIPT="$ARIS_REPO/tools/deepxiv_fetch.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/deepxiv_fetch.py" ] && DEEPXIV_SCRIPT="$LABLINE_REPO/tools/deepxiv_fetch.py"
 [ -z "$DEEPXIV_SCRIPT" ] && DEEPXIV_SCRIPT=$(find tools/ -name "deepxiv_fetch.py" 2>/dev/null | head -1)
 [ -z "$DEEPXIV_SCRIPT" ] && DEEPXIV_SCRIPT=$(find ~/.codex/skills/deepxiv/ -name "deepxiv_fetch.py" 2>/dev/null | head -1)
 if [ -n "$DEEPXIV_SCRIPT" ]; then
@@ -214,7 +214,7 @@ When the user explicitly requests `— sources: exa` (or includes `exa` in a com
 
 ```bash
 EXA_SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/exa_search.py" ] && EXA_SCRIPT="$ARIS_REPO/tools/exa_search.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/exa_search.py" ] && EXA_SCRIPT="$LABLINE_REPO/tools/exa_search.py"
 [ -z "$EXA_SCRIPT" ] && EXA_SCRIPT=$(find tools/ -name "exa_search.py" 2>/dev/null | head -1)
 [ -z "$EXA_SCRIPT" ] && EXA_SCRIPT=$(find ~/.codex/skills/exa-search/ -name "exa_search.py" 2>/dev/null | head -1)
 

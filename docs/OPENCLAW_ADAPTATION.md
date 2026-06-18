@@ -1,10 +1,10 @@
-# OpenClaw 适配指南（ARIS Workflow）
+# OpenClaw 适配指南（Labline Workflow）
 
-> 目标：在**没有 Claude Code slash 技能**的情况下，把 ARIS 的核心流程迁移到 OpenClaw 对话式执行。
+> 目标：在**没有 Claude Code slash 技能**的情况下，把 Labline 的核心流程迁移到 OpenClaw 对话式执行。
 
 ## 1. 适配思路
 
-ARIS 的本质是「科研流程编排」：
+Labline 的本质是「科研流程编排」：
 
 - Workflow 1：文献 → 想法 → 新颖性/可行性评估
 - Workflow 2：实验执行 → 自动评审循环 → 迭代修复
@@ -13,9 +13,9 @@ ARIS 的本质是「科研流程编排」：
 
 ---
 
-## 2. 对应关系（ARIS → OpenClaw）
+## 2. 对应关系（Labline → OpenClaw）
 
-| ARIS /skill | OpenClaw 等价执行方式 | 产出文件 |
+| Labline /skill | OpenClaw 等价执行方式 | 产出文件 |
 |---|---|---|
 | `/research-lit` | 让 agent 执行文献扫描与结构化综述 | `outputs/lit_scan.md` |
 | `/idea-creator` | 让 agent 生成候选方案 + MVP + 失败信号 | `outputs/idea_report.md` |

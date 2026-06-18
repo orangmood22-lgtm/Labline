@@ -1,6 +1,6 @@
 # Templates
 
-ARIS workflow templates. Copy into a research project, fill in content, then run matching skill (`$skill-name` in Codex, `/skill-name` in Claude Code).
+Labline workflow templates. Copy into a research project, fill in content, then run matching skill (`$skill-name` in Codex, `/skill-name` in Claude Code).
 
 ## Project Setup
 

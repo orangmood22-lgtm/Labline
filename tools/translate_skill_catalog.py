@@ -37,10 +37,11 @@ CN_DESC = {
     "experiment-plan": "设计严谨实验计划，声明预期并设置差异断言。",
     "experiment-queue": "通过 SSH 管理多种子/多配置 ML 实验队列，支持 OOM 重试。",
     "feishu-notify": "向飞书/Lark 发送状态更新通知。",
+    "feishu-session": "管理飞书/Lark 远程 Codex 或 Claude Code 会话；默认使用 lark-channel-bridge，Labline 自研 runner 仅作审计/合并 fallback。",
     "figure-description": "处理专利附图并生成正式附图说明。",
     "figure-spec": "生成可编辑 SVG 的确定性出版级架构/流程/管线图。",
     "formula-derivation": "整理并推导研究公式，生成可用于论文的推导包。",
-    "framework-update": "一键更新 ARIS 框架：git pull + 重建 symlinks。",
+    "framework-update": "一键更新 Labline 框架：git pull + 重建 symlinks。",
     "gemini-search": "通过 Gemini 搜索论文，用于广泛文献发现。",
     "grant-proposal": "根据研究想法起草结构化基金申请书（国自然/NSF/ERC 等）。",
     "idea-creator": "根据宽泛方向生成并排序研究想法。",
@@ -52,7 +53,7 @@ CN_DESC = {
     "kill-argument": "对抗性审查：模拟最严厉审稿人拒稿，判断论文是否已回应。",
     "leader": "三边架构总编排：自动派生 Executor、调 Reviewer，一个窗口全流程。",
     "mermaid-diagram": "生成 Mermaid 图表：架构图、流程图、数据流图。",
-    "meta-optimize": "分析 ARIS 使用日志，提出 SKILL.md 和工作流优化建议。",
+    "meta-optimize": "分析 Labline 使用日志，提出 SKILL.md 和工作流优化建议。",
     "monitor-experiment": "监控正在运行的 ML 实验，检查进度并检测问题。",
     "novelty-check": "对比现有文献验证研究想法的新颖性。",
     "openalex": "通过 OpenAlex API 搜索学术论文，含引用量和元数据。",
@@ -180,7 +181,7 @@ CN_ARG_HINT = {
 
 # 这些已经是中文了，但标题/框架文字需要翻译
 FRAMEWORK_TEXT = {
-    "title": "ARIS Skill 目录（中文版）",
+    "title": "Labline Skill 目录（中文版）",
     "auto_generated": "自动生成于",
     "total_skills": "个 skill",
     "total_categories": "个分类",
@@ -201,7 +202,7 @@ def translate_catalog(en_path: Path, cn_path: Path):
     content = en_path.read_text("utf-8")
 
     # Replace title
-    content = content.replace("# ARIS Skill Catalog", f"# {FRAMEWORK_TEXT['title']}")
+    content = content.replace("# Labline Skill Catalog", f"# {FRAMEWORK_TEXT['title']}")
 
     # Replace auto-generated line
     content = re.sub(

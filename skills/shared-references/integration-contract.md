@@ -1,8 +1,8 @@
 # Integration Contract
 
-When one ARIS skill delegates work to another (or to persistent project
+When one Labline skill delegates work to another (or to persistent project
 state), the coupling must be **engineered**, not assumed. This document
-formalizes what every cross-skill integration inside ARIS must provide.
+formalizes what every cross-skill integration inside Labline must provide.
 
 Rule of thumb: **SKILL.md prose can *describe* an integration; it cannot
 *guarantee* one.** Any integration whose silent failure would damage the
@@ -31,7 +31,7 @@ prose without a canonical helper, a concrete artifact, or a verifier**.
 
 ## Required components
 
-Every integration between two ARIS skills (or between a skill and a
+Every integration between two Labline skills (or between a skill and a
 persistent project artifact) must provide all six:
 
 ### 1. Activation predicate — single, explicit, observable
@@ -52,24 +52,24 @@ The business logic lives in **exactly one place** — a script under
 invokes the same entrypoint, but every caller must also resolve
 **where** that entrypoint lives, because the helper may sit at any of:
 
-- `<project>/.aris/tools/<helper>` — symlinked by `install_aris.sh` (Phase 0, #174)
-- `<project>/tools/<helper>` — manual copy or running from inside the ARIS repo
-- `$ARIS_REPO/tools/<helper>` — env var or auto-resolved from the install manifest
+- `<project>/.labline/tools/<helper>` — symlinked by `install_labline.sh` (Phase 0, #174)
+- `<project>/tools/<helper>` — manual copy or running from inside the Labline repo
+- `$LABLINE_REPO/tools/<helper>` — env var or auto-resolved from the install manifest
 
 So callers MUST use a resolution chain, not a hard-coded path. Pattern:
 
 ```bash
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills.txt 2>/dev/null)}"
-HELPER=".aris/tools/<helper>"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills.txt 2>/dev/null)}"
+HELPER=".labline/tools/<helper>"
 [ -f "$HELPER" ] || HELPER="tools/<helper>"
-[ -f "$HELPER" ] || { [ -n "${ARIS_REPO:-}" ] && HELPER="$ARIS_REPO/tools/<helper>"; }
-[ -f "$HELPER" ] || { echo "WARN: <helper> not found; rerun bash tools/install_aris.sh, set ARIS_REPO, or copy the helper to tools/. Skipping this step." >&2; HELPER=""; }
+[ -f "$HELPER" ] || { [ -n "${LABLINE_REPO:-}" ] && HELPER="$LABLINE_REPO/tools/<helper>"; }
+[ -f "$HELPER" ] || { echo "WARN: <helper> not found; rerun bash tools/install_labline.sh, set LABLINE_REPO, or copy the helper to tools/. Skipping this step." >&2; HELPER=""; }
 # ... then: [ -n "$HELPER" ] && python3 "$HELPER" <subcommand> ...
 ```
 
 - ✅ Resolved-via-chain invocation: `python3 "$WIKI_SCRIPT" ingest_paper <root> --arxiv-id <id>` (where `$WIKI_SCRIPT` was set by the chain above with `<helper>=research_wiki.py`)
-- ✅ `bash tools/verify_paper_audits.sh <paper> --assurance submission` (helpers under `tools/` that are only run from inside the ARIS repo can stay as plain `tools/...`; the resolution chain only applies to helpers invoked from a downstream user project)
+- ✅ `bash tools/verify_paper_audits.sh <paper> --assurance submission` (helpers under `tools/` that are only run from inside the Labline repo can stay as plain `tools/...`; the resolution chain only applies to helpers invoked from a downstream user project)
 - ❌ Hard-coded `python3 tools/research_wiki.py …` from a downstream skill that may run in a project without `tools/` on disk — it silently exits 2 and the caller proceeds with no side effect, which is exactly the failure mode that left a real user's `research-wiki/` empty for a week.
 - ❌ N skills each paraphrasing the same 10-line bash snippet. When one drifts, they all drift.
 
@@ -116,7 +116,7 @@ helper should not have to guess what to backfill.
 
 - ✅ `/research-wiki sync --arxiv-ids 2501.12345,1706.03762`
 - ✅ `/research-wiki sync --from-file ids.txt`
-- ⚠️ `/research-wiki sync` that scans `.aris/traces/` for arxiv IDs —
+- ⚠️ `/research-wiki sync` that scans `.labline/traces/` for arxiv IDs —
      only as a best-effort secondary mode, not the primary UX, and
      clearly labeled as heuristic.
 
@@ -142,7 +142,7 @@ surfaces drift to humans. But do not market a diagnostic as a gate.
 ## Experiment-chain contract vocabulary (for load-bearing research workflows)
 
 For experiment planning / implementation / auditing / claim judgment,
-ARIS should reuse a small shared vocabulary across artifacts instead of
+Labline should reuse a small shared vocabulary across artifacts instead of
 letting each skill invent new prose. This does **not** require a JSON-
 first migration; it means the same markdown sections and checklist terms
 must appear across the chain.
@@ -203,11 +203,11 @@ When reviewing a new integration proposal, reject any of:
 - **"Trust the LLM to self-report completion"** — missing verifier (§6)
   when the failure is load-bearing.
 
-## Known ARIS integrations under this contract
+## Known Labline integrations under this contract
 
 | Integration | Predicate | Helper | Artifact | Checklist | Backfill | Verifier |
 |---|---|---|---|---|---|---|
-| Submission audits (`max`/`beast`) | `paper/.aris/assurance.txt = submission` | `verify_paper_audits.sh` + 3 audit skills emit JSON | `paper/PROOF_AUDIT.json`, `PAPER_CLAIM_AUDIT.json`, `CITATION_AUDIT.json` + `paper/.aris/audit-verifier-report.json` | Phase 6.0 pre-flight checklist | Rerun the failed audit | `verify_paper_audits.sh` (exit 1 blocks) |
+| Submission audits (`max`/`beast`) | `paper/.labline/assurance.txt = submission` | `verify_paper_audits.sh` + 3 audit skills emit JSON | `paper/PROOF_AUDIT.json`, `PAPER_CLAIM_AUDIT.json`, `CITATION_AUDIT.json` + `paper/.labline/audit-verifier-report.json` | Phase 6.0 pre-flight checklist | Rerun the failed audit | `verify_paper_audits.sh` (exit 1 blocks) |
 | Research wiki ingest | `research-wiki/` exists | `research_wiki.py ingest_paper` | `research-wiki/papers/<slug>.md` + `log.md` entry | Step in each paper-reading skill | `research_wiki.py sync --arxiv-ids …` | `verify_wiki_coverage.sh` (diagnostic) |
 | paper-illustration-image2 finalization | `tools/paper_illustration_image2.py preflight --workspace <cwd>` returns `ok=true` | `paper_illustration_image2.py` (`preflight`, `finalize`, `verify`) | `figures/ai_generated/figure_final.png`, `latex_include.tex`, `review_log.json` | Step 0 checklist in `paper-illustration-image2` | `paper_illustration_image2.py finalize --workspace <cwd> --best-image <png>` | `paper_illustration_image2.py verify` (diagnostic, exit 1 on missing artifacts) |
 

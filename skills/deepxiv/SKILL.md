@@ -70,7 +70,7 @@ If the main argument looks like an arXiv ID and no explicit mode is given, defau
 
 ### Step 2: Locate the Adapter
 
-Prefer the ARIS adapter:
+Prefer the Labline adapter:
 
 ```bash
 python3 tools/deepxiv_fetch.py --help
@@ -207,12 +207,12 @@ read (brief / head / section / full) during this invocation — mere
 ```bash
 if [ -d research-wiki/ ]; then
   cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
-  ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills.txt 2>/dev/null)}"
-  WIKI_SCRIPT=".aris/tools/research_wiki.py"
+  LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills.txt 2>/dev/null)}"
+  WIKI_SCRIPT=".labline/tools/research_wiki.py"
   [ -f "$WIKI_SCRIPT" ] || WIKI_SCRIPT="tools/research_wiki.py"
-  [ -f "$WIKI_SCRIPT" ] || { [ -n "${ARIS_REPO:-}" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"; }
+  [ -f "$WIKI_SCRIPT" ] || { [ -n "${LABLINE_REPO:-}" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"; }
   [ -f "$WIKI_SCRIPT" ] || {
-    echo "WARN: research_wiki.py not found; depth-read summary delivered, wiki ingest skipped. Fix: bash tools/install_aris.sh, export ARIS_REPO, or cp <ARIS-repo>/tools/research_wiki.py tools/." >&2
+    echo "WARN: research_wiki.py not found; depth-read summary delivered, wiki ingest skipped. Fix: bash tools/install_labline.sh, export LABLINE_REPO, or cp <Labline-repo>/tools/research_wiki.py tools/." >&2
     WIKI_SCRIPT=""
   }
   if [ -n "$WIKI_SCRIPT" ]; then

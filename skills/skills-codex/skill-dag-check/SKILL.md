@@ -18,8 +18,8 @@ Analyze dependency impact for: **$ARGUMENTS**
 
 1. **Load current DAG**
    ```bash
-   ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-   python3 "$ARIS_REPO/tools/generate_skill_dag.py" --check-only
+   LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+   python3 "$LABLINE_REPO/tools/generate_skill_dag.py" --check-only
    ```
 
 2. **Parse target skill** — identify skill name from arguments

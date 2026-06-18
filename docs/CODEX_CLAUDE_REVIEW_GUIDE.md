@@ -1,6 +1,6 @@
 # Codex + Claude Reviewer Guide
 
-Run ARIS with:
+Run Labline with:
 
 - **Codex** as the main executor
 - **Claude Code CLI** as the reviewer

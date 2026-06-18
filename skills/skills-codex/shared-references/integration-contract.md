@@ -1,8 +1,8 @@
 # Integration Contract
 
-When one ARIS skill delegates work to another (or to persistent project
+When one Labline skill delegates work to another (or to persistent project
 state), the coupling must be **engineered**, not assumed. This document
-formalizes what every cross-skill integration inside ARIS must provide.
+formalizes what every cross-skill integration inside Labline must provide.
 
 Rule of thumb: **SKILL.md prose can *describe* an integration; it cannot
 *guarantee* one.** Any integration whose silent failure would damage the
@@ -31,7 +31,7 @@ prose without a canonical helper, a concrete artifact, or a verifier**.
 
 ## Required components
 
-Every integration between two ARIS skills (or between a skill and a
+Every integration between two Labline skills (or between a skill and a
 persistent project artifact) must provide all six:
 
 ### 1. Activation predicate — single, explicit, observable
@@ -52,24 +52,24 @@ The business logic lives in **exactly one place** — a script under
 invokes the same entrypoint, but every caller must also resolve
 **where** that entrypoint lives. On the Codex side the helper may be at:
 
-- `$ARIS_REPO/tools/<helper>` — env var or auto-resolved from `.aris/installed-skills-codex.txt`
-- `<project>/tools/<helper>` — manual copy or running from inside the ARIS repo
+- `$LABLINE_REPO/tools/<helper>` — env var or auto-resolved from `.labline/installed-skills-codex.txt`
+- `<project>/tools/<helper>` — manual copy or running from inside the Labline repo
 - `~/.codex/skills/<skill-name>/<helper>` — Codex global install layout
 
 Use a resolution chain, not a hard-coded path. Pattern:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 HELPER=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/<helper>" ] && HELPER="$ARIS_REPO/tools/<helper>"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/<helper>" ] && HELPER="$LABLINE_REPO/tools/<helper>"
 [ -z "$HELPER" ] && [ -f tools/<helper> ] && HELPER="tools/<helper>"
 [ -z "$HELPER" ] && [ -f ~/.codex/skills/<skill-name>/<helper> ] && HELPER="$HOME/.codex/skills/<skill-name>/<helper>"
-[ -z "$HELPER" ] && { echo "WARN: <helper> not found; set ARIS_REPO, copy to tools/, or use Codex global install. Skipping this step." >&2; }
+[ -z "$HELPER" ] && { echo "WARN: <helper> not found; set LABLINE_REPO, copy to tools/, or use Codex global install. Skipping this step." >&2; }
 # ... then: [ -n "$HELPER" ] && python3 "$HELPER" <subcommand> ...
 ```
 
 - ✅ Resolved-via-chain invocation: `python3 "$WIKI_SCRIPT" ingest_paper <root> --arxiv-id <id>` (where `$WIKI_SCRIPT` was set by the chain above with `<helper>=research_wiki.py`)
-- ✅ `bash tools/verify_paper_audits.sh <paper> --assurance submission` (helpers under `tools/` that are only run from inside the ARIS repo can stay as plain `tools/...`; the resolution chain only applies to helpers invoked from a downstream user project)
+- ✅ `bash tools/verify_paper_audits.sh <paper> --assurance submission` (helpers under `tools/` that are only run from inside the Labline repo can stay as plain `tools/...`; the resolution chain only applies to helpers invoked from a downstream user project)
 - ❌ Hard-coded `python3 tools/research_wiki.py …` from a downstream skill that may run in a project without `tools/` on disk — it silently exits 2 and the caller proceeds with no side effect.
 - ❌ N skills each paraphrasing the same 10-line bash snippet. When one drifts, they all drift.
 
@@ -116,7 +116,7 @@ helper should not have to guess what to backfill.
 
 - ✅ `/research-wiki sync --arxiv-ids 2501.12345,1706.03762`
 - ✅ `/research-wiki sync --from-file ids.txt`
-- ⚠️ `/research-wiki sync` that scans `.aris/traces/` for arxiv IDs —
+- ⚠️ `/research-wiki sync` that scans `.labline/traces/` for arxiv IDs —
      only as a best-effort secondary mode, not the primary UX, and
      clearly labeled as heuristic.
 
@@ -156,11 +156,11 @@ When reviewing a new integration proposal, reject any of:
 - **"Trust the LLM to self-report completion"** — missing verifier (§6)
   when the failure is load-bearing.
 
-## Known ARIS integrations under this contract
+## Known Labline integrations under this contract
 
 | Integration | Predicate | Helper | Artifact | Checklist | Backfill | Verifier |
 |---|---|---|---|---|---|---|
-| Submission audits (`max`/`beast`) | `paper/.aris/assurance.txt = submission` | `verify_paper_audits.sh` + 3 audit skills emit JSON | `paper/PROOF_AUDIT.json`, `PAPER_CLAIM_AUDIT.json`, `CITATION_AUDIT.json` + `paper/.aris/audit-verifier-report.json` | Phase 6.0 pre-flight checklist | Rerun the failed audit | `verify_paper_audits.sh` (exit 1 blocks) |
+| Submission audits (`max`/`beast`) | `paper/.labline/assurance.txt = submission` | `verify_paper_audits.sh` + 3 audit skills emit JSON | `paper/PROOF_AUDIT.json`, `PAPER_CLAIM_AUDIT.json`, `CITATION_AUDIT.json` + `paper/.labline/audit-verifier-report.json` | Phase 6.0 pre-flight checklist | Rerun the failed audit | `verify_paper_audits.sh` (exit 1 blocks) |
 | Research wiki ingest | `research-wiki/` exists | `research_wiki.py ingest_paper` | `research-wiki/papers/<slug>.md` + `log.md` entry | Step in each paper-reading skill | `research_wiki.py sync --arxiv-ids …` | `verify_wiki_coverage.sh` (diagnostic) |
 
 When adding a new cross-skill integration, add a row to the table above

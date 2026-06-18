@@ -1,6 +1,6 @@
-# Cursor Adaptation Guide (ARIS Workflows)
+# Cursor Adaptation Guide (Labline Workflows)
 
-> Use ARIS research workflows in **Cursor** without Claude Code slash commands.
+> Use Labline research workflows in **Cursor** without Claude Code slash commands.
 
 ## 1. Key Differences: Claude Code vs Cursor
 
@@ -21,11 +21,11 @@
 git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git
 ```
 
-> **Important:** Open this repo (or add it as a workspace folder) in Cursor. The `@skills/...` references throughout this guide use Cursor's `@`-file feature, which only resolves files within your open workspace. If you work in a separate project, either copy the `skills/` folder into it or add the ARIS repo as a second workspace folder (File → Add Folder to Workspace).
+> **Important:** Open this repo (or add it as a workspace folder) in Cursor. The `@skills/...` references throughout this guide use Cursor's `@`-file feature, which only resolves files within your open workspace. If you work in a separate project, either copy the `skills/` folder into it or add the Labline repo as a second workspace folder (File → Add Folder to Workspace).
 
 ### 2.2 Set up Codex MCP in Cursor (for review skills)
 
-ARIS uses an external LLM (GPT-5.4 via Codex) as a critical reviewer. To enable this in Cursor:
+Labline uses an external LLM (GPT-5.4 via Codex) as a critical reviewer. To enable this in Cursor:
 
 1. Install Codex CLI and authenticate:
    ```bash
@@ -217,9 +217,9 @@ Each stage reads the previous stage's output files, so context carries forward e
 
 ## 5. MCP Tool Calls
 
-ARIS skills reference MCP tools by name (e.g., `mcp__codex__codex`). Cursor supports MCP tool calls in agent mode — when the SKILL.md instructions say to call an MCP tool, Cursor's agent will invoke it if the server is configured.
+Labline skills reference MCP tools by name (e.g., `mcp__codex__codex`). Cursor supports MCP tool calls in agent mode — when the SKILL.md instructions say to call an MCP tool, Cursor's agent will invoke it if the server is configured.
 
-| ARIS MCP tool | What it does | Required MCP server |
+| Labline MCP tool | What it does | Required MCP server |
 |--------------|-------------|-------------------|
 | `mcp__codex__codex` | Send prompt to GPT-5.4 | Codex |
 | `mcp__codex__codex-reply` | Continue conversation thread | Codex |
@@ -229,7 +229,7 @@ ARIS skills reference MCP tools by name (e.g., `mcp__codex__codex`). Cursor supp
 
 ## 6. State Files & Recovery
 
-ARIS workflows persist state to files for crash recovery. These work identically in Cursor:
+Labline workflows persist state to files for crash recovery. These work identically in Cursor:
 
 | File | Purpose | Written by |
 |------|---------|-----------|
@@ -272,7 +272,7 @@ Deploy the training script to the remote GPU server.
 | `allowed-tools` not enforced | Cursor agent has access to all its tools by default — not a problem in practice |
 | Skills reference `$ARGUMENTS` | Replace with your actual arguments in the prompt |
 | SKILL.md files use `/skill-name` to call sub-skills | Cursor ignores these. For pipeline skills (`idea-discovery`, `paper-writing`), list the sub-skill `@` references explicitly in your prompt — see Workflow 1 and 3 examples |
-| `@skills/...` requires workspace access | The ARIS repo (or its `skills/` folder) must be in your Cursor workspace — see Setup §2.1 |
+| `@skills/...` requires workspace access | The Labline repo (or its `skills/` folder) must be in your Cursor workspace — see Setup §2.1 |
 
 ## 9. Quick Reference
 

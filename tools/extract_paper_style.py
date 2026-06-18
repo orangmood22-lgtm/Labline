@@ -91,7 +91,7 @@ Output schema
 
 Cache layout
 ------------
-Default cache root: $ARIS_STYLE_REF_CACHE (env) or `~/.cache/aris-style-refs/`
+Default cache root: $LABLINE_STYLE_REF_CACHE (env) or `~/.cache/labline-style-refs/`
                     (XDG-friendly; avoids polluting the user's project repo
                     when the user runs the writer skill from inside their
                     paper directory)
@@ -197,7 +197,7 @@ def _read_arxiv(arxiv_id: str) -> str:
     arxiv_id = arxiv_id.removeprefix("arxiv:")
     url = f"https://export.arxiv.org/abs/{arxiv_id}"
     try:
-        r = requests.get(url, timeout=20, headers={"User-Agent": "aris-extract-paper-style/1"})
+        r = requests.get(url, timeout=20, headers={"User-Agent": "labline-extract-paper-style/1"})
     except Exception as e:
         raise SourceError(f"arXiv fetch failed: {e}")
     if r.status_code != 200:
@@ -211,7 +211,7 @@ def _read_http(url: str) -> str:
     except ImportError:
         raise MissingDep("requests (pip install requests) needed for HTTP fetch")
     try:
-        r = requests.get(url, timeout=30, headers={"User-Agent": "aris-extract-paper-style/1"})
+        r = requests.get(url, timeout=30, headers={"User-Agent": "labline-extract-paper-style/1"})
     except Exception as e:
         raise SourceError(f"HTTP fetch failed: {e}")
     if r.status_code != 200:
@@ -451,26 +451,26 @@ class SourceError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 def _cache_root() -> Path:
-    env = os.environ.get("ARIS_STYLE_REF_CACHE")
+    env = os.environ.get("LABLINE_STYLE_REF_CACHE")
     if env:
         return Path(env).expanduser().resolve()
     xdg = os.environ.get("XDG_CACHE_HOME")
     base = Path(xdg).expanduser() if xdg else Path.home() / ".cache"
-    return base / "aris-style-refs"
+    return base / "labline-style-refs"
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Extract a skeleton-only style profile from a reference paper "
-                    "for opt-in use by ARIS writer skills via --style-ref.",
+                    "for opt-in use by Labline writer skills via --style-ref.",
     )
     ap.add_argument("--source", required=True,
                     help="Local path, arXiv ID, http(s) URL, or 'arxiv:<id>'. "
                          "Overleaf URLs are rejected — clone via overleaf-sync first "
                          "and pass the local clone path instead.")
     ap.add_argument("--out", default=None,
-                    help="Override cache root (default: $ARIS_STYLE_REF_CACHE, "
-                         "$XDG_CACHE_HOME/aris-style-refs/, or ~/.cache/aris-style-refs/)")
+                    help="Override cache root (default: $LABLINE_STYLE_REF_CACHE, "
+                         "$XDG_CACHE_HOME/labline-style-refs/, or ~/.cache/labline-style-refs/)")
     ap.add_argument("--force", action="store_true",
                     help="Refetch and overwrite even if cache hit exists.")
     args = ap.parse_args()

@@ -24,7 +24,7 @@ Use Exa when you need results beyond academic databases, or when you want conten
 
 ## Constants
 
-- **FETCH_SCRIPT** — `$ARIS_REPO/tools/exa_search.py` from the ARIS repo recorded by the Codex install manifest.
+- **FETCH_SCRIPT** — `$LABLINE_REPO/tools/exa_search.py` from the Labline repo recorded by the Codex install manifest.
 - **MAX_RESULTS = 10** — Default number of results to return.
 
 > Overrides (append to arguments):
@@ -74,16 +74,16 @@ Parse `$ARGUMENTS` for:
 ### Step 2: Locate Script
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/exa_search.py" ] && SCRIPT="$ARIS_REPO/tools/exa_search.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/exa_search.py" ] && SCRIPT="$LABLINE_REPO/tools/exa_search.py"
 [ -z "$SCRIPT" ] && SCRIPT=$(find tools/ -name "exa_search.py" 2>/dev/null | head -1)
 [ -z "$SCRIPT" ] && SCRIPT=$(find ~/.codex/skills/exa-search/ -name "exa_search.py" 2>/dev/null | head -1)
 ```
 
 If not found, tell the user:
 ```
-exa_search.py not found. Run install_aris_codex.sh, set ARIS_REPO to your ARIS repo root, or install/copy the helper into the project/global Codex skill path; then install exa-py:
+exa_search.py not found. Run install_labline_codex.sh, set LABLINE_REPO to your Labline repo root, or install/copy the helper into the project/global Codex skill path; then install exa-py:
 pip install exa-py
 ```
 
@@ -154,7 +154,7 @@ back to manual metadata:
 ```
 if [ -d research-wiki/ ] and query category was "research paper":
     WIKI_SCRIPT=""
-    [ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"
+    [ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"
     [ -z "$WIKI_SCRIPT" ] && [ -f tools/research_wiki.py ] && WIKI_SCRIPT="tools/research_wiki.py"
     [ -z "$WIKI_SCRIPT" ] && [ -f ~/.codex/skills/research-wiki/research_wiki.py ] && WIKI_SCRIPT="$HOME/.codex/skills/research-wiki/research_wiki.py"
     for each research-paper hit in results:

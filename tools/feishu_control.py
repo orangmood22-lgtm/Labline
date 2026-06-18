@@ -34,7 +34,7 @@ def state_root(args: argparse.Namespace) -> Path:
     if args.state_root:
         return Path(args.state_root)
     project_root = Path(args.project_root or ".")
-    return project_root / ".aris" / "feishu-control"
+    return project_root / ".labline" / "feishu-control"
 
 
 def state_file(root: Path) -> Path:
@@ -208,7 +208,7 @@ def handle_command(root: Path, state: dict, text: str, now: datetime) -> tuple[d
         return {"status": "ok", "active_session_id": state.get("active_session_id"), "lease": state.get("leases", {})}, 0
 
     if command == "/resume" and len(parts) >= 2:
-        # The actual Codex launch belongs to aris-feishu-session. This command records intent only.
+        # The actual Codex launch belongs to labline_feishu_session. This command records intent only.
         session_id = state.get("active_session_id")
         if session_id:
             queue_message(root, state, session_id, text, "feishu", now)
@@ -362,7 +362,7 @@ def cmd_respond(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage ARIS Feishu-controlled Codex sessions.")
+    parser = argparse.ArgumentParser(description="Manage Labline Feishu-controlled Codex sessions.")
     parser.add_argument("--state-root")
     parser.add_argument("--project-root")
     subparsers = parser.add_subparsers(dest="command", required=True)

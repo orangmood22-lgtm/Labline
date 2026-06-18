@@ -2,16 +2,16 @@
 
 [English](SESSION_RECOVERY_GUIDE.md) | 中文版
 
-> 在 ARIS 工作流中跨会话和上下文压缩维护项目状态 — 核心设计是**项目 CLAUDE.md 中的 Pipeline Status**，Claude Code 用户可选 hook 自动化。
+> 在 Labline 工作流中跨会话和上下文压缩维护项目状态 — 核心设计是**项目 CLAUDE.md 中的 Pipeline Status**，Claude Code 用户可选 hook 自动化。
 
 ## 为什么需要会话恢复
 
-ARIS 工作流可能持续数小时（idea discovery、auto-review loop、overnight training）。两件事会打断状态连续性：
+Labline 工作流可能持续数小时（idea discovery、auto-review loop、overnight training）。两件事会打断状态连续性：
 
 1. **上下文压缩（Context Compaction）** — 当上下文窗口满了，Claude Code 自动压缩之前的消息。压缩后 LLM 只有压缩摘要，可能忘记当前在哪个 stage、哪些实验在跑、下一步该做什么。
 2. **主动开新会话** — 当上下文使用超过约 50% 时，LLM 能力会明显下降。有经验的用户会主动开新 session 以恢复模型满状态能力，而不是等自动压缩。这意味着 LLM 必须从磁盘文件重建项目状态。
 
-ARIS 已经将部分状态持久化到文件（`review-stage/REVIEW_STATE.json`、`review-stage/AUTO_REVIEW.md`），但**没有系统性机制确保 LLM 在恢复时去读这些文件**。压缩后，它经常忘记。
+Labline 已经将部分状态持久化到文件（`review-stage/REVIEW_STATE.json`、`review-stage/AUTO_REVIEW.md`），但**没有系统性机制确保 LLM 在恢复时去读这些文件**。压缩后，它经常忘记。
 
 ## 核心方案：Pipeline Status
 
@@ -140,12 +140,12 @@ cat > ~/.claude/hooks/session-restore.sh << 'HOOKEOF'
 # PreToolUse hook: 新会话首次工具调用时自动恢复项目上下文
 # 每个会话只触发一次。修改 RESEARCH_ROOT 指向你的项目父目录。
 
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
 
-FLAG="/tmp/aris-session-restore-$$"
+FLAG="/tmp/labline-session-restore-$$"
 [ -f "$FLAG" ] && exit 0
 touch "$FLAG"
 
@@ -220,12 +220,12 @@ cat > ~/.claude/hooks/context-refresh.sh << 'HOOKEOF'
 # PreToolUse hook: 每 30 次工具调用刷新一次 Pipeline Status
 
 INPUT=$(cat)
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
 
-COUNTER_FILE="/tmp/aris-context-refresh-counter"
+COUNTER_FILE="/tmp/labline-context-refresh-counter"
 COUNT=0
 [ -f "$COUNTER_FILE" ] && COUNT=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 COUNT=$((COUNT + 1))
@@ -260,7 +260,7 @@ cat > ~/.claude/hooks/pre-compact-remind.sh << 'HOOKEOF'
 #!/bin/bash
 # PreCompact hook: 压缩前提醒 LLM 保存状态
 
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
@@ -291,7 +291,7 @@ case "$TOOL_NAME" in
   *) exit 0 ;;
 esac
 
-RESEARCH_ROOT="${ARIS_RESEARCH_ROOT:-$HOME/research}"
+RESEARCH_ROOT="${LABLINE_RESEARCH_ROOT:-$HOME/research}"
 CWD=$(pwd)
 [[ "$CWD" != "$RESEARCH_ROOT"/* ]] && exit 0
 
@@ -301,7 +301,7 @@ case "$FILE_PATH" in
     exit 0 ;;
 esac
 
-COUNTER_FILE="/tmp/aris-progress-remind-counter"
+COUNTER_FILE="/tmp/labline-progress-remind-counter"
 COUNT=0
 [ -f "$COUNTER_FILE" ] && COUNT=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 COUNT=$((COUNT + 1))
@@ -368,7 +368,7 @@ chmod +x ~/.claude/hooks/progress-remind.sh
 #### 4. 设置项目根目录（可选）
 
 ```bash
-export ARIS_RESEARCH_ROOT="$HOME/my-projects"  # 默认: ~/research
+export LABLINE_RESEARCH_ROOT="$HOME/my-projects"  # 默认: ~/research
 ```
 
 ## 整体架构

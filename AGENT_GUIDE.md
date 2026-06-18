@@ -1,4 +1,4 @@
-# ARIS Agent Guide
+# Labline Agent Guide
 
 > This file has moved to `skills/shared-references/agent-guide.md` and is automatically installed into every project via symlink.
 >

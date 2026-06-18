@@ -1,6 +1,6 @@
 # MCP Servers
 
-ARIS keeps reviewer/chat/notification bridges under `mcp-servers/`. Some entries are true MCP stdio servers; `feishu-bridge` is an HTTP bridge kept here because it serves the same agent-integration layer.
+Labline keeps reviewer/chat/notification bridges under `mcp-servers/`. Some entries are true MCP stdio servers; `feishu-bridge` is an HTTP bridge kept here because it serves the same agent-integration layer.
 
 ## Index
 
@@ -40,7 +40,7 @@ Provider smoke tests need live API keys and are intentionally manual.
 | `POST /control/request-approval` | Create a single-action Remote Action Approval |
 | `POST /control/respond` | Record a Codex Session response in the outbox |
 
-Runtime state defaults to `.aris/feishu-control/` under `ARIS_PROJECT_ROOT`. Override with `ARIS_FEISHU_CONTROL_ROOT` for tests or isolated deployments.
+Runtime state defaults to `.labline/feishu-control/` under `LABLINE_PROJECT_ROOT`. Override with `LABLINE_FEISHU_CONTROL_ROOT` for tests or isolated deployments.
 
 Feishu message sending defaults to `FEISHU_RECEIVE_ID_TYPE=open_id`. If `FEISHU_USER_ID` is a Feishu user ID or union ID, set `FEISHU_RECEIVE_ID_TYPE=user_id` or `FEISHU_RECEIVE_ID_TYPE=union_id`.
 
@@ -51,14 +51,14 @@ Run the bridge:
 ```bash
 set -a; source .env; set +a
 export FEISHU_ENABLE_WS=1
-export ARIS_PROJECT_ROOT="$PWD"
+export LABLINE_PROJECT_ROOT="$PWD"
 python mcp-servers/feishu-bridge/server.py
 ```
 
 Run a managed Codex session that consumes the active inbox and replies through Feishu:
 
 ```bash
-python tools/aris_feishu_session.py \
+python tools/labline_feishu_session.py \
   --session-id leader-phone \
   --role leader \
   --project-root "$PWD" \

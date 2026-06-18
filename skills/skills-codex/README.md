@@ -1,10 +1,10 @@
 # `skills-codex`
 
-Codex-native mirror and adaptation layer for the main ARIS `skills/` package.
+Codex-native mirror and adaptation layer for the main Labline `skills/` package.
 
 ## Scope
 
-- Base mirror coverage: all `94` user-facing mainline skills under `skills/`
+- Base mirror coverage: all user-facing mainline skills under `skills/`
 - Support directory: `shared-references/`
 - Default reviewer contract for reviewer-heavy skills:
   - round 1: `spawn_agent`
@@ -21,31 +21,31 @@ This package is still an appendage to the Claude mainline, not a separate Codex-
 Project-local install is the default path for Codex:
 
 ```bash
-git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git ~/aris_repo
+git clone https://github.com/orangmood22-lgtm/Auto-research-in-sleep.git ~/labline_repo
 cd ~/your-project
 
-bash ~/aris_repo/tools/install_aris_codex.sh .
+bash ~/labline_repo/tools/install_labline_codex.sh .
 ```
 
 This creates a flat managed layout:
 
 ```text
-.agents/skills/<skill-name> -> ~/aris_repo/skills/skills-codex/<skill-name>
-.aris/installed-skills-codex.txt
+.agents/skills/<skill-name> -> ~/labline_repo/skills/skills-codex/<skill-name>
+.labline/installed-skills-codex.txt
 AGENTS.md   # managed Codex block
 ```
 
 Reconcile after upstream changes:
 
 ```bash
-cd ~/aris_repo && git pull
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile
+cd ~/labline_repo && git pull
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile
 ```
 
 Uninstall only managed Codex entries:
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --uninstall
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --uninstall
 ```
 
 ## Optional Overlays
@@ -53,11 +53,11 @@ bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --uninstall
 Install the base first, then choose an overlay:
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile --with-claude-review-overlay
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile --with-claude-review-overlay
 ```
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile --with-gemini-review-overlay
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile --with-gemini-review-overlay
 ```
 
 Overlays only replace reviewer routing. They do not replace the base mirror or the executor model.
@@ -68,24 +68,24 @@ If you intentionally use a copied Codex install instead of managed project symli
 
 ```bash
 mkdir -p ~/.codex/skills
-cp -a ~/aris_repo/skills/skills-codex/. ~/.codex/skills/
+cp -a ~/labline_repo/skills/skills-codex/. ~/.codex/skills/
 ```
 
 Update copied installs with:
 
 ```bash
-bash ~/aris_repo/tools/smart_update_codex.sh
-bash ~/aris_repo/tools/smart_update_codex.sh --apply
+bash ~/labline_repo/tools/smart_update_codex.sh
+bash ~/labline_repo/tools/smart_update_codex.sh --apply
 ```
 
 For a copied project-local Codex install:
 
 ```bash
-bash ~/aris_repo/tools/smart_update_codex.sh --project ~/your-project
-bash ~/aris_repo/tools/smart_update_codex.sh --project ~/your-project --apply
+bash ~/labline_repo/tools/smart_update_codex.sh --project ~/your-project
+bash ~/labline_repo/tools/smart_update_codex.sh --project ~/your-project --apply
 ```
 
-`smart_update_codex.sh` refuses symlink-managed installs and redirects them to `install_aris_codex.sh --reconcile`.
+`smart_update_codex.sh` refuses symlink-managed installs and redirects them to `install_labline_codex.sh --reconcile`.
 
 ## Non-Degrading Skills
 

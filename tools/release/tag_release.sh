@@ -54,7 +54,7 @@ if [[ "$APPLY" -ne 1 ]]; then
   exit 0
 fi
 
-git -C "$REPO" tag -a "$VERSION" -m "ARIS $VERSION"
+git -C "$REPO" tag -a "$VERSION" -m "Labline $VERSION"
 echo "Created local tag $VERSION"
 
 if [[ "$PUSH_TAG" -eq 1 ]]; then

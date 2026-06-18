@@ -13,7 +13,7 @@
 
 - 禁止 `tail -f` 或循环 `tail` 轮询实验 → 用 `$monitor-experiment` 或 background tasks
 - Executor 遇阻塞遵循 `executor-blocked-protocol.md`：自救 2 次，失败写 `BLOCKED_REPORT.md`
-- Agent 启动、进入长任务、阻塞、完成时遵循 `agent-status-stream.md` 更新自己的状态文件；`.aris/status/` 不提交
+- Agent 启动、进入长任务、阻塞、完成时遵循 `agent-status-stream.md` 更新自己的状态文件；`.labline/status/` 不提交
 - 角色职责以 `role-contracts.md` 为准；模型/provider 覆盖不能改变职责边界
 - Leader 不写代码/不跑命令，Coder 不 SSH，Deployer 不改代码，Writer 不跑实验，Reviewer 只看原始文件
 - Skill 分层：编排层(leader) / 执行层(coder|deployer|writer) / 审查层(reviewer) / 工具层(any) / 检索层(any)，不要越层调用

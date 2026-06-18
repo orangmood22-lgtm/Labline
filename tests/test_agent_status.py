@@ -300,7 +300,7 @@ def test_project_root_writes_project_runtime_state():
             ]
         )
 
-        snapshot_path = project_root / ".aris" / "status" / "agents" / "writer-001.json"
+        snapshot_path = project_root / ".labline" / "status" / "agents" / "writer-001.json"
         assert snapshot_path.exists()
         assert json.loads(snapshot_path.read_text(encoding="utf-8"))["role"] == "writer"
 
@@ -335,7 +335,7 @@ def test_start_accepts_reviewer_transport_metadata():
                 "--input-scope",
                 "refine-logs/EXPERIMENT_RESULTS/",
                 "--trace-path",
-                ".aris/traces/experiment-audit/20260613_run01/",
+                ".labline/traces/experiment-audit/20260613_run01/",
             ]
         )
 
@@ -346,7 +346,7 @@ def test_start_accepts_reviewer_transport_metadata():
             "refine-logs/EXPERIMENT_PLAN.md",
             "refine-logs/EXPERIMENT_RESULTS/",
         ]
-        assert snapshot["trace_path"] == ".aris/traces/experiment-audit/20260613_run01/"
+        assert snapshot["trace_path"] == ".labline/traces/experiment-audit/20260613_run01/"
 
 
 if __name__ == "__main__":

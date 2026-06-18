@@ -1,6 +1,6 @@
-# ARIS GPU 部署指南 — 3090x2 服务器
+# Labline GPU 部署指南 — 3090x2 服务器
 
-> 目标：在 `3090x2-original` 上用 Docker 部署 ARIS 框架（GPU 版），运行 exp0516 实验。
+> 目标：在 `3090x2-original` 上用 Docker 部署 Labline 框架（GPU 版），运行 exp0516 实验。
 
 ## 前置条件
 
@@ -88,7 +88,7 @@ SSH_PATH=[你的SSH目录]
 ```bash
 cd [你的framework位置]
 
-docker build -f deploy/Dockerfile.gpu -t aris-gpu \
+docker build -f deploy/Dockerfile.gpu -t labline-gpu \
   --build-arg BUILD_HTTP_PROXY=http://127.0.0.1:7897 \
   --build-arg BUILD_HTTPS_PROXY=http://127.0.0.1:7897 \
   --network host \
@@ -112,30 +112,30 @@ PyTorch X.X.X, CUDA available: True
 
 ```bash
 docker run -d \
-  --name aris-gpu \
-  --hostname aris-gpu \
-  --add-host aris-gpu:127.0.1.1 \
+  --name labline-gpu \
+  --hostname labline-gpu \
+  --add-host labline-gpu:127.0.1.1 \
   --restart unless-stopped \
   --gpus all \
   --network host \
-  -v "$FRAMEWORK_PATH:/aris/framework" \
-  -v "$DEV_FRAMEWORK_PATH:/aris/aris-dev" \
-  -v "$PROJECT_PATH:/aris/projects" \
-  -v "$DATASETS_PATH:/aris/shared/datasets:ro" \
-  -v "$PRETRAINED_PATH:/aris/shared/pretrained" \
+  -v "$FRAMEWORK_PATH:/labline/framework" \
+  -v "$DEV_FRAMEWORK_PATH:/labline/labline-dev" \
+  -v "$PROJECT_PATH:/labline/projects" \
+  -v "$DATASETS_PATH:/labline/shared/datasets:ro" \
+  -v "$PRETRAINED_PATH:/labline/shared/pretrained" \
   -v "$SSH_PATH:/run/secrets/ssh:ro" \
   -e ANTHROPIC_API_KEY="$(grep ANTHROPIC_API_KEY deploy/.env | cut -d= -f2)" \
   -e ANTHROPIC_BASE_URL="$(grep ANTHROPIC_BASE_URL deploy/.env | cut -d= -f2)" \
   -e OPENAI_API_KEY="$(grep OPENAI_API_KEY deploy/.env | cut -d= -f2)" \
   -e HTTP_PROXY=http://127.0.0.1:7897 \
   -e HTTPS_PROXY=http://127.0.0.1:7897 \
-  aris-gpu sleep infinity
+  labline-gpu sleep infinity
 ```
 
 ## Step 5: 进容器
 
 ```bash
-docker exec -it aris-gpu bash
+docker exec -it labline-gpu bash
 ```
 
 ## Step 6: 容器内验证
@@ -145,18 +145,18 @@ docker exec -it aris-gpu bash
 nvidia-smi
 python3 -c "import torch; print(f'GPUs: {torch.cuda.device_count()}, CUDA: {torch.cuda.is_available()}')"
 
-# ARIS 框架
-ls /aris/framework/skills/ | head -5
-ls -ld /aris/aris-dev
-bash /aris/framework/deploy/aris_gpu_doctor.sh --project exp0516 --project exp0603
+# Labline 框架
+ls /labline/framework/skills/ | head -5
+ls -ld /labline/labline-dev
+bash /labline/framework/deploy/labline_gpu_doctor.sh --project exp0516 --project exp0603
 
 # Codex / Claude Code
 codex --version
 claude --version
 
 # 项目文件和数据集
-ls /aris/projects/exp0516/
-ls -ld /aris/shared/datasets/VOCdevkit
+ls /labline/projects/exp0516/
+ls -ld /labline/shared/datasets/VOCdevkit
 ```
 
 ## Step 7: 容器内安装 Skills 到 exp0516
@@ -164,15 +164,15 @@ ls -ld /aris/shared/datasets/VOCdevkit
 exp0516 的 symlinks 指向本机路径，需重建：
 
 ```bash
-cd /aris/projects/exp0516
-bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --replace-link
+cd /labline/projects/exp0516
+bash /labline/framework/tools/install_labline.sh . --labline-repo /labline/framework --replace-link
 ```
 
 验证：
 ```bash
 ls -la .agents/skills/ | head -5
 ls -la .claude/skills/ | head -5
-# 应该指向 /aris/framework/skills/...
+# 应该指向 /labline/framework/skills/...
 ```
 
 ## Step 8: 传数据集（从本机 WSL 执行）
@@ -189,7 +189,7 @@ rsync -avz --progress \
 ## Step 9: 容器内解压数据集
 
 ```bash
-cd /aris/projects/exp0516
+cd /labline/projects/exp0516
 tar xzf VOC2007.tar.gz
 tar xzf VOCdevkit_full.tar.gz
 ```
@@ -198,7 +198,7 @@ tar xzf VOCdevkit_full.tar.gz
 
 ```bash
 # 进入项目目录
-cd /aris/projects/exp0516
+cd /labline/projects/exp0516
 
 # 启动 Codex
 codex
@@ -219,23 +219,23 @@ python3 code/train.py
 ```bash
 ssh 3090x2-original
 proxyon
-docker start aris-gpu
-docker exec -it aris-gpu bash
+docker start labline-gpu
+docker exec -it labline-gpu bash
 ```
 
 ### 停止
 
 ```bash
-docker stop aris-gpu
+docker stop labline-gpu
 ```
 
 ### 重建（框架更新后）
 
 ```bash
-docker stop aris-gpu && docker rm aris-gpu
+docker stop labline-gpu && docker rm labline-gpu
 cd [你的framework位置]
 git pull
-docker build -f deploy/Dockerfile.gpu -t aris-gpu \
+docker build -f deploy/Dockerfile.gpu -t labline-gpu \
   --build-arg BUILD_HTTP_PROXY=http://127.0.0.1:7897 \
   --build-arg BUILD_HTTPS_PROXY=http://127.0.0.1:7897 \
   --network host .
@@ -246,9 +246,9 @@ docker build -f deploy/Dockerfile.gpu -t aris-gpu \
 
 ```bash
 # 容器内执行
-cd /aris/framework && sudo git pull
-cd /aris/projects/exp0516
-bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --reconcile
+cd /labline/framework && sudo git pull
+cd /labline/projects/exp0516
+bash /labline/framework/tools/install_labline.sh . --labline-repo /labline/framework --reconcile
 ```
 
 ---
@@ -262,5 +262,5 @@ bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --recon
 | GPU 容器内看不到              | 检查 `--gpus all`，宿主机跑 `nvidia-smi` 确认驱动正常                   |
 | Claude Code 报 401/403        | 检查 `ANTHROPIC_API_KEY` 是否正确传入，容器内 `echo $ANTHROPIC_API_KEY` |
 | PyTorch 报 CUDA not available | 驱动版本和 CUDA 镜像版本不兼容，降级 Dockerfile 中的 CUDA 版本          |
-| `install_aris.sh` 报错        | 确认 `/aris/framework/skills/` 存在且非空                               |
+| `install_labline.sh` 报错        | 确认 `/labline/framework/skills/` 存在且非空                               |
 | 容器内网络不通                | `--network host` 应该继承宿主机网络，检查 clash 是否在跑                |

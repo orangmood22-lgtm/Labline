@@ -30,13 +30,13 @@
 1. 先安装上游原生 Codex 基座：
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project
 ```
 
 2. 再用 Claude overlay 重跑一次：
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile --with-claude-review-overlay
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile --with-claude-review-overlay
 ```
 
 3. 注册本地 reviewer bridge：

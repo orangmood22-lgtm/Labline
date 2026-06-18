@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ARIS Research Wiki — Helper utilities.
+Labline Research Wiki — Helper utilities.
 Canonical helper for the /research-wiki skill and integration hooks in other
 skills. The SKILL.md prose for paper-reading skills (research-lit, arxiv,
 alphaxiv, deepxiv, semantic-scholar, exa-search) delegates ingest to this
@@ -638,7 +638,7 @@ def append_log(wiki_root: str, message: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ARIS Research Wiki utilities")
+    parser = argparse.ArgumentParser(description="Labline Research Wiki utilities")
     subparsers = parser.add_subparsers(dest="command")
 
     # init

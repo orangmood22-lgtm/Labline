@@ -1,4 +1,4 @@
-# ARIS Role Contract Matrix
+# Labline Role Contract Matrix
 
 Role Contract defines responsibility. Runtime Binding defines which model/session/provider runs the role. Changing a model must not change role responsibility.
 

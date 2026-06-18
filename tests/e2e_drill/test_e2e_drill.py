@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pytest assertions for the ARIS end-to-end drill.
+"""Pytest assertions for the Labline end-to-end drill.
 
 Verifies that the hardened audit + claim gate correctly catches
 two deliberately injected failures:

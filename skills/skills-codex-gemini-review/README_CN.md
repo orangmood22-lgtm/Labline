@@ -97,13 +97,13 @@
 1. 先安装上游原生 Codex 基座：
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project
 ```
 
 2. 再用 Gemini overlay 重跑一次：
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile --with-gemini-review-overlay
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile --with-gemini-review-overlay
 ```
 
 3. 注册本地 reviewer bridge：
@@ -158,7 +158,7 @@ codex mcp add gemini-review --env GEMINI_REVIEW_BACKEND=api --env GEMINI_REVIEW_
 
 ## 引用与来源
 
-- 上游 ARIS 的 overlay 组织方式：
+- 上游 Labline 的 overlay 组织方式：
   - <https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/tree/main/skills/skills-codex-claude-review>
   - <https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/tree/main/mcp-servers/claude-review>
 - 本仓库里的本地 Gemini reviewer bridge：
@@ -168,4 +168,4 @@ codex mcp add gemini-review --env GEMINI_REVIEW_BACKEND=api --env GEMINI_REVIEW_
   - 官方 Gemini CLI：<https://github.com/google-gemini/gemini-cli>
   - AI Studio API key：<https://aistudio.google.com/apikey>
 
-这个包保持了上游 ARIS review skill 的组织和调用形状，但把 reviewer transport 换成了本地 `gemini-review` bridge。现在它覆盖了本仓库里所有原先依赖第二个 Codex reviewer 或 `mcp__codex__codex` 审稿步骤的预定义 Codex skill。这里没有直接依赖通用的 Gemini MCP server 成品包，因为 ARIS 这组 review skills 依赖的是特定的 `review*` 工具契约、可恢复的 review thread 语义，以及 poster PNG 这类本地图像审查入口。
+这个包保持了上游 Labline review skill 的组织和调用形状，但把 reviewer transport 换成了本地 `gemini-review` bridge。现在它覆盖了本仓库里所有原先依赖第二个 Codex reviewer 或 `mcp__codex__codex` 审稿步骤的预定义 Codex skill。这里没有直接依赖通用的 Gemini MCP server 成品包，因为 Labline 这组 review skills 依赖的是特定的 `review*` 工具契约、可恢复的 review thread 语义，以及 poster PNG 这类本地图像审查入口。

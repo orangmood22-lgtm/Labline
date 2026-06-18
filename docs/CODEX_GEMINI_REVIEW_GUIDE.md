@@ -1,6 +1,6 @@
 # Codex + Gemini Reviewer Guide
 
-Run ARIS with:
+Run Labline with:
 
 - **Codex** as the main executor
 - **Gemini** as the reviewer
@@ -51,9 +51,9 @@ The bridge auto-loads `~/.gemini/.env` if present.
 
 ## Why direct API is the default
 
-- This path is designed to maximize reuse of the original ARIS reviewer-aware skills while minimizing skill changes.
+- This path is designed to maximize reuse of the original Labline reviewer-aware skills while minimizing skill changes.
 - The `gemini-review` bridge preserves the same `review` / `review_reply` / `review_start` / `review_reply_start` / `review_status` contract used by the existing Claude-review overlay.
-- Using the direct Gemini API removes the extra local CLI hop and keeps the reviewer path closer to the API-backed integrations already used elsewhere in ARIS.
+- Using the direct Gemini API removes the extra local CLI hop and keeps the reviewer path closer to the API-backed integrations already used elsewhere in Labline.
 
 ## Access Notes
 
@@ -104,7 +104,7 @@ codex mcp remove gemini-review
 codex mcp add gemini-review --env GEMINI_REVIEW_BACKEND=api --env GEMINI_REVIEW_MODEL=gemini-flash-latest -- python3 ~/.codex/mcp-servers/gemini-review/server.py
 ```
 
-This does not change the ARIS reviewer contract or skill overlay shape. It only changes the Gemini API model used behind the same local `gemini-review` bridge.
+This does not change the Labline reviewer contract or skill overlay shape. It only changes the Gemini API model used behind the same local `gemini-review` bridge.
 
 ## Validation Summary
 

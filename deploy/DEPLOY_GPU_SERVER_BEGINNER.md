@@ -1,8 +1,8 @@
-# ARIS GPU 服务器部署新手指南
+# Labline GPU 服务器部署新手指南
 
-> 面向第一次部署 ARIS 的同学。
+> 面向第一次部署 Labline 的同学。
 >
-> 目标：在任意一台 Linux GPU 服务器上启动 `aris-gpu` Docker 容器，让容器能访问 GPU、ARIS framework、实验项目、共享数据集，并能运行 Codex CLI / Claude Code。
+> 目标：在任意一台 Linux GPU 服务器上启动 `labline-gpu` Docker 容器，让容器能访问 GPU、Labline framework、实验项目、共享数据集，并能运行 Codex CLI / Claude Code。
 >
 > 本文不是 3090x2 专用文档。3090x2 只作为一个示例；真实部署时请替换成你的服务器用户名、路径、项目名、代理端口。
 
@@ -14,14 +14,14 @@
 |------|------|------|
 | `SERVER` | SSH alias 或服务器地址 | `[你的服务器SSH别名]` |
 | `HOST_USER` | 服务器上的 Linux 用户名 | `alice`、`dell`、`researcher` |
-| `ARIS_ROOT` | 可选：你自己定义的 ARIS 总目录 | `[你的ARIS总目录]` |
-| `FRAMEWORK_PATH` | 宿主机上的 ARIS framework 目录 | `[你的framework位置]` |
+| `LABLINE_ROOT` | 可选：你自己定义的 Labline 总目录 | `[你的Labline总目录]` |
+| `FRAMEWORK_PATH` | 宿主机上的 Labline framework 目录 | `[你的framework位置]` |
 | `DEV_FRAMEWORK_PATH` | 可选开发版 framework 目录 | `[你的dev framework位置]` |
 | `PROJECTS_ROOT` | 宿主机上的项目根目录 | `[你的项目工作区]` |
 | `DATASETS_PATH` | 宿主机上的共享数据集目录 | `[你的数据集目录]` |
 | `PRETRAINED_PATH` | 宿主机上的预训练模型缓存目录 | `[你的预训练模型目录]` |
 | `SSH_PATH` | 宿主机上的 SSH key 目录 | `[你的SSH目录]` |
-| `CONTAINER_NAME` | Docker 容器名 | `aris-gpu` |
+| `CONTAINER_NAME` | Docker 容器名 | `labline-gpu` |
 | `CONTAINER_USER` | 容器内默认用户名 | `researcher`、`alice` |
 | `USER_UID` | 容器用户 UID，通常与宿主机用户一致 | `1000` |
 | `USER_GID` | 容器用户 GID，通常与宿主机用户一致 | `1000` |
@@ -33,14 +33,14 @@
 ```bash
 SERVER=[你的服务器SSH别名]
 HOST_USER=[你的服务器用户名]
-ARIS_ROOT=[你的ARIS总目录]
+LABLINE_ROOT=[你的Labline总目录]
 FRAMEWORK_PATH=[你的framework位置]
 DEV_FRAMEWORK_PATH=[你的dev framework位置]
 PROJECTS_ROOT=[你的项目工作区]
 DATASETS_PATH=[你的数据集目录]
 PRETRAINED_PATH=[你的预训练模型目录]
 SSH_PATH=[你的SSH目录]
-CONTAINER_NAME=aris-gpu
+CONTAINER_NAME=labline-gpu
 CONTAINER_USER=researcher
 USER_UID=1000
 USER_GID=1000
@@ -48,35 +48,35 @@ HTTP_PROXY_URL=
 HTTPS_PROXY_URL=
 ```
 
-建议把这些变量保存到一个临时文件，例如 `~/aris-deploy.env`：
+建议把这些变量保存到一个临时文件，例如 `~/labline-deploy.env`：
 
 ```bash
-cat > ~/aris-deploy.env <<'EOF'
+cat > ~/labline-deploy.env <<'EOF'
 SERVER=[你的服务器SSH别名]
 HOST_USER=[你的服务器用户名]
-ARIS_ROOT=[你的ARIS总目录]
+LABLINE_ROOT=[你的Labline总目录]
 FRAMEWORK_PATH=[你的framework位置]
 DEV_FRAMEWORK_PATH=[你的dev framework位置]
 PROJECTS_ROOT=[你的项目工作区]
 DATASETS_PATH=[你的数据集目录]
 PRETRAINED_PATH=[你的预训练模型目录]
 SSH_PATH=[你的SSH目录]
-CONTAINER_NAME=aris-gpu
+CONTAINER_NAME=labline-gpu
 CONTAINER_USER=alice
 USER_UID=1001
 USER_GID=1001
 HTTP_PROXY_URL=
 HTTPS_PROXY_URL=
 EOF
-source ~/aris-deploy.env
+source ~/labline-deploy.env
 ```
 
 本文里有些命令在本机执行，有些命令在服务器执行。进入服务器后也要设置同一组变量，可以把这个文件复制到服务器再 `source`：
 
 ```bash
-scp ~/aris-deploy.env "$SERVER:~/aris-deploy.env"
+scp ~/labline-deploy.env "$SERVER:~/labline-deploy.env"
 ssh "$SERVER"
-source ~/aris-deploy.env
+source ~/labline-deploy.env
 ```
 
 ## 2. 理解宿主机路径和容器路径
@@ -85,23 +85,23 @@ source ~/aris-deploy.env
 
 | 内容 | 宿主机路径 | 容器内固定路径 |
 |------|------------|----------------|
-| Framework | `$FRAMEWORK_PATH` | `/aris/framework` |
-| Dev framework | `$DEV_FRAMEWORK_PATH` | `/aris/aris-dev` |
-| 项目根目录 | `$PROJECTS_ROOT` | `/aris/projects` |
-| 共享数据集 | `$DATASETS_PATH` | `/aris/shared/datasets` |
-| 预训练模型缓存 | `$PRETRAINED_PATH` | `/aris/shared/pretrained` |
+| Framework | `$FRAMEWORK_PATH` | `/labline/framework` |
+| Dev framework | `$DEV_FRAMEWORK_PATH` | `/labline/labline-dev` |
+| 项目根目录 | `$PROJECTS_ROOT` | `/labline/projects` |
+| 共享数据集 | `$DATASETS_PATH` | `/labline/shared/datasets` |
+| 预训练模型缓存 | `$PRETRAINED_PATH` | `/labline/shared/pretrained` |
 | SSH key | `$SSH_PATH` | `/run/secrets/ssh` |
 
 关键规则：
 
-- 容器内访问 framework 永远用 `/aris/framework`。
-- 容器内访问 dev framework 永远用 `/aris/aris-dev`。
-- 容器内访问项目永远用 `/aris/projects/<project>`。
-- 容器内访问共享数据集永远用 `/aris/shared/datasets/...`。
-- 项目里的 `.agents/skills/*` 应该指向 `/aris/framework/skills/...`。
-- Claude Code 兼容模式的 `.claude/skills/*` 也应该指向 `/aris/framework/skills/...`。
-- 项目里的数据集 symlink 应该指向 `/aris/shared/datasets/...`。
-- 不要在容器要用的 symlink 里写宿主机路径；容器内统一使用 `/aris/...`。
+- 容器内访问 framework 永远用 `/labline/framework`。
+- 容器内访问 dev framework 永远用 `/labline/labline-dev`。
+- 容器内访问项目永远用 `/labline/projects/<project>`。
+- 容器内访问共享数据集永远用 `/labline/shared/datasets/...`。
+- 项目里的 `.agents/skills/*` 应该指向 `/labline/framework/skills/...`。
+- Claude Code 兼容模式的 `.claude/skills/*` 也应该指向 `/labline/framework/skills/...`。
+- 项目里的数据集 symlink 应该指向 `/labline/shared/datasets/...`。
+- 不要在容器要用的 symlink 里写宿主机路径；容器内统一使用 `/labline/...`。
 - API key 只放服务器本地的 `deploy/.env`，不要提交到 Git。
 
 ## 3. 前置条件
@@ -136,7 +136,7 @@ nvidia-smi
 docker run --rm --gpus all nvidia/cuda:12.8.0-devel-ubuntu22.04 nvidia-smi
 ```
 
-如果这里看不到 GPU，先修 NVIDIA Container Toolkit。ARIS 容器本身无法绕过这个问题。
+如果这里看不到 GPU，先修 NVIDIA Container Toolkit。Labline 容器本身无法绕过这个问题。
 
 ### 3.3 网络能下载依赖
 
@@ -209,10 +209,10 @@ git config --global --unset https.proxy || true
 
 ### 3.4 磁盘空间足够
 
-ARIS GPU 镜像大约 18-20GB，数据集和实验输出可能更大。
+Labline GPU 镜像大约 18-20GB，数据集和实验输出可能更大。
 
 ```bash
-df -h "$ARIS_ROOT" "$DATASETS_PATH" 2>/dev/null || df -h
+df -h "$LABLINE_ROOT" "$DATASETS_PATH" 2>/dev/null || df -h
 docker system df
 ```
 
@@ -250,12 +250,12 @@ rsync -avz --progress /path/to/VOCdevkit_full.tar.gz "$SERVER:$DATASETS_PATH/"
 ssh "$SERVER" "cd '$DATASETS_PATH' && tar xzf VOCdevkit_full.tar.gz"
 ```
 
-## 5. 同步 ARIS framework 文件
+## 5. 同步 Labline framework 文件
 
-在本机 ARIS stable framework 仓库执行：
+在本机 Labline stable framework 仓库执行：
 
 ```bash
-cd /root/Projects/aris/Auto-research-in-sleep/aris-orangmood-edition
+cd /root/Projects/labline/Auto-research-in-sleep/labline-orangmood-edition
 ```
 
 同步部署文件。注意排除服务器本地 `.env`：
@@ -268,12 +268,12 @@ rsync -avz --exclude .env deploy/ "$SERVER:$FRAMEWORK_PATH/deploy/"
 
 ```bash
 ssh "$SERVER" "mkdir -p '$FRAMEWORK_PATH/tools' '$FRAMEWORK_PATH/skills' '$FRAMEWORK_PATH/templates'"
-scp tools/install_aris.sh "$SERVER:$FRAMEWORK_PATH/tools/install_aris.sh"
+scp tools/install_labline.sh "$SERVER:$FRAMEWORK_PATH/tools/install_labline.sh"
 rsync -avz skills/ "$SERVER:$FRAMEWORK_PATH/skills/"
 rsync -avz templates/ "$SERVER:$FRAMEWORK_PATH/templates/"
 ```
 
-如果你也要在服务器上开发 ARIS dev framework，同步本地 `aris-dev`：
+如果你也要在服务器上开发 Labline dev framework，同步本地 `labline-dev`：
 
 ```bash
 rsync -avz --delete \
@@ -284,7 +284,7 @@ rsync -avz --delete \
   --exclude '.claude/' \
   --exclude 'to-developer/discussions/settings*.json' \
   --exclude 'to-developer/discussions/ssh.txt' \
-  /root/Projects/aris/Auto-research-in-sleep/aris-dev/ \
+  /root/Projects/labline/Auto-research-in-sleep/labline-dev/ \
   "$SERVER:$DEV_FRAMEWORK_PATH/"
 ```
 
@@ -292,7 +292,7 @@ rsync -avz --delete \
 
 - `deploy/.env` 应该只在服务器本地创建。
 - 如果服务器上已经是完整 Git checkout，也可以用 `git pull`，但仍要确认没有覆盖本地 `.env`。
-- 最低限度需要有：`deploy/`、`tools/install_aris.sh`、`skills/`、`templates/`。
+- 最低限度需要有：`deploy/`、`tools/install_labline.sh`、`skills/`、`templates/`。
 
 ## 6. 配置服务器本地 `.env`
 
@@ -365,7 +365,7 @@ API key 说明：
 
 ```bash
 ssh "$SERVER"
-tmux new -s aris_gpu_build
+tmux new -s labline_gpu_build
 ```
 
 进入 tmux 后：
@@ -379,7 +379,7 @@ cd "$FRAMEWORK_PATH"
 ```bash
 docker build --progress=plain \
   -f deploy/Dockerfile.gpu \
-  -t aris-gpu \
+  -t labline-gpu \
   --build-arg USERNAME="$CONTAINER_USER" \
   --build-arg UID="$USER_UID" \
   --build-arg GID="$USER_GID" \
@@ -394,7 +394,7 @@ docker build --progress=plain \
 ```bash
 docker build --progress=plain \
   -f deploy/Dockerfile.gpu \
-  -t aris-gpu \
+  -t labline-gpu \
   --build-arg USERNAME="$CONTAINER_USER" \
   --build-arg UID="$USER_UID" \
   --build-arg GID="$USER_GID" \
@@ -405,17 +405,17 @@ docker build --progress=plain \
 构建完成后检查：
 
 ```bash
-docker images | grep aris-gpu
+docker images | grep labline-gpu
 ```
 
-期望看到 `aris-gpu` 镜像，大小通常约 18-20GB。
+期望看到 `labline-gpu` 镜像，大小通常约 18-20GB。
 
 如果想后台构建并写日志，可以用：
 
 ```bash
 cd "$FRAMEWORK_PATH"
-tmux new-session -d -s aris_gpu_build \
-  "bash -lc 'docker build --progress=plain -f deploy/Dockerfile.gpu -t aris-gpu --build-arg USERNAME=$CONTAINER_USER --build-arg UID=$USER_UID --build-arg GID=$USER_GID --network host . > deploy/build_aris_gpu.log 2>&1; echo EXIT:$? > deploy/build_aris_gpu.status'"
+tmux new-session -d -s labline_gpu_build \
+  "bash -lc 'docker build --progress=plain -f deploy/Dockerfile.gpu -t labline-gpu --build-arg USERNAME=$CONTAINER_USER --build-arg UID=$USER_UID --build-arg GID=$USER_GID --network host . > deploy/build_labline_gpu.log 2>&1; echo EXIT:$? > deploy/build_labline_gpu.status'"
 ```
 
 如果后台构建需要代理，再加上 `--build-arg BUILD_HTTP_PROXY=... --build-arg BUILD_HTTPS_PROXY=...`。
@@ -423,9 +423,9 @@ tmux new-session -d -s aris_gpu_build \
 查看后台构建状态：
 
 ```bash
-tmux ls | grep aris_gpu_build || true
-cat "$FRAMEWORK_PATH/deploy/build_aris_gpu.status" 2>/dev/null || true
-docker images | grep aris-gpu || true
+tmux ls | grep labline_gpu_build || true
+cat "$FRAMEWORK_PATH/deploy/build_labline_gpu.status" 2>/dev/null || true
+docker images | grep labline-gpu || true
 ```
 
 ## 8. 启动容器
@@ -448,11 +448,11 @@ docker run -d \
   --restart unless-stopped \
   --gpus all \
   --network host \
-  -v "$FRAMEWORK_PATH:/aris/framework" \
-  -v "$DEV_FRAMEWORK_PATH:/aris/aris-dev" \
-  -v "$PROJECTS_ROOT:/aris/projects" \
-  -v "$DATASETS_PATH:/aris/shared/datasets:ro" \
-  -v "$PRETRAINED_PATH:/aris/shared/pretrained" \
+  -v "$FRAMEWORK_PATH:/labline/framework" \
+  -v "$DEV_FRAMEWORK_PATH:/labline/labline-dev" \
+  -v "$PROJECTS_ROOT:/labline/projects" \
+  -v "$DATASETS_PATH:/labline/shared/datasets:ro" \
+  -v "$PRETRAINED_PATH:/labline/shared/pretrained" \
   -v "$SSH_PATH:/run/secrets/ssh:ro" \
   -e ANTHROPIC_API_KEY="$(awk -F= '$1=="ANTHROPIC_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
   -e ANTHROPIC_BASE_URL="$(awk -F= '$1=="ANTHROPIC_BASE_URL"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
@@ -460,7 +460,7 @@ docker run -d \
   -e HTTP_PROXY="$HTTP_PROXY_URL" \
   -e HTTPS_PROXY="$HTTPS_PROXY_URL" \
   -e NO_PROXY=127.0.0.1,localhost \
-  aris-gpu sleep infinity
+  labline-gpu sleep infinity
 ```
 
 无代理时：
@@ -473,16 +473,16 @@ docker run -d \
   --restart unless-stopped \
   --gpus all \
   --network host \
-  -v "$FRAMEWORK_PATH:/aris/framework" \
-  -v "$DEV_FRAMEWORK_PATH:/aris/aris-dev" \
-  -v "$PROJECTS_ROOT:/aris/projects" \
-  -v "$DATASETS_PATH:/aris/shared/datasets:ro" \
-  -v "$PRETRAINED_PATH:/aris/shared/pretrained" \
+  -v "$FRAMEWORK_PATH:/labline/framework" \
+  -v "$DEV_FRAMEWORK_PATH:/labline/labline-dev" \
+  -v "$PROJECTS_ROOT:/labline/projects" \
+  -v "$DATASETS_PATH:/labline/shared/datasets:ro" \
+  -v "$PRETRAINED_PATH:/labline/shared/pretrained" \
   -v "$SSH_PATH:/run/secrets/ssh:ro" \
   -e ANTHROPIC_API_KEY="$(awk -F= '$1=="ANTHROPIC_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
   -e ANTHROPIC_BASE_URL="$(awk -F= '$1=="ANTHROPIC_BASE_URL"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
   -e OPENAI_API_KEY="$(awk -F= '$1=="OPENAI_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
-  aris-gpu sleep infinity
+  labline-gpu sleep infinity
 ```
 
 为什么最后是 `sleep infinity`：
@@ -527,10 +527,10 @@ gpus >= 1
 检查挂载：
 
 ```bash
-ls -ld /aris/framework
-ls -ld /aris/aris-dev
-ls -ld /aris/projects
-ls -ld /aris/shared/datasets
+ls -ld /labline/framework
+ls -ld /labline/labline-dev
+ls -ld /labline/projects
+ls -ld /labline/shared/datasets
 ```
 
 检查 CLI：
@@ -543,7 +543,7 @@ claude --version
 运行部署健康检查。把项目名换成你自己的：
 
 ```bash
-bash /aris/framework/deploy/aris_gpu_doctor.sh --project exp0516 --project exp0603
+bash /labline/framework/deploy/labline_gpu_doctor.sh --project exp0516 --project exp0603
 ```
 
 期望：
@@ -561,8 +561,8 @@ OK exp0603 dataset
 
 ```bash
 tmp=$(mktemp -d)
-bash /aris/framework/tools/install_aris.sh "$tmp" --dev --quiet --no-doc
-cat "$tmp/.aris/framework-version.txt" 2>/dev/null || true
+bash /labline/framework/tools/install_labline.sh "$tmp" --dev --quiet --no-doc
+cat "$tmp/.labline/framework-version.txt" 2>/dev/null || true
 rm -rf "$tmp"
 ```
 
@@ -581,22 +581,22 @@ FAIL <project> skills: stale target outside framework
 在容器内执行：
 
 ```bash
-cd /aris/projects/YOUR_PROJECT
-bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --quiet --no-doc
+cd /labline/projects/YOUR_PROJECT
+bash /labline/framework/tools/install_labline.sh . --labline-repo /labline/framework --quiet --no-doc
 ```
 
 检查：
 
 ```bash
-ls -la /aris/projects/YOUR_PROJECT/.agents/skills | head
+ls -la /labline/projects/YOUR_PROJECT/.agents/skills | head
 # Claude Code 兼容模式：
-ls -la /aris/projects/YOUR_PROJECT/.claude/skills | head
+ls -la /labline/projects/YOUR_PROJECT/.claude/skills | head
 ```
 
 目标应该是：
 
 ```text
-/aris/framework/skills/...
+/labline/framework/skills/...
 ```
 
 ### 10.2 修复数据集 symlink
@@ -604,15 +604,15 @@ ls -la /aris/projects/YOUR_PROJECT/.claude/skills | head
 如果项目使用共享 VOC：
 
 ```bash
-rm -f /aris/projects/YOUR_PROJECT/data/VOCdevkit
-mkdir -p /aris/projects/YOUR_PROJECT/data
-ln -s /aris/shared/datasets/VOCdevkit /aris/projects/YOUR_PROJECT/data/VOCdevkit
+rm -f /labline/projects/YOUR_PROJECT/data/VOCdevkit
+mkdir -p /labline/projects/YOUR_PROJECT/data
+ln -s /labline/shared/datasets/VOCdevkit /labline/projects/YOUR_PROJECT/data/VOCdevkit
 ```
 
 不要指向宿主机路径。容器内应使用：
 
 ```text
-/aris/shared/datasets/VOCdevkit
+/labline/shared/datasets/VOCdevkit
 ```
 
 ## 11. 日常使用
@@ -641,20 +641,20 @@ docker logs --tail 100 "$CONTAINER_NAME"
 
 ```bash
 docker exec -it "$CONTAINER_NAME" bash
-cd /aris/projects/YOUR_PROJECT
+cd /labline/projects/YOUR_PROJECT
 ```
 
 跑 doctor：
 
 ```bash
-docker exec "$CONTAINER_NAME" bash -lc 'bash /aris/framework/deploy/aris_gpu_doctor.sh --project exp0516 --project exp0603'
+docker exec "$CONTAINER_NAME" bash -lc 'bash /labline/framework/deploy/labline_gpu_doctor.sh --project exp0516 --project exp0603'
 ```
 
 查看 dev framework：
 
 ```bash
 docker exec -it "$CONTAINER_NAME" bash
-cd /aris/aris-dev
+cd /labline/labline-dev
 git status --short --branch
 ```
 
@@ -723,10 +723,10 @@ docker ps -a --filter name="$CONTAINER_NAME"
 启动容器时最后使用：
 
 ```bash
-aris-gpu sleep infinity
+labline-gpu sleep infinity
 ```
 
-### 12.4 容器内没有 `/aris/framework`
+### 12.4 容器内没有 `/labline/framework`
 
 原因：
 
@@ -737,7 +737,7 @@ aris-gpu sleep infinity
 启动命令必须包含：
 
 ```bash
--v "$FRAMEWORK_PATH:/aris/framework"
+-v "$FRAMEWORK_PATH:/labline/framework"
 ```
 
 ### 12.5 skills 指向旧路径
@@ -751,8 +751,8 @@ FAIL PROJECT skills: stale target outside framework
 解决：
 
 ```bash
-cd /aris/projects/YOUR_PROJECT
-bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --quiet --no-doc
+cd /labline/projects/YOUR_PROJECT
+bash /labline/framework/tools/install_labline.sh . --labline-repo /labline/framework --quiet --no-doc
 ```
 
 ### 12.6 数据集链接宿主机可用、容器内不可用
@@ -764,8 +764,8 @@ bash /aris/framework/tools/install_aris.sh . --aris-repo /aris/framework --quiet
 解决：
 
 ```bash
-rm -f /aris/projects/YOUR_PROJECT/data/VOCdevkit
-ln -s /aris/shared/datasets/VOCdevkit /aris/projects/YOUR_PROJECT/data/VOCdevkit
+rm -f /labline/projects/YOUR_PROJECT/data/VOCdevkit
+ln -s /labline/shared/datasets/VOCdevkit /labline/projects/YOUR_PROJECT/data/VOCdevkit
 ```
 
 ### 12.7 `sudo: unable to resolve host`
@@ -800,7 +800,7 @@ docker inspect "$CONTAINER_NAME" --format 'Exit={{.State.ExitCode}} Error={{.Sta
 
 ```bash
 docker ps --filter name="$CONTAINER_NAME" --format "{{.Names}} {{.Status}} {{.Image}}"
-docker images --format "{{.Repository}}:{{.Tag}} {{.Size}}" | grep '^aris-gpu'
+docker images --format "{{.Repository}}:{{.Tag}} {{.Size}}" | grep '^labline-gpu'
 ```
 
 容器内：
@@ -819,14 +819,14 @@ codex --version
 项目检查：
 
 ```bash
-docker exec "$CONTAINER_NAME" bash -lc 'bash /aris/framework/deploy/aris_gpu_doctor.sh --project exp0516 --project exp0603'
+docker exec "$CONTAINER_NAME" bash -lc 'bash /labline/framework/deploy/labline_gpu_doctor.sh --project exp0516 --project exp0603'
 ```
 
 合格标准：
 
 ```text
 容器是 Up
-aris-gpu 镜像存在
+labline-gpu 镜像存在
 torch cuda True
 gpus >= 1
 Claude Code 能打印版本

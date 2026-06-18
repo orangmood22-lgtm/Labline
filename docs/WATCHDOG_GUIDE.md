@@ -2,11 +2,11 @@
 
 [中文版](WATCHDOG_GUIDE_CN.md) | English
 
-> Persistent server-side monitoring for ARIS experiments — catch dead sessions, stalled downloads, and idle GPUs without manual polling.
+> Persistent server-side monitoring for Labline experiments — catch dead sessions, stalled downloads, and idle GPUs without manual polling.
 
 ## The Problem
 
-ARIS experiments run remotely in screen/tmux sessions. Current monitoring (`/monitor-experiment`) is **on-demand** — you have to actively ask "how are my experiments doing?". Between checks:
+Labline experiments run remotely in screen/tmux sessions. Current monitoring (`/monitor-experiment`) is **on-demand** — you have to actively ask "how are my experiments doing?". Between checks:
 
 - A training session can crash silently (screen dies, OOM kill)
 - A download can stall (network timeout, auth failure)
@@ -28,7 +28,7 @@ A lightweight Python daemon that runs on each GPU server, continuously monitorin
 **What it outputs:**
 
 ```
-/tmp/aris-watchdog/
+/tmp/labline-watchdog/
 ├── watchdog.pid              # daemon PID (for liveness checks)
 ├── tasks.json                # registered tasks
 ├── alerts.log                # anomaly log (for cross-session recovery)
@@ -103,7 +103,7 @@ python3 tools/watchdog.py --register '{
 ```bash
 ssh your-server "python3 /path/to/tools/watchdog.py --status"
 # or
-ssh your-server "cat /tmp/aris-watchdog/status/summary.txt"
+ssh your-server "cat /tmp/labline-watchdog/status/summary.txt"
 ```
 
 **Example output:**
@@ -116,7 +116,7 @@ dl01(download): SLOW speed=0.45MB/s
 **Automated polling with CronCreate (Claude Code):**
 ```
 CronCreate: every 15 minutes
-  ssh your-server "cat /tmp/aris-watchdog/status/summary.txt"
+  ssh your-server "cat /tmp/labline-watchdog/status/summary.txt"
   → all OK → do nothing
   → any DEAD/STALLED/SLOW/IDLE → investigate and fix
 ```
@@ -140,7 +140,7 @@ python3 tools/watchdog.py --unregister exp01
 | `SLOW` | Download speed <1 MB/s | May be throttled; check network or source |
 | `ERROR` | Watchdog encountered an error checking this task | Check watchdog logs |
 
-## Integration with ARIS Workflows
+## Integration with Labline Workflows
 
 ### With `/run-experiment`
 
@@ -164,7 +164,7 @@ python3 tools/watchdog.py --register '{"name":"exp01","type":"training","session
 When starting a new session, check `alerts.log` for anomalies that happened while you were away:
 
 ```bash
-ssh your-server "tail -20 /tmp/aris-watchdog/alerts.log"
+ssh your-server "tail -20 /tmp/labline-watchdog/alerts.log"
 ```
 
 This pairs well with the [Session Recovery Guide](SESSION_RECOVERY_GUIDE.md) — add watchdog alert checking to your recovery flow.
@@ -173,7 +173,7 @@ This pairs well with the [Session Recovery Guide](SESSION_RECOVERY_GUIDE.md) —
 
 | Parameter | Default | How to change |
 |-----------|---------|---------------|
-| Base directory | `/tmp/aris-watchdog` | `--base-dir /your/path` |
+| Base directory | `/tmp/labline-watchdog` | `--base-dir /your/path` |
 | Check interval | 60 seconds | `--interval 30` |
 | GPU idle threshold | 5% | Edit `GPU_IDLE_THRESHOLD` in script |
 | Slow download threshold | 1 MB/s | Edit `SLOW_SPEED_THRESHOLD` in script |

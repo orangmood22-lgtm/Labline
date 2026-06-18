@@ -1,6 +1,6 @@
 ---
 name: paper-illustration-image2
-description: "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for ARIS users who want a GPT-image-style renderer without modifying the original skill."
+description: "Generate publication-quality academic illustrations through a local Codex app-server bridge that uses Codex native image generation. This is a separate experimental alternative to `paper-illustration`, intended for Labline users who want a GPT-image-style renderer without modifying the original skill."
 argument-hint: [description-or-method-file]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, mcp__codex-image2__generate, mcp__codex-image2__generate_start, mcp__codex-image2__generate_status, mcp__codex__codex, mcp__codex__codex-reply
 caller: executor
@@ -84,7 +84,7 @@ and a **local Codex app-server MCP bridge** as the raster renderer.
 - **OUTPUT_DIR = `figures/ai_generated/`** — Output directory
 - **TEXT_LANGUAGE = `English`** — Default figure text language unless the user requests otherwise
 - **NATIVE_IMAGE_REQUIREMENT = `strict`** — Accept only native `imageGeneration` output; reject shell/Python fallbacks
-- **CANONICAL_HELPER = `python3 "$ARIS_REPO/tools/paper_illustration_image2.py"`** — Preflight, finalize, verify, and repair path for this integration
+- **CANONICAL_HELPER = `python3 "$LABLINE_REPO/tools/paper_illustration_image2.py"`** — Preflight, finalize, verify, and repair path for this integration
 
 ## CVPR/ICLR/NeurIPS Top-Tier Conference Style Guide
 
@@ -162,11 +162,11 @@ Render this checklist explicitly before starting:
 
 ```text
 📋 paper-illustration-image2 integration checklist:
-   [ ] 1. python3 "$ARIS_REPO/tools/paper_illustration_image2.py" preflight --workspace <cwd> --json-out figures/ai_generated/preflight.json
+   [ ] 1. python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" preflight --workspace <cwd> --json-out figures/ai_generated/preflight.json
    [ ] 2. Confirm preflight JSON says ok=true before rendering
    [ ] 3. Render via mcp__codex-image2__generate_start + generate_status
-   [ ] 4. Finalize via python3 "$ARIS_REPO/tools/paper_illustration_image2.py" finalize --workspace <cwd> --best-image <best_png>
-   [ ] 5. Verify artifacts via python3 "$ARIS_REPO/tools/paper_illustration_image2.py" verify --workspace <cwd> --json-out figures/ai_generated/verify.json
+   [ ] 4. Finalize via python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" finalize --workspace <cwd> --best-image <best_png>
+   [ ] 5. Verify artifacts via python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" verify --workspace <cwd> --json-out figures/ai_generated/verify.json
 ```
 
 1. Create `figures/ai_generated/` if it does not exist.
@@ -178,8 +178,8 @@ Render this checklist explicitly before starting:
 4. Run:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-python3 "$ARIS_REPO/tools/paper_illustration_image2.py" preflight \
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" preflight \
   --workspace <cwd> \
   --json-out figures/ai_generated/preflight.json
 ```
@@ -289,14 +289,14 @@ When accepted:
 - run helper verification before claiming success
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-python3 "$ARIS_REPO/tools/paper_illustration_image2.py" finalize \
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" finalize \
   --workspace <cwd> \
   --best-image figures/ai_generated/figure_vN.png \
   --score 9 \
   --review-summary "Accepted after strict review; labels and arrows are paper-ready."
 
-python3 "$ARIS_REPO/tools/paper_illustration_image2.py" verify \
+python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" verify \
   --workspace <cwd> \
   --json-out figures/ai_generated/verify.json
 ```
@@ -325,20 +325,20 @@ Suggested LaTeX:
 9. Use specific, actionable refinement feedback instead of vague comments.
 10. Review arrow direction, label clarity, and visual hierarchy every round.
 11. Accept only figures that look paper-ready, not slide-ready.
-12. Always use `$ARIS_REPO/tools/paper_illustration_image2.py finalize` to emit the final artifacts.
-13. Always use `$ARIS_REPO/tools/paper_illustration_image2.py verify` before claiming success.
+12. Always use `$LABLINE_REPO/tools/paper_illustration_image2.py finalize` to emit the final artifacts.
+13. Always use `$LABLINE_REPO/tools/paper_illustration_image2.py verify` before claiming success.
 
 ## Repair Path
 
 If rendering succeeded but final artifacts were skipped, repair the integration explicitly:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-python3 "$ARIS_REPO/tools/paper_illustration_image2.py" finalize \
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" finalize \
   --workspace <cwd> \
   --best-image figures/ai_generated/figure_vN.png
 
-python3 "$ARIS_REPO/tools/paper_illustration_image2.py" verify \
+python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" verify \
   --workspace <cwd> \
   --json-out figures/ai_generated/verify.json
 ```
@@ -361,10 +361,10 @@ figures/ai_generated/
 
 | Stage | Agent / Tool | Purpose |
 |-------|--------------|---------|
-| Step 0 | `python3 "$ARIS_REPO/tools/paper_illustration_image2.py" preflight` | Observable activation predicate and preflight receipt |
+| Step 0 | `python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" preflight` | Observable activation predicate and preflight receipt |
 | Step 1 | Claude | Parse request and create the initial figure prompt |
 | Step 2 | Claude (+ optional Codex critique) | Refine layout, grouping, spacing, and arrow routing |
 | Step 3 | Claude (+ optional Codex critique) | Verify academic visual style before rendering |
 | Step 4 | `mcp__codex-image2__generate_start` + `generate_status` | Native raster image generation through Codex app-server |
 | Step 5 | Claude | Strict visual review and scoring |
-| Step 7 | `python3 "$ARIS_REPO/tools/paper_illustration_image2.py" finalize` + `verify` | Emit canonical artifacts and external verification receipt |
+| Step 7 | `python3 "$LABLINE_REPO/tools/paper_illustration_image2.py" finalize` + `verify` | Emit canonical artifacts and external verification receipt |

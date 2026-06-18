@@ -66,7 +66,7 @@ mcp__codex__codex:
 
 ## When to apply
 
-This protocol applies to ALL cross-model review calls in ARIS:
+This protocol applies to ALL cross-model review calls in Labline:
 - `/research-review` — paper review
 - `/auto-review-loop` — iterative review
 - `/paper-plan` — outline review

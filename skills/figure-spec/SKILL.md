@@ -40,7 +40,7 @@ Generate publication-quality **architecture diagrams**, **workflow pipelines**, 
 
 ## Tool Location
 
-`tools/figure_renderer.py` (from ARIS root). Invoke via:
+`tools/figure_renderer.py` (from Labline root). Invoke via:
 
 ```bash
 python3 tools/figure_renderer.py render <spec.json> --output <out.svg>
@@ -151,7 +151,7 @@ mcp__codex__codex:
     Score each axis 1-10 and list specific issues to fix.
 ```
 
-Iterate until all three axes ≥ 7/10. The ARIS tech report figures went through 5 rounds of this loop to reach C:7/R:7/S:8.
+Iterate until all three axes ≥ 7/10. The Labline tech report figures went through 5 rounds of this loop to reach C:7/R:7/S:8.
 
 ## Schema Quick Reference
 
@@ -223,4 +223,4 @@ Three-stage horizontal cascade with inputs feeding in from top, outputs exiting 
 
 ## Review Tracing
 
-After each `mcp__codex__codex` or `mcp__codex__codex-reply` reviewer call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.aris/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).
+After each `mcp__codex__codex` or `mcp__codex__codex-reply` reviewer call, save the trace following `shared-references/review-tracing.md`. Use `tools/save_trace.sh` or write files directly to `.labline/traces/<skill>/<date>_run<NN>/`. Respect the `--- trace:` parameter (default: `full`).

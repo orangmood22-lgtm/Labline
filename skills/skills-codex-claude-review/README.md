@@ -30,13 +30,13 @@ Current overrides:
 1. Install the base Codex-native mirror first:
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project
 ```
 
 2. Re-run with the Claude overlay enabled:
 
 ```bash
-bash ~/aris_repo/tools/install_aris_codex.sh ~/your-project --reconcile --with-claude-review-overlay
+bash ~/labline_repo/tools/install_labline_codex.sh ~/your-project --reconcile --with-claude-review-overlay
 ```
 
 3. Register the local reviewer bridge:

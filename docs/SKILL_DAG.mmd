@@ -2,6 +2,8 @@ graph TD
     auto-paper-improvement-loop --> kill-argument
     coder --> tdd
     deployer --> monitor-experiment
+    leader --> coder
+    leader --> deployer
     leader --> diagnose
     leader --> experiment-plan
     leader --> experiment-queue
@@ -11,6 +13,7 @@ graph TD
     leader --> sync
     leader --> tdd
     leader --> training-check
+    leader --> writer
     paper-illustration-image2 --> figure-spec
     paper-illustration-image2 --> paper-figure
     paper-talk --> citation-audit

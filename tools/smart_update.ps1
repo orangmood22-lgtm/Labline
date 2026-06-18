@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# ARIS Smart Skill Update (PowerShell)
+# Labline Smart Skill Update (PowerShell)
 # Intelligently compares local skills with upstream, detects personal
 # customizations, and recommends safe update strategy per skill.
 #
@@ -9,14 +9,14 @@
 #   Project-level (Claude Code):
 #     .\tools\smart_update.ps1 -ProjectPath <path> [-Apply]
 #   Project-level (Codex CLI):
-#     .\tools\smart_update.ps1 -ProjectPath <path> -TargetSubdir '.agents/skills/aris' [-Apply]
+#     .\tools\smart_update.ps1 -ProjectPath <path> -TargetSubdir '.agents/skills' [-Apply]
 #   Custom paths:
 #     .\tools\smart_update.ps1 -UpstreamPath <path> -LocalPath <path> [-Apply]
 #
 #   -Apply: actually perform the updates (default: dry-run analysis only)
 #   -ProjectPath: project root — upstream is always the repo's skills/; local targets <ProjectPath>/<TargetSubdir>
 #   -TargetSubdir: project-mode skill subdirectory (default: .claude/skills)
-#                  common: .claude/skills, .claude/skills/aris, .agents/skills, .agents/skills/aris
+#                  common: .claude/skills, .agents/skills
 #                  must be a relative path
 #   -UpstreamPath: explicit upstream skills directory
 #   -LocalPath: explicit local skills directory
@@ -77,7 +77,7 @@ if ($PSCmdlet.ParameterSetName -eq 'Project') {
         Write-Host "          (CC only scans .claude/skills/ one level deep)." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "  Switch to the flat install (use the bash version via WSL, or manual junctions —" -ForegroundColor Yellow
-        Write-Host "  see install_aris.ps1 docstring for the manual one-liner)." -ForegroundColor Yellow
+        Write-Host "  see install_labline.ps1 docstring for the manual one-liner)." -ForegroundColor Yellow
         Write-Host ""
         if ($Apply) {
             Write-Host "Refusing to -Apply with deprecated nested target." -ForegroundColor Red
@@ -124,7 +124,7 @@ if (Test-Path $LocalDir) {
         Write-Host "  → $($item.Target)"
         Write-Host ""
         Write-Host "smart_update is for COPIED installs. Symlinked installs are updated by:"
-        Write-Host "  cd <aris-repo>; git pull"
+        Write-Host "  cd <labline-repo>; git pull"
         Write-Host ""
         Write-Host "If you need per-project customization, switch to a copied install:"
         Write-Host "  Remove-Item $LocalDir -Force"
@@ -166,7 +166,7 @@ function Test-IsRegexPattern {
 
 # ─── Header ────────────────────────────────────────────────────────────────────
 Write-Host ''
-Write-Host '=== ARIS Smart Skill Update ===' -ForegroundColor Cyan
+Write-Host '=== Labline Smart Skill Update ===' -ForegroundColor Cyan
 Write-Host "Scope:    $Scope"
 Write-Host "Upstream: $UpstreamDir"
 Write-Host "Local:    $LocalDir"

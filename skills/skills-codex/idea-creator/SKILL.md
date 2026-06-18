@@ -33,9 +33,9 @@ Resolve the wiki helper using the Codex-side canonical chain (see
 `../shared-references/wiki-helper-resolution.md`):
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
 WIKI_SCRIPT=""
-[ -n "$ARIS_REPO" ] && [ -f "$ARIS_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$ARIS_REPO/tools/research_wiki.py"
+[ -n "$LABLINE_REPO" ] && [ -f "$LABLINE_REPO/tools/research_wiki.py" ] && WIKI_SCRIPT="$LABLINE_REPO/tools/research_wiki.py"
 [ -z "$WIKI_SCRIPT" ] && [ -f tools/research_wiki.py ] && WIKI_SCRIPT="tools/research_wiki.py"
 [ -z "$WIKI_SCRIPT" ] && [ -f ~/.codex/skills/research-wiki/research_wiki.py ] && WIKI_SCRIPT="$HOME/.codex/skills/research-wiki/research_wiki.py"
 ```
@@ -249,7 +249,7 @@ For each recommended and eliminated idea:
 1. Create or update `research-wiki/ideas/<idea_id>.md`.
 2. Include `node_id`, `stage`, `outcome`, `based_on`, `target_gaps`, hypothesis, proposed method, expected outcome, and pilot results when available.
 3. If `WIKI_SCRIPT` is available, add edges from idea to source papers and target gaps, then rebuild `query_pack.md`.
-4. If `WIKI_SCRIPT` is unavailable, write the idea pages and report that graph edges/query-pack rebuild require ARIS `research_wiki.py`.
+4. If `WIKI_SCRIPT` is unavailable, write the idea pages and report that graph edges/query-pack rebuild require Labline `research_wiki.py`.
 
 Required edge semantics when helper support exists:
 

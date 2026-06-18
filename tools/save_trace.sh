@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# save_trace.sh — Save a reviewer MCP call trace to .aris/traces/
-# Part of the ARIS Review Tracing Protocol (shared-references/review-tracing.md)
+# save_trace.sh — Save a reviewer MCP call trace to .labline/traces/
+# Part of the Labline Review Tracing Protocol (shared-references/review-tracing.md)
 #
 # Usage:
 #   bash tools/save_trace.sh \
@@ -24,7 +24,7 @@ set -euo pipefail
 
 # --- Parse arguments ---
 SKILL="" PURPOSE="" MODEL="" THREAD_ID="" PROMPT="" RESPONSE=""
-PROMPT_FILE="" RESPONSE_FILE="" TRACE_MODE="${ARIS_TRACE_MODE:-full}"
+PROMPT_FILE="" RESPONSE_FILE="" TRACE_MODE="${LABLINE_TRACE_MODE:-full}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -61,7 +61,7 @@ fi
 
 # --- Determine run directory ---
 TODAY=$(date +%Y-%m-%d)
-TRACES_DIR=".aris/traces/${SKILL}"
+TRACES_DIR=".labline/traces/${SKILL}"
 mkdir -p "$TRACES_DIR"
 
 # Find next run number for today
@@ -148,8 +148,8 @@ json.dump(data, open('${RUN_DIR}/${CALL_PREFIX}-${PURPOSE}.meta.json', 'w'), ind
 "
 
 # --- Append to events.jsonl (if it exists) ---
-EVENTS_FILE=".aris/meta/events.jsonl"
-if [[ -d ".aris/meta" ]]; then
+EVENTS_FILE=".labline/meta/events.jsonl"
+if [[ -d ".labline/meta" ]]; then
   python3 -c "
 import json
 evt = {

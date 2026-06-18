@@ -25,7 +25,7 @@ class TestGetPaths(unittest.TestCase):
     """Test that get_paths returns correct sub-paths."""
 
     def test_paths_structure(self):
-        base = "/tmp/aris-test"
+        base = "/tmp/labline-test"
         paths = watchdog.get_paths(base)
         # Compare resolved Path objects so the test passes on both Unix and Windows
         self.assertEqual(paths["base"], Path(base))

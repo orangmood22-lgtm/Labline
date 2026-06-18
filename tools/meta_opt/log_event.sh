@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# ARIS Meta-Optimize: Event Logger
+# Labline Meta-Optimize: Event Logger
 # Reads Claude Code hook JSON from stdin, extracts key fields,
 # appends structured event to BOTH project-level and global logs.
 #
 # Called automatically by Claude Code hooks (PostToolUse, UserPromptSubmit, etc.)
 # Input: JSON via stdin (Claude Code hook payload)
 # Output:
-#   Project: $CLAUDE_PROJECT_DIR/.aris/meta/events.jsonl  (project-specific details)
-#   Global:  ~/.aris/meta/events.jsonl                    (cross-project trends)
+#   Project: $CLAUDE_PROJECT_DIR/.labline/meta/events.jsonl  (project-specific details)
+#   Global:  ~/.labline/meta/events.jsonl                    (cross-project trends)
 
 set -euo pipefail
 
-PROJECT_META="${CLAUDE_PROJECT_DIR:-.}/.aris/meta"
-GLOBAL_META="$HOME/.aris/meta"
+PROJECT_META="${CLAUDE_PROJECT_DIR:-.}/.labline/meta"
+GLOBAL_META="$HOME/.labline/meta"
 mkdir -p "$PROJECT_META" "$GLOBAL_META"
 
 # Read stdin payload into env var (cannot use heredoc + herestring simultaneously)
-export ARIS_HOOK_PAYLOAD="$(cat)"
+export LABLINE_HOOK_PAYLOAD="$(cat)"
 
 python3 - "$PROJECT_META/events.jsonl" "$GLOBAL_META/events.jsonl" << 'PYEOF'
 import json, sys, os
@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 project_log = sys.argv[1]
 global_log = sys.argv[2]
 
-raw = os.environ.get("ARIS_HOOK_PAYLOAD", "").strip()
+raw = os.environ.get("LABLINE_HOOK_PAYLOAD", "").strip()
 if not raw:
     sys.exit(0)
 try:

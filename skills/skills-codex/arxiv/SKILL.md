@@ -11,7 +11,7 @@ Search topic or arXiv paper ID: $ARGUMENTS
 
 - **PAPER_DIR** - Local directory to save downloaded PDFs. Default: `papers/` in the current project directory.
 - **MAX_RESULTS = 10** - Default number of search results.
-- **FETCH_SCRIPT** - `$ARIS_REPO/tools/arxiv_fetch.py` from the ARIS repo recorded by the Codex install manifest. Fall back to inline Python if not found.
+- **FETCH_SCRIPT** - `$LABLINE_REPO/tools/arxiv_fetch.py` from the Labline repo recorded by the Codex install manifest. Fall back to inline Python if not found.
 
 > Overrides (append to arguments):
 > - `/arxiv "attention mechanism" - max: 20` - return up to 20 results
@@ -38,14 +38,14 @@ If the argument matches an arXiv ID pattern (`YYMM.NNNNN` or `category/NNNNNNN`)
 Locate the fetch script. Prefer the Codex managed install manifest when present, then fall back to the same project/global copy-install lookup style as the Claude skill:
 
 ```bash
-ARIS_REPO="${ARIS_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills-codex.txt 2>/dev/null)}"
-export ARIS_REPO
+LABLINE_REPO="${LABLINE_REPO:-$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .labline/installed-skills-codex.txt 2>/dev/null)}"
+export LABLINE_REPO
 SCRIPT=$(python3 -c "
 import pathlib
 import os
 candidates = [
-    pathlib.Path(os.environ['ARIS_REPO']) / 'tools' / 'arxiv_fetch.py'
-    if os.environ.get('ARIS_REPO') else None,
+    pathlib.Path(os.environ['LABLINE_REPO']) / 'tools' / 'arxiv_fetch.py'
+    if os.environ.get('LABLINE_REPO') else None,
     pathlib.Path('tools/arxiv_fetch.py'),
     pathlib.Path.home() / '.codex' / 'skills' / 'arxiv' / 'arxiv_fetch.py',
 ]

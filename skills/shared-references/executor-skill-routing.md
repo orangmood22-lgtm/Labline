@@ -2,7 +2,7 @@
 
 > Leader 派发 Executor 任务时，根据任务类型从本表选择推荐 skills 写入 prompt。
 > Executor 收到推荐后**必须使用**标记为"必用"的 skill。
-> Executor 有三种专用角色：Coder / Deployer / Writer，各有不同 skill 路由。
+> Executor 有三种主执行角色：Coder / Deployer / Writer，各有不同 skill 路由。
 
 ## 角色→Skill 路由
 
