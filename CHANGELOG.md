@@ -6,6 +6,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+- Pending.
+
+---
+
+## [v0.5.0] - 2026-06-18
+
 ### Added
 - Added `aris feishu ...` as the stable wrapper for `lark-channel-bridge`, including user-local install, doctor, run/start/status/stop/restart, log tailing, profile/home selection, and `--no-proxy` startup for proxy-incompatible Feishu OpenAPI requests.
 
