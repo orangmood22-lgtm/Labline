@@ -39,8 +39,11 @@ class FeishuBridgeCliTest(unittest.TestCase):
     def _env(self, **extra: str) -> dict:
         env = os.environ.copy()
         env["HOME"] = str(self.home)
-        env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
+        env["PATH"] = str(self.bin) + os.pathsep + "/usr/bin:/bin"
         env.pop("LABLINE_WORKSPACE", None)
+        env.pop("NPM_CONFIG_PREFIX", None)
+        env.pop("npm_config_prefix", None)
+        env.pop("LABLINE_LARK_CHANNEL_BRIDGE_BIN", None)
         env.update(extra)
         return env
 
@@ -122,13 +125,45 @@ class FeishuBridgeCliTest(unittest.TestCase):
                 HTTP_PROXY="http://good-proxy:7897",
                 https_proxy="http://bad-proxy:10808",
                 HTTPS_PROXY="http://good-proxy:7897",
+                all_proxy="http://all-proxy:10808",
+                ALL_PROXY="http://all-proxy:7897",
             ),
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("proxy.http_proxy: http://bad-proxy:10808", result.stdout)
         self.assertIn("proxy.HTTP_PROXY: http://good-proxy:7897", result.stdout)
+        self.assertIn("proxy.all_proxy: http://all-proxy:10808", result.stdout)
+        self.assertIn("proxy.ALL_PROXY: http://all-proxy:7897", result.stdout)
         self.assertIn("proxy.warning: http_proxy and HTTP_PROXY differ", result.stdout)
         self.assertIn("proxy.warning: https_proxy and HTTPS_PROXY differ", result.stdout)
+
+    def test_feishu_bridge_missing_reports_install_hint_without_traceback(self) -> None:
+        (self.bin / "lark-channel-bridge").unlink()
+
+        result = self._run("feishu", "start")
+        self.assertEqual(result.returncode, 127)
+        self.assertIn("lark-channel-bridge: missing", result.stderr)
+        self.assertIn("lane feishu install", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_feishu_status_does_not_pass_workspace_to_bridge(self) -> None:
+        log = self.tmp / "bridge-status-args.txt"
+        self._write_executable(
+            "lark-channel-bridge",
+            "\n".join(
+                [
+                    "if [[ \"${1:-}\" == \"--version\" ]]; then printf '0.3.1\\n'; exit 0; fi",
+                    "printf '%s\\n' \"$@\" > \"$LABLINE_FAKE_BRIDGE_LOG\"",
+                ]
+            )
+            + "\n",
+        )
+
+        result = self._run("feishu", "status", env=self._env(LABLINE_FAKE_BRIDGE_LOG=str(log)))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        content = log.read_text(encoding="utf-8")
+        self.assertIn("status\n", content)
+        self.assertNotIn("--workspace", content)
 
     def test_feishu_bridge_run_sets_user_local_npm_prefix_for_child_auto_installs(self) -> None:
         log = self.tmp / "bridge-env.txt"

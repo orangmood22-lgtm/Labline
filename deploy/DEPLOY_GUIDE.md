@@ -15,6 +15,8 @@
 
 部署时至少有三层网络环境：宿主机 shell、Git、容器运行时。不要只配一处代理；很多工具只读小写 `http_proxy/https_proxy`，也有工具只读大写 `HTTP_PROXY/HTTPS_PROXY`。
 
+Labline 默认**不配置 `ALL_PROXY/all_proxy`**。原因是 Node/Lark SDK 对 `ALL_PROXY` 的处理和 `curl` 不完全一致，飞书 bridge 可能出现 `socket hang up`。统一只用 HTTP/HTTPS 代理变量。
+
 如果服务器需要代理才能访问 GitHub/PyPI/飞书，先在宿主机 shell 设置大小写两套变量：
 
 ```bash
@@ -24,6 +26,8 @@ export NO_PROXY=127.0.0.1,localhost,::1
 export http_proxy="$HTTP_PROXY"
 export https_proxy="$HTTPS_PROXY"
 export no_proxy="$NO_PROXY"
+unset ALL_PROXY all_proxy
+export NODE_USE_ENV_PROXY=1
 
 curl -I https://github.com
 python3 -m pip index versions pip >/dev/null
@@ -40,7 +44,7 @@ git config --global --get-regexp 'http.*proxy'
 不需要代理时清理：
 
 ```bash
-unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy
+unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy ALL_PROXY all_proxy NODE_USE_ENV_PROXY
 git config --global --unset http.proxy || true
 git config --global --unset https.proxy || true
 ```
@@ -50,13 +54,23 @@ git config --global --unset https.proxy || true
 | 场景 | 推荐代理地址 |
 |------|--------------|
 | 宿主机本机命令 | `http://127.0.0.1:7897` |
-| Docker bridge 容器访问宿主机代理 | `http://172.17.0.1:7897` 或宿主机内网 IP |
+| Labline 默认 host network 容器 | `http://127.0.0.1:7897` |
 | Docker Desktop | `http://host.docker.internal:7897` |
 | 远程服务器上的 Clash | 监听 `0.0.0.0:7897`，并用防火墙限制来源 |
 
+容器启动时会根据 `.env` 自动写入 `~/.proxy_env`，并默认在新 shell 中启用。容器内可以手动切换：
+
+```bash
+proxy-on     # 新 shell 默认 source ~/.proxy_env
+proxy-off    # 新 shell 不再自动启用代理
+source ~/.proxy_env
+```
+
 ## 快速开始（5 分钟）
 
-默认部署模型是**一人一个长期容器**：
+默认推荐在 GPU 服务器上使用 `docker-compose.gpu.yaml`；没有 GPU 或只做 SSH 跳板/文档工作的机器使用 `docker-compose.yaml`。两套 compose 都使用同一套代理、host network、cc-switch 和 Labline state 契约。
+
+多人部署模型是**一人一个长期容器**：
 
 | 资源 | 隔离/共享方式 |
 |------|---------------|
@@ -96,14 +110,16 @@ Host Server
 git clone https://github.com/orangmood22-lgtm/Labline.git [你的Labline总目录]/admin/framework
 cd [你的Labline总目录]/admin/framework/deploy
 
-# 2. 配置环境变量
+# 2A. 默认 GPU 单容器部署
+cp .env.gpu.example .env
+vim .env   # 填写 framework/projects/shared/ssh 路径和代理端口
+docker compose -f docker-compose.gpu.yaml up -d
+docker exec -it labline-gpu bash
+
+# 2B. 多人普通 compose 部署
 cp .env.example .env
-vim .env   # 填写 LABLINE_ROOT、用户名、API key、共享数据路径
-
-# 3. 启动
+vim .env   # 填写 LABLINE_ROOT、用户名、共享数据路径、代理端口
 docker compose up -d
-
-# 4. 进入容器
 docker exec -it labline-zhangsan bash
 ```
 
@@ -167,10 +183,8 @@ USER2_FRAMEWORK_PATH=[你的Labline总目录]/users/lisi/framework
 USER2_PROJECTS_PATH=[你的Labline总目录]/users/lisi/projects
 USER2_STATE_PATH=[你的Labline总目录]/users/lisi/.labline
 
-# API（组统一，用户可在容器内覆盖）
-ANTHROPIC_API_KEY=sk-ant-xxx     # 或中转站 key
-ANTHROPIC_BASE_URL=              # 留空=官方, 填中转站 URL
-OPENAI_API_KEY=sk-xxx            # Codex 用
+# 模型供应商/API key 不写在 .env 里。
+# 每个用户进入自己的容器后用 cc-switch-cli 配置 Codex/Claude provider。
 
 # 共享资源（宿主机路径）
 LABLINE_ROOT=[你的Labline总目录]
@@ -178,13 +192,16 @@ DATASETS_PATH=[你的Labline总目录]/shared/datasets
 PRETRAINED_PATH=[你的Labline总目录]/shared/pretrained
 DOWNLOADS_PATH=[你的Labline总目录]/shared/downloads
 
-# 代理（可选）
-HTTP_PROXY=http://192.168.1.1:7890
-HTTPS_PROXY=http://192.168.1.1:7890
+# 代理（默认开启；端口按宿主机代理实际配置改）
+LABLINE_PROXY_ENABLED=1
+PROXY_PORT=7890
+HTTP_PROXY=http://127.0.0.1:7890
+HTTPS_PROXY=http://127.0.0.1:7890
 NO_PROXY=127.0.0.1,localhost,gitea
-http_proxy=http://192.168.1.1:7890
-https_proxy=http://192.168.1.1:7890
+http_proxy=http://127.0.0.1:7890
+https_proxy=http://127.0.0.1:7890
 no_proxy=127.0.0.1,localhost,gitea
+# 不要设置 ALL_PROXY/all_proxy。
 
 # git 代理（可选；只有 git 仍连不上外网时再填）
 GIT_HTTP_PROXY=
@@ -326,34 +343,19 @@ chmod 600 ~/.ssh/config
 
 ## API 配置
 
-### 组统一 key（.env 里配）
+### 模型/API 配置（容器内用 cc-switch-cli）
 
-所有用户容器继承。
-
-### 个人覆盖（容器内配）
+Labline 镜像预装 `cc-switch-cli`。不要把 OpenAI/Anthropic API key 预填到 `deploy/.env` 或 compose environment 里；多人服务器上这很容易造成凭据混用。每个用户进入自己的容器后配置自己的 provider。
 
 ```bash
-# 覆盖 Anthropic（比如用自己的中转站）
-cat > ~/.claude/settings.json <<EOF
-{
-  "env": {
-    "ANTHROPIC_AUTH_TOKEN": "sk-my-personal-key",
-    "ANTHROPIC_BASE_URL": "https://my-proxy.com/anthropic"
-  }
-}
-EOF
+# 进入自己的容器
+docker exec -it labline-zhangsan bash
 
-# 覆盖 OpenAI/Codex
-cat > ~/.codex/auth.json <<EOF
-{"OPENAI_API_KEY": "sk-my-personal-key"}
-EOF
-cat > ~/.codex/config.toml <<EOF
-model_provider = "my_proxy"
-model = "gpt-5.5"
-[model_providers.my_proxy]
-base_url = "https://my-proxy.com/v1"
-wire_api = "responses"
-EOF
+# 在容器内添加 provider。命令以你安装的 cc-switch-cli 版本为准：
+cc-switch provider add --name "codex-main"
+cc-switch provider list
+cc-switch provider switch 1 --app codex
+cc-switch provider switch 1 --app claude
 ```
 
 ### 需要 VPN/海外 IP
@@ -361,19 +363,17 @@ EOF
 如果用 Anthropic 官方 API 或 Claude Coding Plan:
 
 ```env
-# .env 里配代理（Docker bridge 网络）
-# 172.17.0.1 是 Docker 默认网桥 IP，所有容器都能访问
-HTTP_PROXY=http://172.17.0.1:7897
-HTTPS_PROXY=http://172.17.0.1:7897
+# .env 里配代理。Labline 容器默认 host network，127.0.0.1 是宿主机。
+LABLINE_PROXY_ENABLED=1
+HTTP_PROXY=http://127.0.0.1:7897
+HTTPS_PROXY=http://127.0.0.1:7897
 NO_PROXY=127.0.0.1,localhost,gitea
-http_proxy=http://172.17.0.1:7897
-https_proxy=http://172.17.0.1:7897
+http_proxy=http://127.0.0.1:7897
+https_proxy=http://127.0.0.1:7897
 no_proxy=127.0.0.1,localhost,gitea
 ```
 
-宿主机跑 Clash/V2Ray 监听 `*:7897`（所有接口）即可。
-
-> **注意**: 不要用 `--network host`，用默认 bridge 网络。entrypoint 会自动将大小写代理变量写入 `/etc/environment`，`docker exec` 的 PAM 会话也能正确读取。
+宿主机跑 Clash/V2Ray/mihomo 监听 `127.0.0.1:7897` 即可。entrypoint 会自动写入 `~/.proxy_env` 和 `/etc/environment`，`docker exec` 的 PAM 会话也能读取。
 
 容器内验证：
 
@@ -387,8 +387,8 @@ git ls-remote https://github.com/orangmood22-lgtm/Labline.git HEAD
 如果 `curl` 能通但 `git ls-remote` 失败，再设置 git 专用代理：
 
 ```env
-GIT_HTTP_PROXY=http://172.17.0.1:7897
-GIT_HTTPS_PROXY=http://172.17.0.1:7897
+GIT_HTTP_PROXY=http://127.0.0.1:7897
+GIT_HTTPS_PROXY=http://127.0.0.1:7897
 ```
 
 然后重建或重启容器：
@@ -426,35 +426,40 @@ Codex + Claude Code 的飞书/Lark 远程控制默认推荐使用外部桥接器
 安装：
 
 ```bash
-npm i -g lark-channel-bridge
+lane feishu install
+lane feishu doctor
 ```
 
 在用户项目目录启动 Codex profile：
 
 ```bash
-lark-channel-bridge run \
-  --profile codex \
-  --agent codex \
+lane feishu run \
+  --home ~/.lark-channel-[用户] \
+  --profile [用户]-[项目] \
   --workspace [你的project位置]
 ```
 
-后台启动：
+服务器和容器里推荐放进 tmux：
 
 ```bash
-lark-channel-bridge start \
-  --profile codex \
-  --agent codex \
-  --workspace [你的project位置]
+tmux new-session -d -s feishu-[用户]-[项目] '
+source ~/.proxy_env 2>/dev/null || true
+cd [你的project位置]
+lane feishu run --home ~/.lark-channel-[用户] --profile [用户]-[项目] --workspace [你的project位置]
+'
 ```
 
 Claude Code 使用独立 profile：
 
 ```bash
-lark-channel-bridge run \
-  --profile claude \
+lane feishu run \
+  --home ~/.lark-channel-[用户] \
+  --profile [用户]-[项目]-claude \
   --agent claude \
   --workspace [你的project位置]
 ```
+
+`lane feishu start` 会使用上游后台服务机制；桌面 Linux 可以用，服务器/root/Docker 环境如果缺 user systemd/dbus，就用 tmux + `lane feishu run`。
 
 飞书/Lark 里常用命令：
 
@@ -542,7 +547,8 @@ export LABLINE_PROJECT_ROOT=[你的Labline总目录]/admin/framework
 | 容器内 `git push` 失败 | 检查 GITEA_TOKEN，或 `git remote set-url origin http://token@gitea:3000/user/repo.git` |
 | `git clone` / `git pull` 连不上 GitHub | 先设置大小写 proxy env；仍失败再设置 `git config --global http.proxy/https.proxy` |
 | 容器里 `curl` 能联网但 git 不行 | 在 `.env` 填 `GIT_HTTP_PROXY` / `GIT_HTTPS_PROXY` 后 `docker compose up -d --force-recreate` |
-| Python/pip/Feishu SDK 不认代理 | 同时设置 `HTTP_PROXY/HTTPS_PROXY` 和 `http_proxy/https_proxy` |
+| Python/pip/Feishu SDK 不认代理 | 同时设置 `HTTP_PROXY/HTTPS_PROXY` 和 `http_proxy/https_proxy`，不要设置 `ALL_PROXY/all_proxy` |
+| Feishu bridge `socket hang up` | `unset ALL_PROXY all_proxy`，确认 `~/.proxy_env` 只含 HTTP/HTTPS 代理 |
 | 旧版 Feishu bridge 启动时报 `Address already in use` | 修改 `BRIDGE_PORT`，并同步修改 runner 的 `--bridge-url` |
 | SSH 到 GPU 超时 | 检查 SSH key mount，`ls ~/.ssh/` |
 | API 403/401 | 检查 key 是否过期，base_url 是否正确 |

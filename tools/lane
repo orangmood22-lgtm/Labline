@@ -957,7 +957,7 @@ def feishu_command(args: argparse.Namespace, action: str) -> list[str]:
     if agent:
         cmd.extend(["--agent", agent])
     workspace = getattr(args, "workspace", None)
-    if not getattr(args, "no_workspace", False):
+    if hasattr(args, "workspace") and not getattr(args, "no_workspace", False):
         workspace_path = Path(workspace).expanduser().resolve() if workspace else Path.cwd().resolve()
         cmd.extend(["--workspace", str(workspace_path)])
     app_id = getattr(args, "app_id", None)
@@ -1034,7 +1034,7 @@ def redact_proxy_url(value: str) -> str:
 
 def proxy_diagnostics() -> list[str]:
     lines = []
-    for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]:
+    for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"]:
         value = os.environ.get(key, "")
         if value:
             lines.append(f"proxy.{key}: {redact_proxy_url(value)}")
@@ -1086,7 +1086,17 @@ def cmd_feishu_bridge(args: argparse.Namespace) -> int:
         if getattr(args, "no_proxy", False):
             print("proxy: disabled")
         return 0
-    result = subprocess.run(cmd, env=feishu_env(args))
+    env = feishu_env(args)
+    bridge = cmd[0]
+    bridge_exists = Path(bridge).exists() if "/" in bridge else shutil.which(bridge, path=env.get("PATH")) is not None
+    if not bridge_exists:
+        prefix = feishu_node_prefix(args)
+        print("lark-channel-bridge: missing", file=sys.stderr)
+        print("Run first:", file=sys.stderr)
+        print(f"  lane feishu install --prefix {prefix}", file=sys.stderr)
+        print("Then retry the current lane feishu command.", file=sys.stderr)
+        return 127
+    result = subprocess.run(cmd, env=env)
     return result.returncode
 
 

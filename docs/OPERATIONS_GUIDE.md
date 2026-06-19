@@ -893,23 +893,13 @@ Gitea (http://gitea:3000)
 
 添加新用户：编辑 `.env` + `docker-compose.yaml`，`docker compose up -d`。
 
-### API Provider 预配
+### API Provider 配置
 
-组统一 provider 放在 `.env`，所有用户容器会继承；用户仍可在容器内用 `cc-switch provider add` 添加自己的 key 覆盖。
-
-```env
-ANTHROPIC_API_KEY=sk-ant-xxx
-ANTHROPIC_BASE_URL=                    # 留空=官方，填中转站 URL
-OPENAI_API_KEY=sk-xxx                  # Codex 主入口和本地 Reviewer 用
-```
-
-容器启动后可批量预配：
+不要把 API key 预填在 `deploy/.env` 里让所有用户容器继承。每个用户进入自己的容器后用 `cc-switch-cli` 配置 Codex/Claude provider；这样可以避免多人共用 key、误覆盖 provider 或把 key 写进部署文件。
 
 ```bash
-cc-switch provider add --name "组统一-中转站" \
-    --base-url "$ANTHROPIC_BASE_URL" \
-    --api-key "$ANTHROPIC_API_KEY" \
-    --model "claude-sonnet-4-20250514"
+cc-switch provider add --name "codex-main"
+cc-switch provider list
 cc-switch provider switch 1
 ```
 

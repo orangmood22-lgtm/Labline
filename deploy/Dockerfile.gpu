@@ -163,7 +163,7 @@ WORKDIR /home/${USERNAME}
 
 # ─── LABLINE framework clone ────────────────────────────────────────────────────
 ARG LABLINE_REPO=https://github.com/orangmood22-lgtm/Labline.git
-ARG LABLINE_BRANCH=orangmood-tripartite-night-20260512
+ARG LABLINE_BRANCH=main
 
 RUN export http_proxy="${BUILD_HTTP_PROXY}" \
     && export https_proxy="${BUILD_HTTPS_PROXY}" \

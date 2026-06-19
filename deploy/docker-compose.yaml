@@ -6,7 +6,7 @@
 #
 # Usage:
 #   1. Copy this file to your group server
-#   2. Edit .env file with user list and API keys
+#   2. Edit .env file with user list, host paths, and proxy port
 #   3. docker compose up -d
 #   4. docker exec -it labline-zhangsan bash
 #
@@ -39,12 +39,13 @@ services:
         USERNAME: ${USER1_NAME:-researcher1}
         UID: ${USER1_UID:-1001}
         GID: ${USER1_GID:-1001}
+        BUILD_HTTP_PROXY: ${HTTP_PROXY:-}
+        BUILD_HTTPS_PROXY: ${HTTPS_PROXY:-}
     container_name: labline-${USER1_NAME:-researcher1}
     hostname: labline-${USER1_NAME:-researcher1}
+    network_mode: host
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LABLINE_PROXY_ENABLED=${LABLINE_PROXY_ENABLED:-1}
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
@@ -64,7 +65,7 @@ services:
       - BRIDGE_PORT=${BRIDGE_PORT:-5000}
       - LABLINE_PROJECT_ROOT=${LABLINE_PROJECT_ROOT:-/labline/framework}
       - LABLINE_FEISHU_CONTROL_ROOT=${LABLINE_FEISHU_CONTROL_ROOT:-}
-      - GITEA_URL=http://gitea:3000
+      - GITEA_URL=${GITEA_URL:-http://127.0.0.1:3000}
     volumes:
       # Per-user framework checkout: user controls update/rollback.
       - ${USER1_FRAMEWORK_PATH:?set USER1_FRAMEWORK_PATH in .env}:/labline/framework
@@ -94,12 +95,13 @@ services:
         USERNAME: ${USER2_NAME:-researcher2}
         UID: ${USER2_UID:-1002}
         GID: ${USER2_GID:-1002}
+        BUILD_HTTP_PROXY: ${HTTP_PROXY:-}
+        BUILD_HTTPS_PROXY: ${HTTPS_PROXY:-}
     container_name: labline-${USER2_NAME:-researcher2}
     hostname: labline-${USER2_NAME:-researcher2}
+    network_mode: host
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LABLINE_PROXY_ENABLED=${LABLINE_PROXY_ENABLED:-1}
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
@@ -119,7 +121,7 @@ services:
       - BRIDGE_PORT=${BRIDGE_PORT:-5000}
       - LABLINE_PROJECT_ROOT=${LABLINE_PROJECT_ROOT:-/labline/framework}
       - LABLINE_FEISHU_CONTROL_ROOT=${LABLINE_FEISHU_CONTROL_ROOT:-}
-      - GITEA_URL=http://gitea:3000
+      - GITEA_URL=${GITEA_URL:-http://127.0.0.1:3000}
     volumes:
       - ${USER2_FRAMEWORK_PATH:?set USER2_FRAMEWORK_PATH in .env}:/labline/framework
       # Per-user projects: do not share this path with another researcher.

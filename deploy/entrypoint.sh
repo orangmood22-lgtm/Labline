@@ -1,43 +1,71 @@
 #!/bin/bash
 # Labline container entrypoint
-# Sets up API config, SSH, and framework symlinks on first boot
+# Sets up proxy helpers, SSH, and framework symlinks on first boot
 
 set -e
 
-# ─── API config from env vars ────────────────────────────────────────────────
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-    mkdir -p ~/.claude
-    cat > ~/.claude/settings.json <<EOF
-{
-  "env": {
-    "ANTHROPIC_AUTH_TOKEN": "$ANTHROPIC_API_KEY",
-    "ANTHROPIC_BASE_URL": "${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
-  }
-}
-EOF
-fi
-
-if [ -n "$OPENAI_API_KEY" ]; then
-    mkdir -p ~/.codex
-    cat > ~/.codex/auth.json <<EOF
-{"OPENAI_API_KEY": "$OPENAI_API_KEY"}
-EOF
-fi
+# ─── API/provider config ────────────────────────────────────────────────────
+# Do not write API keys from Docker env into Codex/Claude config files.
+# Users configure providers inside the container with cc-switch-cli so keys stay
+# personal and accidental group-wide credential reuse is avoided.
 
 # ─── Proxy config ────────────────────────────────────────────────────────────
 PROXY_HTTP="${HTTP_PROXY:-${http_proxy:-}}"
 PROXY_HTTPS="${HTTPS_PROXY:-${https_proxy:-$PROXY_HTTP}}"
 PROXY_NO="${NO_PROXY:-${no_proxy:-127.0.0.1,localhost}}"
+LABLINE_PROXY_ENABLED="${LABLINE_PROXY_ENABLED:-1}"
 
-if [ -n "$PROXY_HTTP" ]; then
-    export HTTP_PROXY="$PROXY_HTTP"
-    export HTTPS_PROXY="$PROXY_HTTPS"
-    export NO_PROXY="$PROXY_NO"
-    export http_proxy="$PROXY_HTTP"
-    export https_proxy="$PROXY_HTTPS"
-    export no_proxy="$PROXY_NO"
+mkdir -p ~/.labline ~/.local/bin
+
+cat > ~/.proxy_env <<EOF
+export HTTP_PROXY="${PROXY_HTTP}"
+export HTTPS_PROXY="${PROXY_HTTPS}"
+export NO_PROXY="${PROXY_NO}"
+export http_proxy="${PROXY_HTTP}"
+export https_proxy="${PROXY_HTTPS}"
+export no_proxy="${PROXY_NO}"
+unset ALL_PROXY
+unset all_proxy
+export NODE_USE_ENV_PROXY=1
+EOF
+
+cat > ~/.local/bin/proxy-on <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ ! -s "$HOME/.proxy_env" ]; then
+    echo "~/.proxy_env is missing or empty" >&2
+    exit 1
+fi
+if ! grep -q "source ~/.proxy_env # Labline proxy" "$HOME/.bashrc" 2>/dev/null; then
+    printf '\nsource ~/.proxy_env # Labline proxy\n' >> "$HOME/.bashrc"
+fi
+echo "Labline proxy enabled for new shells. Run: source ~/.proxy_env"
+EOF
+
+cat > ~/.local/bin/proxy-off <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+sed -i '/source ~\/.proxy_env # Labline proxy/d' "$HOME/.bashrc" 2>/dev/null || true
+unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy ALL_PROXY all_proxy NODE_USE_ENV_PROXY
+echo "Labline proxy disabled for new shells. Current shell env was unset by this process only."
+EOF
+
+chmod +x ~/.local/bin/proxy-on ~/.local/bin/proxy-off
+export PATH="$HOME/.local/bin:$PATH"
+if ! grep -q "Labline local bin" ~/.bashrc 2>/dev/null; then
+    {
+        echo ""
+        echo "# Labline local bin"
+        echo 'export PATH="$HOME/.local/bin:$PATH"'
+    } >> ~/.bashrc
+fi
+
+sudo sed -i '/^HTTP_PROXY=/d;/^HTTPS_PROXY=/d;/^NO_PROXY=/d;/^http_proxy=/d;/^https_proxy=/d;/^no_proxy=/d;/^ALL_PROXY=/d;/^all_proxy=/d;/^NODE_USE_ENV_PROXY=/d' /etc/environment 2>/dev/null || true
+
+if [ "$LABLINE_PROXY_ENABLED" != "0" ] && [ -n "$PROXY_HTTP" ]; then
+    # shellcheck disable=SC1090
+    . ~/.proxy_env
     # Write both upper/lower names for PAM sessions started by docker exec.
-    sudo sed -i '/^HTTP_PROXY=/d;/^HTTPS_PROXY=/d;/^NO_PROXY=/d;/^http_proxy=/d;/^https_proxy=/d;/^no_proxy=/d' /etc/environment 2>/dev/null || true
     {
         echo "HTTP_PROXY=\"$HTTP_PROXY\""
         echo "HTTPS_PROXY=\"$HTTPS_PROXY\""
@@ -45,7 +73,13 @@ if [ -n "$PROXY_HTTP" ]; then
         echo "http_proxy=\"$http_proxy\""
         echo "https_proxy=\"$https_proxy\""
         echo "no_proxy=\"$no_proxy\""
+        echo "NODE_USE_ENV_PROXY=\"1\""
     } | sudo tee -a /etc/environment >/dev/null
+    if ! grep -q "source ~/.proxy_env # Labline proxy" ~/.bashrc 2>/dev/null; then
+        printf '\nsource ~/.proxy_env # Labline proxy\n' >> ~/.bashrc
+    fi
+else
+    unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy ALL_PROXY all_proxy NODE_USE_ENV_PROXY
 fi
 
 if [ -n "$GIT_HTTP_PROXY" ]; then
@@ -63,7 +97,6 @@ if [ -d /run/secrets/ssh ]; then
 fi
 
 # ─── Framework update check on boot/shell (if network available) ─────────────
-mkdir -p ~/.labline ~/.local/bin
 if [ -x /labline/framework/tools/lane ]; then
     ln -sf /labline/framework/tools/lane ~/.local/bin/lane
 fi

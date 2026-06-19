@@ -3,7 +3,7 @@
 #
 # Usage:
 #   1. Copy deploy/ dir to GPU server
-#   2. Copy .env.gpu.example → .env, fill in values
+#   2. Copy .env.gpu.example → .env, fill in host paths and proxy port
 #   3. docker compose -f docker-compose.gpu.yaml up -d
 #   4. docker exec -it labline-gpu bash
 
@@ -16,15 +16,14 @@ services:
         USERNAME: ${USERNAME:-researcher}
         UID: ${USER_UID:-1000}
         GID: ${USER_GID:-1000}
-        LABLINE_BRANCH: ${LABLINE_BRANCH:-orangmood-tripartite-night-20260512}
+        LABLINE_BRANCH: ${LABLINE_BRANCH:-main}
         BUILD_HTTP_PROXY: ${HTTP_PROXY:-}
         BUILD_HTTPS_PROXY: ${HTTPS_PROXY:-}
     container_name: labline-gpu
     hostname: labline-gpu
+    network_mode: host
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LABLINE_PROXY_ENABLED=${LABLINE_PROXY_ENABLED:-1}
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}

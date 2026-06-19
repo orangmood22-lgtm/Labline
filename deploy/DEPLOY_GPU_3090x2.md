@@ -48,7 +48,7 @@ cd [你的framework位置]
 cp deploy/.env.gpu.example deploy/.env
 ```
 
-编辑 `deploy/.env`，填入你的 API key：
+编辑 `deploy/.env`，填入宿主机路径和代理端口。不要把 API key 写进 `.env`；进入容器后用 `cc-switch-cli` 配置 Codex/Claude provider：
 
 ```bash
 vim deploy/.env
@@ -56,18 +56,13 @@ vim deploy/.env
 
 需要改的字段：
 ```ini
-# Codex 默认入口
-OPENAI_API_KEY=sk-xxx
-
-# Claude Code 兼容入口
-ANTHROPIC_API_KEY=sk-ant-xxx（或中转站 key）
-ANTHROPIC_BASE_URL=https://your-proxy.com/v1（留空=官方）
-
 # 3090x2 上 clash 当前跑在 7897 端口
+LABLINE_PROXY_ENABLED=1
 HTTP_PROXY=http://127.0.0.1:7897
 HTTPS_PROXY=http://127.0.0.1:7897
 http_proxy=http://127.0.0.1:7897
 https_proxy=http://127.0.0.1:7897
+# 不要设置 ALL_PROXY/all_proxy。
 # 只有 git pull/clone 仍失败时再填
 GIT_HTTP_PROXY=http://127.0.0.1:7897
 GIT_HTTPS_PROXY=http://127.0.0.1:7897
@@ -124,11 +119,11 @@ docker run -d \
   -v "$DATASETS_PATH:/labline/shared/datasets:ro" \
   -v "$PRETRAINED_PATH:/labline/shared/pretrained" \
   -v "$SSH_PATH:/run/secrets/ssh:ro" \
-  -e ANTHROPIC_API_KEY="$(grep ANTHROPIC_API_KEY deploy/.env | cut -d= -f2)" \
-  -e ANTHROPIC_BASE_URL="$(grep ANTHROPIC_BASE_URL deploy/.env | cut -d= -f2)" \
-  -e OPENAI_API_KEY="$(grep OPENAI_API_KEY deploy/.env | cut -d= -f2)" \
+  -e LABLINE_PROXY_ENABLED=1 \
   -e HTTP_PROXY=http://127.0.0.1:7897 \
   -e HTTPS_PROXY=http://127.0.0.1:7897 \
+  -e http_proxy=http://127.0.0.1:7897 \
+  -e https_proxy=http://127.0.0.1:7897 \
   labline-gpu sleep infinity
 ```
 
@@ -260,7 +255,7 @@ bash /labline/framework/tools/install_labline.sh . --labline-repo /labline/frame
 | `docker build` apt 报错       | 使用 `BUILD_HTTP_PROXY/BUILD_HTTPS_PROXY=http://127.0.0.1:7897`，Dockerfile 会覆盖 CUDA base image 里的旧代理 |
 | `git pull` / `git clone` 失败 | 同时设置大小写 proxy；仍失败再设置 `git config --global http.proxy/https.proxy` |
 | GPU 容器内看不到              | 检查 `--gpus all`，宿主机跑 `nvidia-smi` 确认驱动正常                   |
-| Claude Code 报 401/403        | 检查 `ANTHROPIC_API_KEY` 是否正确传入，容器内 `echo $ANTHROPIC_API_KEY` |
+| Codex/Claude Code 报 401/403  | 进入容器后用 `cc-switch provider list` / `cc-switch provider switch` 检查当前 provider |
 | PyTorch 报 CUDA not available | 驱动版本和 CUDA 镜像版本不兼容，降级 Dockerfile 中的 CUDA 版本          |
 | `install_labline.sh` 报错        | 确认 `/labline/framework/skills/` 存在且非空                               |
-| 容器内网络不通                | `--network host` 应该继承宿主机网络，检查 clash 是否在跑                |
+| 容器内网络不通                | `--network host` 应该继承宿主机网络，检查 clash 是否在跑；不要设置 `ALL_PROXY/all_proxy` |

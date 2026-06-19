@@ -100,6 +100,7 @@ class GpuDeployContractTest(unittest.TestCase):
             "http_proxy=",
             "https_proxy=",
             "no_proxy=",
+            "LABLINE_PROXY_ENABLED=1",
             "GIT_HTTP_PROXY=",
             "GIT_HTTPS_PROXY=",
             "LABLINE_AUTO_CHECK_UPDATE=1",
@@ -119,6 +120,10 @@ class GpuDeployContractTest(unittest.TestCase):
             with self.subTest(path=path.name):
                 for item in required:
                     self.assertIn(item, content)
+                self.assertNotIn("ALL_PROXY=", content)
+                self.assertNotIn("all_proxy=", content)
+                self.assertNotIn("ANTHROPIC_API_KEY=", content)
+                self.assertNotIn("OPENAI_API_KEY=", content)
 
     def test_compose_files_pass_proxy_git_proxy_and_feishu_vars(self):
         required = [
@@ -128,6 +133,7 @@ class GpuDeployContractTest(unittest.TestCase):
             "http_proxy=${http_proxy:-}",
             "https_proxy=${https_proxy:-}",
             "no_proxy=${no_proxy:-}",
+            "LABLINE_PROXY_ENABLED=${LABLINE_PROXY_ENABLED:-1}",
             "GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}",
             "GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}",
             "LABLINE_AUTO_CHECK_UPDATE=${LABLINE_AUTO_CHECK_UPDATE:-1}",
@@ -147,6 +153,14 @@ class GpuDeployContractTest(unittest.TestCase):
             with self.subTest(path=path.name):
                 for item in required:
                     self.assertIn(item, content)
+                self.assertNotIn("ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}", content)
+                self.assertNotIn("OPENAI_API_KEY=${OPENAI_API_KEY:-}", content)
+
+    def test_compose_files_use_host_network_by_default(self):
+        for path in [GPU_COMPOSE, MULTI_COMPOSE]:
+            content = path.read_text()
+            with self.subTest(path=path.name):
+                self.assertIn("network_mode: host", content)
 
     def test_entrypoint_persists_upper_lower_proxy_and_optional_git_proxy(self):
         content = ENTRYPOINT.read_text()
@@ -154,10 +168,17 @@ class GpuDeployContractTest(unittest.TestCase):
         self.assertIn('PROXY_HTTP="${HTTP_PROXY:-${http_proxy:-}}"', content)
         self.assertIn('PROXY_HTTPS="${HTTPS_PROXY:-${https_proxy:-$PROXY_HTTP}}"', content)
         self.assertIn('PROXY_NO="${NO_PROXY:-${no_proxy:-127.0.0.1,localhost}}"', content)
+        self.assertIn("~/.proxy_env", content)
+        self.assertIn("proxy-on", content)
+        self.assertIn("proxy-off", content)
+        self.assertIn("unset ALL_PROXY", content)
+        self.assertIn("unset all_proxy", content)
         for name in ["HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy"]:
             self.assertIn(f'echo "{name}=', content)
         self.assertIn('git config --global http.proxy "$GIT_HTTP_PROXY"', content)
         self.assertIn('git config --global https.proxy "$GIT_HTTPS_PROXY"', content)
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", content)
+        self.assertNotIn("OPENAI_API_KEY", content)
 
     def test_entrypoint_checks_framework_updates_without_auto_pull(self):
         content = ENTRYPOINT.read_text()

@@ -6,6 +6,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- Feishu/Lark integration docs now explain `--home`, `--profile`, `--workspace`, tmux operation, and multi-user/multi-project usage.
+- Deployment docs and compose examples now standardize on HTTP/HTTPS proxy variables without `ALL_PROXY/all_proxy`, default Labline researcher containers to host networking, and route API provider setup through `cc-switch-cli` instead of prefilled API keys.
+
+### Fixed
+- `lane feishu` now reports a clear install hint when `lark-channel-bridge` is missing, and status-style bridge commands no longer pass workspace-only arguments.
+
 ---
 
 ## [v0.3.3] - 2026-06-16

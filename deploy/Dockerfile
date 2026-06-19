@@ -12,6 +12,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
+ARG BUILD_HTTP_PROXY=
+ARG BUILD_HTTPS_PROXY=
+ENV http_proxy="${BUILD_HTTP_PROXY}"
+ENV https_proxy="${BUILD_HTTPS_PROXY}"
+ENV HTTP_PROXY="${BUILD_HTTP_PROXY}"
+ENV HTTPS_PROXY="${BUILD_HTTPS_PROXY}"
+ENV all_proxy=
+ENV ALL_PROXY=
+
 # ─── System packages ─────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl wget git git-lfs openssh-client rsync tmux vim \
@@ -74,6 +83,13 @@ RUN mkdir -p ~/.claude ~/.codex ~/.labline ~/.ssh \
 
 # ─── Default API config (user overrides via mount or `labline project init`) ────
 COPY templates/api-config.yaml.tmpl /home/${USERNAME}/.labline/api.yaml
+
+ENV http_proxy=
+ENV https_proxy=
+ENV HTTP_PROXY=
+ENV HTTPS_PROXY=
+ENV all_proxy=
+ENV ALL_PROXY=
 
 # ─── Entrypoint ──────────────────────────────────────────────────────────────
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh

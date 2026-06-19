@@ -102,7 +102,7 @@ source ~/labline-deploy.env
 - Claude Code 兼容模式的 `.claude/skills/*` 也应该指向 `/labline/framework/skills/...`。
 - 项目里的数据集 symlink 应该指向 `/labline/shared/datasets/...`。
 - 不要在容器要用的 symlink 里写宿主机路径；容器内统一使用 `/labline/...`。
-- API key 只放服务器本地的 `deploy/.env`，不要提交到 Git。
+- API key 不写入 `deploy/.env`，进入容器后用 `cc-switch-cli` 配置。
 
 ## 3. 前置条件
 
@@ -311,15 +311,12 @@ USERNAME=researcher
 USER_UID=1000
 USER_GID=1000
 
-ANTHROPIC_API_KEY=
-ANTHROPIC_BASE_URL=
-OPENAI_API_KEY=
-
-HTTP_PROXY=
-HTTPS_PROXY=
+LABLINE_PROXY_ENABLED=1
+HTTP_PROXY=http://127.0.0.1:7897
+HTTPS_PROXY=http://127.0.0.1:7897
 NO_PROXY=127.0.0.1,localhost
-http_proxy=
-https_proxy=
+http_proxy=http://127.0.0.1:7897
+https_proxy=http://127.0.0.1:7897
 no_proxy=127.0.0.1,localhost
 GIT_HTTP_PROXY=
 GIT_HTTPS_PROXY=
@@ -335,10 +332,12 @@ SSH_PATH=[你的SSH目录]
 如果服务器需要代理：
 
 ```ini
+LABLINE_PROXY_ENABLED=1
 HTTP_PROXY=http://127.0.0.1:7897
 HTTPS_PROXY=http://127.0.0.1:7897
 http_proxy=http://127.0.0.1:7897
 https_proxy=http://127.0.0.1:7897
+# 不要设置 ALL_PROXY/all_proxy。
 # 只有 git 仍连不上外网时再填
 GIT_HTTP_PROXY=http://127.0.0.1:7897
 GIT_HTTPS_PROXY=http://127.0.0.1:7897
@@ -347,16 +346,15 @@ GIT_HTTPS_PROXY=http://127.0.0.1:7897
 如果服务器不需要代理：
 
 ```ini
+LABLINE_PROXY_ENABLED=0
 HTTP_PROXY=
 HTTPS_PROXY=
 ```
 
 API key 说明：
 
-- `OPENAI_API_KEY` 给 Codex CLI 用。
-- `ANTHROPIC_API_KEY` 给 Claude Code 兼容模式用。
-- `ANTHROPIC_BASE_URL` 只在你使用中转站时填写。
-- 不要把 `deploy/.env` 提交到 Git。
+- 不要把 API key 写进 `deploy/.env` 或 compose environment。
+- 进入容器后用 `cc-switch-cli` 给 Codex/Claude 配 provider。
 - 不要在截图、日志、文档里展示 key。
 
 ## 7. 构建 GPU 镜像
@@ -454,11 +452,11 @@ docker run -d \
   -v "$DATASETS_PATH:/labline/shared/datasets:ro" \
   -v "$PRETRAINED_PATH:/labline/shared/pretrained" \
   -v "$SSH_PATH:/run/secrets/ssh:ro" \
-  -e ANTHROPIC_API_KEY="$(awk -F= '$1=="ANTHROPIC_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
-  -e ANTHROPIC_BASE_URL="$(awk -F= '$1=="ANTHROPIC_BASE_URL"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
-  -e OPENAI_API_KEY="$(awk -F= '$1=="OPENAI_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
+  -e LABLINE_PROXY_ENABLED=1 \
   -e HTTP_PROXY="$HTTP_PROXY_URL" \
   -e HTTPS_PROXY="$HTTPS_PROXY_URL" \
+  -e http_proxy="$HTTP_PROXY_URL" \
+  -e https_proxy="$HTTPS_PROXY_URL" \
   -e NO_PROXY=127.0.0.1,localhost \
   labline-gpu sleep infinity
 ```
@@ -479,9 +477,7 @@ docker run -d \
   -v "$DATASETS_PATH:/labline/shared/datasets:ro" \
   -v "$PRETRAINED_PATH:/labline/shared/pretrained" \
   -v "$SSH_PATH:/run/secrets/ssh:ro" \
-  -e ANTHROPIC_API_KEY="$(awk -F= '$1=="ANTHROPIC_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
-  -e ANTHROPIC_BASE_URL="$(awk -F= '$1=="ANTHROPIC_BASE_URL"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
-  -e OPENAI_API_KEY="$(awk -F= '$1=="OPENAI_API_KEY"{print substr($0,index($0,"=")+1)}' deploy/.env)" \
+  -e LABLINE_PROXY_ENABLED=0 \
   labline-gpu sleep infinity
 ```
 
@@ -680,18 +676,18 @@ Socket ended
 - 如果使用 Clash fake-IP，给内网域名加 fake-ip-filter。
 - 修改规则后刷新 DNS 缓存。
 
-### 12.2 Docker build 访问 `172.17.0.1:10808`
+### 12.2 Docker build 访问旧代理地址
 
 现象：
 
 ```text
-Could not connect to 172.17.0.1:10808
+Could not connect to [旧代理地址]
 E: Failed to fetch http://archive.ubuntu.com/...
 ```
 
 原因：
 
-- Docker daemon 或 CUDA base image 里残留旧代理。
+- Docker daemon 或 CUDA base image 里残留旧代理；Labline 当前默认使用 host network + `127.0.0.1:[代理端口]`。
 
 解决：
 

@@ -41,7 +41,7 @@ lane feishu run
 这会启动：
 
 ```text
-lark-channel-bridge run --profile lane-codex --agent codex --workspace [当前目录]
+lark-channel-bridge run --profile labline-codex --agent codex --workspace [当前目录]
 ```
 
 如果 PersonalAgent 应用还没配置好，首次运行会打开 bridge 的二维码向导。
@@ -69,7 +69,112 @@ lane feishu restart
 lane feishu logs --tail 50
 ```
 
-如果启动时报 `could not resolve bot identity`，并且日志里有 `Request failed with status code 502`，可以绕过代理再试。部分本地 HTTP 代理无法正确处理 Node SDK 的飞书 API 请求，而直连可用：
+### 参数含义
+
+| 参数 | 含义 | 多人使用建议 |
+|------|------|--------------|
+| `--home` | `lark-channel-bridge` 的配置根目录，里面保存飞书应用配置、profile 状态和私有 lark-cli 配置 | 一个人一个 home，例如 `~/.lark-channel-zhangsan` |
+| `--profile` | 一个 bridge 运行配置名；同一个 home 下可以有多个 profile | 一个项目一个 profile，例如 `zhangsan-qy-iOD` |
+| `--workspace` | 本地 agent 实际工作的项目目录 | 指向要控制的 Labline project，例如 `/labline/projects/qy-iOD` |
+| `--agent` | 被 bridge 拉起的本地 agent CLI | 默认 `codex`；Claude Code 兼容时用 `claude` |
+| `--no-proxy` | 清理代理变量后启动 bridge | 只在直连飞书可用、代理反而失败时使用 |
+
+推荐显式写全参数，尤其是在多人共用同一个 Linux 账号或 root 账号时：
+
+```bash
+lane feishu run \
+  --home ~/.lark-channel-zhangsan \
+  --profile zhangsan-qy-iOD \
+  --workspace /labline/projects/qy-iOD
+```
+
+### 多人/多项目操作方式
+
+Labline 推荐的隔离方式是：
+
+- **每个真人一个 `--home`**：绑定自己的飞书/Lark PersonalAgent app，避免二维码配置、OAuth token、lark-cli 私有配置互相覆盖。
+- **每个项目一个 `--profile`**：同一个人同时控制多个项目时，用不同 profile 区分。
+- **每个 profile 固定一个 `--workspace`**：启动时就绑定到目标 project，飞书里仍可用 `/cd` 临时切换。
+- **每个长期 bridge 放进独立 tmux session**：共享服务器、root 账号、容器里优先用 `lane feishu run`，不要依赖 systemd user service。
+
+例子：两个人在同一台服务器、同一个 Linux 账号下分别控制自己的项目：
+
+```bash
+tmux new-session -d -s feishu-zhangsan-qy-iOD '
+cd /labline/projects/qy-iOD
+lane feishu run --home ~/.lark-channel-zhangsan --profile zhangsan-qy-iOD --workspace /labline/projects/qy-iOD
+'
+
+tmux new-session -d -s feishu-lisi-mvdet '
+cd /labline/projects/mvdet
+lane feishu run --home ~/.lark-channel-lisi --profile lisi-mvdet --workspace /labline/projects/mvdet
+'
+```
+
+如果 A 需要让 B 临时访问自己的项目，有两种安全做法：
+
+1. A 和 B 明确共用同一个项目目录，B 用自己的 `--home` 和自己的 profile 指向 A 的 `--workspace`。
+2. 项目目录用 Linux group/ACL 控制读写权限，bridge 只负责消息接入，不负责权限隔离。
+
+不要误解为“拉一个群聊就自动隔离权限”。群聊只能决定哪些人能给 bot 发消息；真正的文件读写权限仍由运行 bridge 的本地用户和项目目录权限决定。
+
+### tmux 推荐启动
+
+服务器、容器、root 账号环境下，优先这样跑：
+
+```bash
+tmux new-session -d -s feishu-[用户]-[项目] '
+source ~/.proxy_env 2>/dev/null || true
+cd [你的project位置]
+lane feishu run --home ~/.lark-channel-[用户] --profile [用户]-[项目] --workspace [你的project位置]
+'
+```
+
+查看：
+
+```bash
+tmux attach -t feishu-[用户]-[项目]
+lane feishu logs --home ~/.lark-channel-[用户] --profile [用户]-[项目] --tail 100
+```
+
+停止：
+
+```bash
+tmux kill-session -t feishu-[用户]-[项目]
+```
+
+`lane feishu start` 会尝试使用上游 bridge 的后台服务机制。桌面 Linux 可以用；服务器、Docker、root shell 中经常缺少 user systemd/dbus，遇到 `Failed to connect to bus` 时直接改用上面的 tmux + `lane feishu run`。
+
+### 代理约定
+
+Labline 不建议给 bridge 设置 `ALL_PROXY/all_proxy`。实践中 `curl` 可能能通过 `ALL_PROXY` 访问飞书，但 Node/Lark SDK 可能走另一条代理解析路径并出现 `socket hang up`。推荐只设置 HTTP/HTTPS 两套大小写变量：
+
+```bash
+export HTTP_PROXY=http://127.0.0.1:[你的代理端口]
+export HTTPS_PROXY=http://127.0.0.1:[你的代理端口]
+export http_proxy="$HTTP_PROXY"
+export https_proxy="$HTTPS_PROXY"
+export NO_PROXY=127.0.0.1,localhost,::1
+export no_proxy="$NO_PROXY"
+export NODE_USE_ENV_PROXY=1
+unset ALL_PROXY all_proxy
+```
+
+容器部署会自动生成 `~/.proxy_env`，并提供：
+
+```bash
+proxy-on
+proxy-off
+```
+
+如果启动时报 `could not resolve bot identity`，先看代理诊断：
+
+```bash
+lane feishu doctor --home ~/.lark-channel-[用户] --profile [用户]-[项目]
+env | grep -i proxy
+```
+
+如果直连飞书开放平台可用，而代理路径失败，才使用：
 
 ```bash
 lane feishu run --no-proxy
