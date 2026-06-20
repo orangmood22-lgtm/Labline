@@ -275,7 +275,9 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("leader_task: ", start.stdout)
         self.assertIn("task.dev-worker: ", start.stdout)
         self.assertIn("task.dev-realtest: ", start.stdout)
+        self.assertIn("progress_dir: ", start.stdout)
         self.assertIn("evidence_dir: ", start.stdout)
+        self.assertIn("next_check_at: ", start.stdout)
 
         workflow_dir = Path(next(line for line in start.stdout.splitlines() if line.startswith("workflow_dir: ")).split(": ", 1)[1])
         manifest = json.loads((workflow_dir / "workflow.json").read_text(encoding="utf-8"))
@@ -283,11 +285,16 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertEqual(manifest["leader_role"], "dev-leader")
         self.assertEqual(manifest["child_roles"], ["dev-worker", "dev-realtest"])
         self.assertEqual(manifest["files"], ["deploy/DEPLOY_GUIDE.md"])
+        self.assertIn("progress_dir", manifest)
+        self.assertEqual(manifest["progress"]["dev-realtest"]["status"], "pending")
+        self.assertIn("next_check_at", manifest["progress"]["dev-realtest"])
 
         leader_task = (workflow_dir / "tasks" / "dev-leader.md").read_text(encoding="utf-8")
         realtest_task = (workflow_dir / "tasks" / "dev-realtest.md").read_text(encoding="utf-8")
         self.assertIn("role: dev-leader", leader_task)
         self.assertIn("child_roles: dev-worker, dev-realtest", leader_task)
+        self.assertIn("progress_dir:", leader_task)
+        self.assertIn("Before `next_check_at`, every active role must update `progress/<role>.md`", leader_task)
         self.assertIn("Write role evidence to `evidence/<role>.md`", leader_task)
         self.assertIn("role: dev-realtest", realtest_task)
         self.assertIn("Report only concrete findings", realtest_task)
@@ -295,7 +302,33 @@ class DevRuntimeCliTest(unittest.TestCase):
 
         status = self._run("dev", "workflow", "status", str(workflow_dir))
         self.assertEqual(status.returncode, 0, msg=status.stderr)
+        self.assertIn("progress.dev-realtest: pending fresh", status.stdout)
         self.assertIn("evidence.dev-realtest: missing", status.stdout)
+
+        update = self._run(
+            "dev",
+            "workflow",
+            "update",
+            str(workflow_dir),
+            "dev-realtest",
+            "--status",
+            "active",
+            "--summary",
+            "Started GPU compose smoke; waiting for image build.",
+            "--next-check-at",
+            "2000-01-01T00:00:00Z",
+            "--file",
+            "to-developer/logs/dev-workflow/build.log",
+        )
+        self.assertEqual(update.returncode, 0, msg=update.stderr)
+        self.assertIn("status: active", update.stdout)
+        self.assertIn("next_check_at: 2000-01-01T00:00:00Z", update.stdout)
+        progress_file = workflow_dir / "progress" / "dev-realtest.md"
+        self.assertIn("Started GPU compose smoke", progress_file.read_text(encoding="utf-8"))
+
+        status_due = self._run("dev", "workflow", "status", str(workflow_dir))
+        self.assertEqual(status_due.returncode, 0, msg=status_due.stderr)
+        self.assertIn("progress.dev-realtest: active due next_check_at=2000-01-01T00:00:00Z", status_due.stdout)
 
         evidence = self._run(
             "dev",
@@ -317,6 +350,7 @@ class DevRuntimeCliTest(unittest.TestCase):
 
         status_after = self._run("dev", "workflow", "status", manifest["workflow_id"])
         self.assertEqual(status_after.returncode, 0, msg=status_after.stderr)
+        self.assertIn("progress.dev-realtest: pass no-check next_check_at=<none>", status_after.stdout)
         self.assertIn("evidence.dev-realtest: ok", status_after.stdout)
 
     def test_dev_runtime_load_env_file_binds_provider_and_run_uses_saved_secret(self) -> None:

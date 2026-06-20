@@ -1069,6 +1069,61 @@ def save_dev_workflow(workflow_dir: Path, data: dict) -> None:
     (workflow_dir / "workflow.json").write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def dev_workflow_next_check(interval: str) -> str:
+    return utc_stamp(utc_now() + parse_duration(interval))
+
+
+def write_dev_workflow_progress(
+    workflow_dir: Path,
+    data: dict,
+    role: str,
+    status: str,
+    summary: str,
+    next_check_at: str,
+    files: list[str],
+) -> Path:
+    progress_dir = Path(data.get("progress_dir") or (workflow_dir / "progress"))
+    progress_dir.mkdir(parents=True, exist_ok=True)
+    progress_file = progress_dir / f"{role}.md"
+    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [none]"
+    progress_file.write_text(
+        f"""# Dev Workflow Progress
+
+workflow_id: {data.get('workflow_id', workflow_dir.name)}
+updated_at: {utc_stamp()}
+role: {role}
+status: {status}
+next_check_at: {next_check_at or '<none>'}
+
+## Summary
+
+{summary}
+
+## Progress Files
+
+{file_lines}
+""",
+        encoding="utf-8",
+    )
+    progress = data.setdefault("progress", {})
+    progress[role] = {
+        "status": status,
+        "summary": summary,
+        "file": str(progress_file),
+        "updated_at": utc_stamp(),
+        "next_check_at": next_check_at,
+        "progress_files": files,
+    }
+    return progress_file
+
+
+def progress_freshness(next_check_at: str | None) -> str:
+    parsed = parse_utc_stamp(next_check_at)
+    if parsed is None:
+        return "no-check"
+    return "due" if utc_now() >= parsed else "fresh"
+
+
 def runtime_binding_for_role(data: dict, role_name: str) -> tuple[dict, str, dict, str, str, str | None, str | None, str | None]:
     defaults = data["defaults"]
     roles = data.get("roles", {})
@@ -1092,12 +1147,15 @@ def cmd_dev_workflow_start(args: argparse.Namespace) -> int:
     workflow_dir = dev_workflow_log_root(framework) / workflow_id
     tasks_dir = workflow_dir / "tasks"
     evidence_dir = workflow_dir / "evidence"
+    progress_dir = workflow_dir / "progress"
     tasks_dir.mkdir(parents=True, exist_ok=False)
     evidence_dir.mkdir(parents=True, exist_ok=True)
+    progress_dir.mkdir(parents=True, exist_ok=True)
     files = args.file or []
     child_roles = args.role or ["dev-worker", "dev-realtest"]
     seen_roles: set[str] = set()
     child_roles = [role for role in child_roles if not (role in seen_roles or seen_roles.add(role))]
+    next_check_at = dev_workflow_next_check(args.next_check_in)
 
     role_task_files: dict[str, str] = {}
     workflow_section = f"""## Dev Workflow
@@ -1105,9 +1163,12 @@ def cmd_dev_workflow_start(args: argparse.Namespace) -> int:
 workflow_id: {workflow_id}
 workflow_dir: {workflow_dir}
 evidence_dir: {evidence_dir}
+progress_dir: {progress_dir}
 child_roles: {', '.join(child_roles) if child_roles else '<none>'}
+next_check_at: {next_check_at}
 
 Write role evidence to `evidence/<role>.md`. Dev Leader reads those files before summarizing maintainer-facing status.
+Before `next_check_at`, every active role must update `progress/<role>.md` through `lane dev workflow update ...`, even when blocked or no work was completed.
 """
     leader_role, provider_name, _provider, transport, model, base_url, api_key_env, effort = runtime_binding_for_role(data, "dev-leader")
     leader_task = f"""Coordinate this Labline developer workflow.
@@ -1179,16 +1240,30 @@ Report only concrete findings, changed files, commands, logs, and blockers. Writ
         "workflow_dir": str(workflow_dir),
         "tasks_dir": str(tasks_dir),
         "evidence_dir": str(evidence_dir),
+        "progress_dir": str(progress_dir),
         "task_files": role_task_files,
+        "progress": {},
         "evidence": {},
     }
+    for role_name in ["dev-leader", *child_roles]:
+        write_dev_workflow_progress(
+            workflow_dir,
+            manifest,
+            role_name,
+            "pending",
+            "Task assigned; no progress reported yet.",
+            next_check_at,
+            [],
+        )
     save_dev_workflow(workflow_dir, manifest)
     print(f"workflow_id: {workflow_id}")
     print(f"workflow_dir: {workflow_dir}")
     print(f"leader_task: {leader_task_file}")
     for role_name in child_roles:
         print(f"task.{role_name}: {role_task_files[role_name]}")
+    print(f"progress_dir: {progress_dir}")
     print(f"evidence_dir: {evidence_dir}")
+    print(f"next_check_at: {next_check_at}")
     print("next: run the task files with the matching dev runtime roles, then record evidence with `lane dev workflow evidence ...`")
     return 0
 
@@ -1206,9 +1281,36 @@ def cmd_dev_workflow_status(args: argparse.Namespace) -> int:
     evidence_dir = Path(data.get("evidence_dir") or (workflow_dir / "evidence"))
     roles = [data.get("leader_role", "dev-leader"), *(data.get("child_roles") or [])]
     for role in roles:
+        progress_info = (data.get("progress") or {}).get(role, {})
+        progress_file = Path(progress_info.get("file") or (Path(data.get("progress_dir") or (workflow_dir / "progress")) / f"{role}.md"))
+        progress_status = progress_info.get("status", "missing") if progress_file.exists() else "missing"
+        freshness = progress_freshness(progress_info.get("next_check_at"))
+        print(f"progress.{role}: {progress_status} {freshness} next_check_at={progress_info.get('next_check_at') or '<none>'} {progress_file}")
         evidence_file = evidence_dir / f"{role}.md"
         status = "ok" if evidence_file.exists() else "missing"
         print(f"evidence.{role}: {status} {evidence_file}")
+    return 0
+
+
+def cmd_dev_workflow_update(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    workflow_dir = resolve_dev_workflow_dir(framework, args.workflow)
+    data = load_dev_workflow(workflow_dir)
+    next_check_at = args.next_check_at or dev_workflow_next_check(args.next_check_in)
+    progress_file = write_dev_workflow_progress(
+        workflow_dir,
+        data,
+        args.role,
+        args.status,
+        args.summary,
+        next_check_at,
+        args.file or [],
+    )
+    save_dev_workflow(workflow_dir, data)
+    print(f"workflow_id: {data.get('workflow_id', workflow_dir.name)}")
+    print(f"progress.{args.role}: {progress_file}")
+    print(f"status: {args.status}")
+    print(f"next_check_at: {next_check_at}")
     return 0
 
 
@@ -1247,6 +1349,15 @@ status: {args.status}
         "recorded_at": utc_stamp(),
         "evidence_files": files,
     }
+    write_dev_workflow_progress(
+        workflow_dir,
+        data,
+        args.role,
+        args.status,
+        args.summary,
+        "",
+        files,
+    )
     save_dev_workflow(workflow_dir, data)
     print(f"workflow_id: {data.get('workflow_id', workflow_dir.name)}")
     print(f"evidence.{args.role}: {evidence_file}")
@@ -1933,12 +2044,24 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_start.add_argument("task")
     workflow_start.add_argument("--file", action="append")
     workflow_start.add_argument("--role", action="append")
+    workflow_start.add_argument("--next-check-in", default="30m")
     workflow_start.set_defaults(func=cmd_dev_workflow_start)
 
     workflow_status = dev_workflow_sub.add_parser("status")
     add_common(workflow_status)
     workflow_status.add_argument("workflow")
     workflow_status.set_defaults(func=cmd_dev_workflow_status)
+
+    workflow_update = dev_workflow_sub.add_parser("update")
+    add_common(workflow_update)
+    workflow_update.add_argument("workflow")
+    workflow_update.add_argument("role")
+    workflow_update.add_argument("--status", choices=["pending", "active", "blocked", "idle", "done"], default="active")
+    workflow_update.add_argument("--summary", required=True)
+    workflow_update.add_argument("--next-check-in", default="30m")
+    workflow_update.add_argument("--next-check-at")
+    workflow_update.add_argument("--file", action="append")
+    workflow_update.set_defaults(func=cmd_dev_workflow_update)
 
     workflow_evidence = dev_workflow_sub.add_parser("evidence")
     add_common(workflow_evidence)
