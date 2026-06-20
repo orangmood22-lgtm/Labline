@@ -219,6 +219,57 @@ class LaneCliTest(unittest.TestCase):
         self.assertFalse((project / ".labline" / "manifest.json").exists())
         self.assertNotIn(str(project.resolve()), self._registry()["projects"])
 
+    def test_project_migrate_aris_dry_run_and_apply(self):
+        project = self.tmp / "legacy-project"
+        project.mkdir()
+        (project / ".aris").mkdir()
+        (project / ".aris" / "manifest.json").write_text(
+            json.dumps({"schema_version": 1, "project_name": "legacy"}) + "\n",
+            encoding="utf-8",
+        )
+        (project / ".agents" / "skills").mkdir(parents=True)
+        (project / ".claude" / "skills").mkdir(parents=True)
+        os.symlink("/data/ARIS/framework/skills/leader", project / ".agents" / "skills" / "leader")
+        os.symlink("/aris/framework/skills/coder", project / ".claude" / "skills" / "coder")
+        (project / "project.yaml").write_text(
+            textwrap.dedent(
+                """\
+                schema_version: 1
+                project:
+                  name: "legacy"
+                  direction: "old"
+                framework:
+                  path: "/data/ARIS/framework"
+                  repo: "https://github.com/old/aris.git"
+                data:
+                  project: "./data"
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        dry_run = self._run(project, "project", "migrate-aris")
+        self.assertEqual(dry_run.returncode, 0, msg=dry_run.stderr)
+        self.assertIn("mode: dry-run", dry_run.stdout)
+        self.assertIn("legacy_skill_links: 2", dry_run.stdout)
+        self.assertTrue((project / ".agents" / "skills" / "leader").is_symlink())
+        self.assertFalse((project / ".labline" / "manifest.json").exists())
+        self.assertIn('/data/ARIS/framework', (project / "project.yaml").read_text(encoding="utf-8"))
+
+        applied = self._run(project, "project", "migrate-aris", "--apply")
+        self.assertEqual(applied.returncode, 0, msg=applied.stderr)
+        self.assertFalse((project / ".agents" / "skills" / "leader").exists())
+        self.assertFalse((project / ".claude" / "skills" / "coder").exists())
+        self.assertTrue((project / ".labline" / "manifest.json").exists())
+        manifest = json.loads((project / ".labline" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["migrated_from"], "ARIS")
+        project_yaml = (project / "project.yaml").read_text(encoding="utf-8")
+        self.assertIn(f'path: "{self.framework}"', project_yaml)
+        self.assertIn("data:\n  project: \"./data\"", project_yaml)
+        self.assertTrue((project / ".labline" / "installed-skills.txt").exists())
+        self.assertTrue((project / ".labline" / "installed-skills-codex.txt").exists())
+        self.assertIn(str(project.resolve()), self._registry()["projects"])
+
     def test_project_version_defaults_to_current_directory(self):
         project = self.tmp / "project"
         project.mkdir()

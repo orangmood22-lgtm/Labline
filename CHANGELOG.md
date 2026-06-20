@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- `lane project migrate-aris` can dry-run and apply migration of legacy ARIS project state, old framework symlinks, and `project.yaml` framework metadata.
+
 ### Changed
 - Feishu/Lark integration docs now explain `--home`, `--profile`, `--workspace`, tmux operation, and multi-user/multi-project usage.
 - Deployment docs and compose examples now standardize on HTTP/HTTPS proxy variables without `ALL_PROXY/all_proxy`, default Labline researcher containers to host networking, and route API provider setup through `cc-switch-cli` instead of prefilled API keys.

@@ -173,6 +173,24 @@ codex
 - `lane framework update` 默认同步更新已登记项目
 - 单个项目可手动运行 `lane project update`
 
+#### 旧 ARIS 项目迁移
+
+如果项目曾经接入过 ARIS，目录里可能保留 `.aris/` 状态、旧 `project.yaml framework.path`，以及指向旧 framework 的 `.agents/skills` / `.claude/skills` symlink。先 dry-run 看计划：
+
+```bash
+cd [你的project位置]
+lane project migrate-aris
+```
+
+确认只会处理旧 ARIS 链接后执行：
+
+```bash
+lane project migrate-aris --apply
+lane project doctor
+```
+
+这个命令会迁移 `.aris/manifest.json` 到 `.labline/manifest.json`，删除指向旧 ARIS framework 的 skill symlink，重写 `project.yaml` 的 `framework:` 块，并重新安装当前 Labline skills。它不会删除项目代码、数据或 Git 历史。
+
 #### 日常开发
 
 ```
@@ -940,6 +958,7 @@ LABLINE_UPDATE_CHECK_TIMEOUT=10s
 | ----------------------------------- | ------------------------------------------------- |
 | Skill 不可用                         | 检查 `.agents/skills/` symlink 是否存在且指向正确 |
 | `lane framework update` 报 "有本地修改" | 先提交/保存本地修改，或手动处理 framework git 状态 |
+| `lane project update` 报旧 ARIS symlink conflict | 运行 `lane project migrate-aris`，确认后加 `--apply` |
 | API 403/401                         | 检查 key 是否过期，base_url 是否正确              |
 | Codex 返回空                         | 检查 `~/.codex/config.toml` 的 base_url            |
 

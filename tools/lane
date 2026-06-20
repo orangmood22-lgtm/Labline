@@ -379,6 +379,115 @@ def migrate_legacy_project_manifest(project: Path, framework: Path) -> bool:
     return True
 
 
+def framework_template_values(framework: Path) -> dict[str, str]:
+    return {
+        "path": str(framework),
+        "repo": git_output(framework, ["config", "--get", "remote.origin.url"], "local"),
+        "version": git_output(framework, ["describe", "--tags", "--always"], "unknown"),
+        "commit": git_output(framework, ["rev-parse", "HEAD"], "unknown"),
+        "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+
+
+def render_framework_yaml_block(framework: Path) -> list[str]:
+    values = framework_template_values(framework)
+    return [
+        "framework:",
+        f'  path: "{values["path"]}"',
+        f'  repo: "{values["repo"]}"',
+        f'  version: "{values["version"]}"',
+        f'  commit: "{values["commit"]}"',
+        f'  recorded_at: "{values["recorded_at"]}"',
+    ]
+
+
+def rewrite_project_yaml_framework(project: Path, framework: Path, apply: bool) -> bool:
+    path = project / "project.yaml"
+    if not path.exists():
+        return False
+    lines = path.read_text(encoding="utf-8").splitlines()
+    start = next((idx for idx, line in enumerate(lines) if line.strip() == "framework:" and not line.startswith(" ")), None)
+    block = render_framework_yaml_block(framework)
+    if start is None:
+        new_lines = lines + ([""] if lines and lines[-1].strip() else []) + block
+    else:
+        end = start + 1
+        while end < len(lines):
+            line = lines[end]
+            if line and not line.startswith((" ", "\t")) and not line.lstrip().startswith("#"):
+                break
+            end += 1
+        new_lines = lines[:start] + block + lines[end:]
+    changed = new_lines != lines
+    if changed and apply:
+        path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    return changed
+
+
+def is_legacy_aris_skill_target(target: str) -> bool:
+    normalized = target.replace("\\", "/")
+    if "/skills/" not in normalized:
+        return False
+    legacy_markers = [
+        "/ARIS/",
+        "/aris/",
+        "Auto-research-in-sleep",
+        "aris-orangmood-edition",
+    ]
+    return any(marker in normalized for marker in legacy_markers)
+
+
+def find_legacy_aris_skill_links(project: Path) -> list[Path]:
+    links: list[Path] = []
+    for rel in [".claude/skills", ".agents/skills"]:
+        root = project / rel
+        if not root.is_dir():
+            continue
+        for path in sorted(root.iterdir()):
+            if path.is_symlink() and is_legacy_aris_skill_target(os.readlink(path)):
+                links.append(path)
+    return links
+
+
+def cmd_project_migrate_aris(args: argparse.Namespace) -> int:
+    project = project_from_arg(args.path)
+    framework = resolve_labline_repo(args)
+    apply = bool(args.apply)
+    legacy_manifest = project / LEGACY_STATE_DIR_NAME / "manifest.json"
+    labline_manifest = project / STATE_DIR_NAME / "manifest.json"
+    legacy_links = find_legacy_aris_skill_links(project)
+    yaml_changed = rewrite_project_yaml_framework(project, framework, apply=False)
+
+    print(f"project: {project}")
+    print(f"framework: {framework}")
+    print(f"mode: {'apply' if apply else 'dry-run'}")
+    print(f"legacy_manifest: {'migrate' if legacy_manifest.exists() and not labline_manifest.exists() else 'skip'}")
+    print(f"project_yaml.framework: {'update' if yaml_changed else 'ok'}")
+    print(f"legacy_skill_links: {len(legacy_links)}")
+    for link in legacy_links:
+        print(f"  remove: {link.relative_to(project)} -> {os.readlink(link)}")
+
+    if not apply:
+        print("dry-run: rerun with --apply to modify files")
+        return 0
+
+    migrated = migrate_legacy_project_manifest(project, framework)
+    for link in legacy_links:
+        link.unlink()
+    rewrite_project_yaml_framework(project, framework, apply=True)
+    install_clients(project, framework)
+    register_project(project)
+
+    if migrated:
+        print("applied: migrated .aris/manifest.json -> .labline/manifest.json")
+    if legacy_links:
+        print(f"applied: removed {len(legacy_links)} legacy ARIS skill links")
+    if yaml_changed:
+        print("applied: updated project.yaml framework block")
+    print("applied: refreshed Labline clients")
+    return 0
+
+
 def init_project(args: argparse.Namespace, project: Path, name: str) -> None:
     project.mkdir(parents=True, exist_ok=True)
     ensure_dirs(project, args.size)
@@ -1409,6 +1518,12 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(update)
     update.add_argument("path", nargs="?")
     update.set_defaults(func=cmd_project_update)
+
+    migrate_aris = project_sub.add_parser("migrate-aris")
+    add_common(migrate_aris)
+    migrate_aris.add_argument("path", nargs="?")
+    migrate_aris.add_argument("--apply", action="store_true")
+    migrate_aris.set_defaults(func=cmd_project_migrate_aris)
 
     doctor = project_sub.add_parser("doctor")
     add_common(doctor)
