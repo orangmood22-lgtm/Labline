@@ -65,6 +65,7 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("default_provider: codex_subagent", config.stdout)
         self.assertIn("default_transport: codex_subagent", config.stdout)
         self.assertIn("default_model: gpt-5.4-mini", config.stdout)
+        self.assertIn("role.dev-realtest: provider=codex_subagent codex_subagent/gpt-5.4-mini", config.stdout)
         self.assertIn("role.dev-worker: provider=codex_subagent codex_subagent/gpt-5.4-mini", config.stdout)
 
         config_path = self.home / ".labline" / "dev-runtime.json"
@@ -72,6 +73,9 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertEqual(payload["defaults"]["provider"], "codex_subagent")
         self.assertEqual(payload["defaults"]["transport"], "codex_subagent")
         self.assertEqual(payload["defaults"]["model"], "gpt-5.4-mini")
+        self.assertEqual(payload["roles"]["dev-realtest"]["provider"], "codex_subagent")
+        self.assertIn("build and run GPU and non-GPU Docker deployment smoke tests", payload["roles"]["dev-realtest"]["allowed_work"])
+        self.assertIn("silently deviating from published docs instead of reporting doc drift", payload["roles"]["dev-realtest"]["forbidden_work"])
         self.assertEqual(payload["roles"]["dev-worker"]["provider"], "codex_subagent")
 
         provider = self._run(
@@ -183,7 +187,7 @@ class DevRuntimeCliTest(unittest.TestCase):
         task_file = Path(task_line.split(": ", 1)[1])
         self.assertTrue(task_file.exists())
         content = task_file.read_text(encoding="utf-8")
-        self.assertIn("# Labline Dev Worker Task", content)
+        self.assertIn("# Labline Dev Runtime Task", content)
         self.assertIn("role: dev-worker", content)
         self.assertIn("provider: deepseek-v4-flash", content)
         self.assertIn("transport: openai_compatible", content)
@@ -195,6 +199,37 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("Never log, print, or persist API key values; only record the environment variable name.", content)
         self.assertIn("- docs/FEISHU_INTEGRATION.md", content)
         self.assertNotIn("super-secret-value", content)
+
+    def test_dev_realmachine_tester_prompt_documents_real_server_scope(self) -> None:
+        result = self._run(
+            "dev",
+            "rt",
+            "prompt",
+            "dev-realtest",
+            "validate Docker deployment on the 5090 server",
+            "--file",
+            "deploy/DEPLOY_GUIDE.md",
+            "--file",
+            "deploy/docker-compose.gpu.yaml",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("runtime_provider: codex_subagent", result.stdout)
+
+        task_line = next(line for line in result.stdout.splitlines() if line.startswith("task_file: "))
+        task_file = Path(task_line.split(": ", 1)[1])
+        content = task_file.read_text(encoding="utf-8")
+        self.assertIn("# Labline Dev Runtime Task", content)
+        self.assertIn("role: dev-realtest", content)
+        self.assertIn("validate Docker deployment on the 5090 server", content)
+        self.assertIn("Allowed work:", content)
+        self.assertIn("follow published deployment and operations docs on a real managed server", content)
+        self.assertIn("build and run GPU and non-GPU Docker deployment smoke tests", content)
+        self.assertIn("collect versions, container state, logs, command output summaries, and pass/fail evidence", content)
+        self.assertIn("Forbidden work:", content)
+        self.assertIn("destructive server cleanup without explicit maintainer approval", content)
+        self.assertIn("silently deviating from published docs instead of reporting doc drift", content)
+        self.assertIn("- deploy/DEPLOY_GUIDE.md", content)
+        self.assertIn("- deploy/docker-compose.gpu.yaml", content)
 
     def test_dev_runtime_load_env_file_binds_provider_and_run_uses_saved_secret(self) -> None:
         received = {}

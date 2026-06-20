@@ -31,6 +31,8 @@ def read(rel: str) -> str:
 def test_worker_is_not_a_user_project_role_skill() -> None:
     assert not (REPO_ROOT / "skills" / "worker" / "SKILL.md").exists()
     assert not (REPO_ROOT / "skills" / "skills-codex" / "worker" / "SKILL.md").exists()
+    assert not (REPO_ROOT / "skills" / "dev-realtest" / "SKILL.md").exists()
+    assert not (REPO_ROOT / "skills" / "skills-codex" / "dev-realtest" / "SKILL.md").exists()
 
 
 def test_user_leader_does_not_dispatch_worker() -> None:
@@ -55,6 +57,7 @@ def test_codex_shared_references_do_not_define_worker_user_role() -> None:
         assert "agent_type: worker" not in content
         assert ".agents/skills/worker/SKILL.md" not in content
         assert "| Worker |" not in content
+        assert "| Dev Real-Machine Tester |" not in content
 
 
 def test_legacy_dev_worker_namespace_is_not_available() -> None:

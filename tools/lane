@@ -269,6 +269,25 @@ def default_dev_runtime_config() -> dict:
                     "rollback or destructive git operations",
                     "credential handling",
                 ],
+            },
+            "dev-realtest": {
+                "provider": "codex_subagent",
+                "transport": "codex_subagent",
+                "model": "gpt-5.4-mini",
+                "allowed_work": [
+                    "follow published deployment and operations docs on a real managed server",
+                    "build and run GPU and non-GPU Docker deployment smoke tests",
+                    "test newly changed Labline features with command evidence",
+                    "validate existing CLI, install, update, Feishu, and Docker regression paths",
+                    "collect versions, container state, logs, command output summaries, and pass/fail evidence",
+                ],
+                "forbidden_work": [
+                    "release or promote decisions",
+                    "editing credentials, private keys, or secret-bearing config",
+                    "destructive server cleanup without explicit maintainer approval",
+                    "mutating production user projects, datasets, or pretrained caches",
+                    "silently deviating from published docs instead of reporting doc drift",
+                ],
             }
         },
     }
@@ -294,7 +313,8 @@ def load_dev_runtime_config(init: bool = False) -> dict:
     data.setdefault("providers", {})
     data["providers"].setdefault("codex_subagent", default_dev_runtime_config()["providers"]["codex_subagent"])
     data.setdefault("roles", {})
-    data["roles"].setdefault("dev-worker", default_dev_runtime_config()["roles"]["dev-worker"])
+    for role_name, role_spec in default_dev_runtime_config()["roles"].items():
+        data["roles"].setdefault(role_name, role_spec)
     if init:
         save_dev_runtime_config(data)
     return data
@@ -773,7 +793,9 @@ def runtime_system_guardrails(
     base_url: str | None,
     api_key_env: str | None,
     effort: str | None,
+    role_spec: dict | None = None,
 ) -> str:
+    role_scope = format_runtime_role_scope(role_spec or {})
     return f"""# Labline Dev Runtime Guardrails
 
 role: {role}
@@ -793,7 +815,24 @@ reasoning_effort: {effort or '<none>'}
 - Do not handle credentials, private keys, or secrets.
 - Do not log API key values.
 - Report concrete files, commands, and results.
+
+{role_scope}
 """
+
+
+def format_runtime_role_scope(role: dict) -> str:
+    allowed = role.get("allowed_work") or []
+    forbidden = role.get("forbidden_work") or []
+    lines = ["## Role Scope", ""]
+    if allowed:
+        lines.append("Allowed work:")
+        lines.extend(f"- {item}" for item in allowed)
+        lines.append("")
+    if forbidden:
+        lines.append("Forbidden work:")
+        lines.extend(f"- {item}" for item in forbidden)
+        lines.append("")
+    return "\n".join(lines).rstrip()
 
 
 def openai_compatible_chat_completion(base_url: str, api_key: str, model: str, messages: list[dict], timeout: int) -> dict:
@@ -843,7 +882,7 @@ def cmd_dev_runtime_prompt(args: argparse.Namespace) -> int:
     task_file = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug}.md"
     files = args.file or []
     file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
-    prompt = f"""# Labline Dev Worker Task
+    prompt = f"""# Labline Dev Runtime Task
 
 created_at: {utc_stamp()}
 role: {args.role}
@@ -861,6 +900,8 @@ reasoning_effort: {effort}
 ## Write Scope
 
 {file_lines}
+
+{format_runtime_role_scope(role)}
 
 ## Operating Rules
 
@@ -913,7 +954,7 @@ def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
     if not api_key:
         raise SystemExit(f"missing API key environment variable: {api_key_env}")
 
-    system_prompt = runtime_system_guardrails(args.role, provider_name, transport, model, base_url, api_key_env, effort)
+    system_prompt = runtime_system_guardrails(args.role, provider_name, transport, model, base_url, api_key_env, effort, role)
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": task_text},

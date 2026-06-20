@@ -256,6 +256,10 @@ _Avoid_: editing User Skills for maintainer-only needs; silently duplicating ski
 The development-only provider, model, role-binding, prompt, and run surface for maintainer helper agents. It is controlled by `lane dev runtime ...` with `lane dev rt ...` as the short alias; legacy `lane dev worker ...` is not part of the canonical CLI.
 _Avoid_: creating one-off dev CLI namespaces for individual helper roles
 
+**Dev Real-Machine Tester**:
+A development-only runtime role that validates Labline changes on an actual managed server or container by following the published deployment and operations docs, recording command evidence, logs, versions, and pass/fail results. It is not a User Skill, not a research project Deployer, and not part of the user Labline Role graph.
+_Avoid_: treating real-machine validation as release approval; testing from undocumented private steps; mutating user projects or credentials during validation
+
 **Skill Invocation Edge**:
 A machine-readable edge saying one skill or workflow step may call, delegate to, or require another skill. It must come from structured metadata or an explicit governance file, not from casual prose mention.
 _Avoid_: inferring runtime dependencies from a skill name appearing in documentation
@@ -321,6 +325,10 @@ Maintainer: "Only as a prerelease snapshot when you need reproducible testing, f
 Developer: "I only updated internal planning notes."
 
 Maintainer: "Do not release. Internal `to-developer/` changes are not framework version changes."
+
+Developer: "The Docker docs changed; can I call the research Deployer to validate them on the 5090 server?"
+
+Maintainer: "Use the Dev Real-Machine Tester. It follows the published docs on the real server, records evidence and logs, and reports findings; it does not approve the release or become a user project role."
 
 Developer: "This change touched skills, tools, and docs. Where do I record the developer detail?"
 
