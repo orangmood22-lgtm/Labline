@@ -351,6 +351,12 @@ def dev_runtime_log_root(framework: Path, role: str) -> Path:
     return root
 
 
+def dev_workflow_log_root(framework: Path) -> Path:
+    root = framework / "to-developer" / "logs" / "dev-workflow"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 def sanitize_slug(value: str, limit: int = 48) -> str:
     slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in value).strip("-")
     while "--" in slug:
@@ -854,6 +860,56 @@ def format_runtime_role_scope(role: dict) -> str:
     return "\n".join(lines).rstrip()
 
 
+def render_runtime_task_prompt(
+    role_name: str,
+    task: str,
+    provider_name: str,
+    transport: str,
+    model: str,
+    base_url: str | None,
+    api_key_env: str | None,
+    effort: str | None,
+    role: dict,
+    files: list[str],
+    extra_sections: list[str] | None = None,
+) -> str:
+    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
+    extras = "\n\n".join(section.rstrip() for section in (extra_sections or []) if section.strip())
+    extra_block = f"\n\n{extras}" if extras else ""
+    return f"""# Labline Dev Runtime Task
+
+created_at: {utc_stamp()}
+role: {role_name}
+provider: {provider_name}
+transport: {transport}
+model: {model}
+base_url: {base_url or '<none>'}
+api_key_env: {api_key_env or '<none>'}
+reasoning_effort: {effort}
+
+## Task
+
+{task}
+
+## Write Scope
+
+{file_lines}
+
+{format_runtime_role_scope(role)}{extra_block}
+
+## Operating Rules
+
+- You are not alone in the codebase. Do not revert unrelated user or agent changes.
+- Stay inside the declared write scope. If the task requires another file, report it instead of editing silently.
+- Prefer producing a small patch, test draft, doc draft, reference sweep, or concrete finding list.
+- Do not make final architecture, release, promote, or rollback decisions.
+- Do not run destructive git commands.
+- Do not handle credentials, private keys, or secrets.
+- Never log, print, or persist API key values; only record the environment variable name.
+- Report changed files and verification commands.
+"""
+
+
 def openai_compatible_chat_completion(base_url: str, api_key: str, model: str, messages: list[dict], timeout: int) -> dict:
     endpoint = base_url.rstrip("/") + "/chat/completions"
     payload = json.dumps({"model": model, "messages": messages}).encode("utf-8")
@@ -900,39 +956,18 @@ def cmd_dev_runtime_prompt(args: argparse.Namespace) -> int:
     slug = sanitize_slug(args.task)
     task_file = dev_runtime_log_root(framework, args.role) / f"{stamp}-{slug}.md"
     files = args.file or []
-    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [not specified; ask leader before editing]"
-    prompt = f"""# Labline Dev Runtime Task
-
-created_at: {utc_stamp()}
-role: {args.role}
-provider: {provider_name}
-transport: {transport}
-model: {model}
-base_url: {base_url or '<none>'}
-api_key_env: {api_key_env or '<none>'}
-reasoning_effort: {effort}
-
-## Task
-
-{args.task}
-
-## Write Scope
-
-{file_lines}
-
-{format_runtime_role_scope(role)}
-
-## Operating Rules
-
-- You are not alone in the codebase. Do not revert unrelated user or agent changes.
-- Stay inside the declared write scope. If the task requires another file, report it instead of editing silently.
-- Prefer producing a small patch, test draft, doc draft, reference sweep, or concrete finding list.
-- Do not make final architecture, release, promote, or rollback decisions.
-- Do not run destructive git commands.
-- Do not handle credentials, private keys, or secrets.
-- Never log, print, or persist API key values; only record the environment variable name.
-- Report changed files and verification commands.
-"""
+    prompt = render_runtime_task_prompt(
+        args.role,
+        args.task,
+        provider_name,
+        transport,
+        model,
+        base_url,
+        api_key_env,
+        effort,
+        role,
+        files,
+    )
     task_file.write_text(prompt, encoding="utf-8")
     print(f"task_file: {task_file}")
     print(f"runtime_provider: {provider_name}")
@@ -1003,6 +1038,219 @@ def cmd_dev_runtime_run(args: argparse.Namespace) -> int:
     print(f"provider: {provider_name}")
     print(f"model: {model}")
     print(f"response_file: {run_dir / 'response.md'}")
+    return 0
+
+
+def resolve_dev_workflow_dir(framework: Path, value: str) -> Path:
+    candidate = Path(value).expanduser()
+    if candidate.exists():
+        return candidate.resolve()
+    root = dev_workflow_log_root(framework)
+    named = root / value
+    if named.exists():
+        return named.resolve()
+    raise SystemExit(f"dev workflow not found: {value}")
+
+
+def load_dev_workflow(workflow_dir: Path) -> dict:
+    manifest = workflow_dir / "workflow.json"
+    if not manifest.exists():
+        raise SystemExit(f"missing workflow manifest: {manifest}")
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"invalid workflow manifest: {manifest}") from exc
+    if not isinstance(data, dict):
+        raise SystemExit(f"invalid workflow manifest: {manifest}")
+    return data
+
+
+def save_dev_workflow(workflow_dir: Path, data: dict) -> None:
+    (workflow_dir / "workflow.json").write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def runtime_binding_for_role(data: dict, role_name: str) -> tuple[dict, str, dict, str, str, str | None, str | None, str | None]:
+    defaults = data["defaults"]
+    roles = data.get("roles", {})
+    if role_name not in roles:
+        raise SystemExit(f"unknown dev runtime role: {role_name}")
+    role = roles[role_name]
+    provider_name, provider = resolve_runtime_provider(data, None, role, defaults)
+    transport = provider.get("transport") or role.get("transport") or defaults.get("transport", "codex_subagent")
+    model = provider.get("model") or role.get("model") or defaults.get("model", "gpt-5.4-mini")
+    base_url = provider.get("base_url")
+    api_key_env = provider.get("api_key_env")
+    effort = role.get("reasoning_effort") or defaults.get("reasoning_effort", "medium")
+    return role, provider_name, provider, transport, model, base_url, api_key_env, effort
+
+
+def cmd_dev_workflow_start(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    data = load_dev_runtime_config(init=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    workflow_id = f"{stamp}-{sanitize_slug(args.task)}"
+    workflow_dir = dev_workflow_log_root(framework) / workflow_id
+    tasks_dir = workflow_dir / "tasks"
+    evidence_dir = workflow_dir / "evidence"
+    tasks_dir.mkdir(parents=True, exist_ok=False)
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    files = args.file or []
+    child_roles = args.role or ["dev-worker", "dev-realtest"]
+    seen_roles: set[str] = set()
+    child_roles = [role for role in child_roles if not (role in seen_roles or seen_roles.add(role))]
+
+    role_task_files: dict[str, str] = {}
+    workflow_section = f"""## Dev Workflow
+
+workflow_id: {workflow_id}
+workflow_dir: {workflow_dir}
+evidence_dir: {evidence_dir}
+child_roles: {', '.join(child_roles) if child_roles else '<none>'}
+
+Write role evidence to `evidence/<role>.md`. Dev Leader reads those files before summarizing maintainer-facing status.
+"""
+    leader_role, provider_name, _provider, transport, model, base_url, api_key_env, effort = runtime_binding_for_role(data, "dev-leader")
+    leader_task = f"""Coordinate this Labline developer workflow.
+
+Original maintainer request:
+{args.task}
+
+Child roles:
+{chr(10).join(f"- {role}" for role in child_roles) if child_roles else "- [none]"}
+
+Expected output:
+- a clear task split
+- evidence requirements for each child role
+- final risk summary after evidence exists
+"""
+    leader_prompt = render_runtime_task_prompt(
+        "dev-leader",
+        leader_task,
+        provider_name,
+        transport,
+        model,
+        base_url,
+        api_key_env,
+        effort,
+        leader_role,
+        files,
+        [workflow_section],
+    )
+    leader_task_file = tasks_dir / "dev-leader.md"
+    leader_task_file.write_text(leader_prompt, encoding="utf-8")
+    role_task_files["dev-leader"] = str(leader_task_file)
+
+    for role_name in child_roles:
+        role, provider_name, _provider, transport, model, base_url, api_key_env, effort = runtime_binding_for_role(data, role_name)
+        child_task = f"""Contribute to this Labline developer workflow as `{role_name}`.
+
+Original maintainer request:
+{args.task}
+
+Report only concrete findings, changed files, commands, logs, and blockers. Write your evidence to:
+{evidence_dir / f'{role_name}.md'}
+"""
+        prompt = render_runtime_task_prompt(
+            role_name,
+            child_task,
+            provider_name,
+            transport,
+            model,
+            base_url,
+            api_key_env,
+            effort,
+            role,
+            files,
+            [workflow_section],
+        )
+        task_file = tasks_dir / f"{role_name}.md"
+        task_file.write_text(prompt, encoding="utf-8")
+        role_task_files[role_name] = str(task_file)
+
+    manifest = {
+        "schema_version": 1,
+        "workflow_id": workflow_id,
+        "created_at": utc_stamp(),
+        "status": "open",
+        "task": args.task,
+        "files": files,
+        "leader_role": "dev-leader",
+        "child_roles": child_roles,
+        "workflow_dir": str(workflow_dir),
+        "tasks_dir": str(tasks_dir),
+        "evidence_dir": str(evidence_dir),
+        "task_files": role_task_files,
+        "evidence": {},
+    }
+    save_dev_workflow(workflow_dir, manifest)
+    print(f"workflow_id: {workflow_id}")
+    print(f"workflow_dir: {workflow_dir}")
+    print(f"leader_task: {leader_task_file}")
+    for role_name in child_roles:
+        print(f"task.{role_name}: {role_task_files[role_name]}")
+    print(f"evidence_dir: {evidence_dir}")
+    print("next: run the task files with the matching dev runtime roles, then record evidence with `lane dev workflow evidence ...`")
+    return 0
+
+
+def cmd_dev_workflow_status(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    workflow_dir = resolve_dev_workflow_dir(framework, args.workflow)
+    data = load_dev_workflow(workflow_dir)
+    print(f"workflow_id: {data.get('workflow_id', workflow_dir.name)}")
+    print(f"status: {data.get('status', 'unknown')}")
+    print(f"workflow_dir: {workflow_dir}")
+    print(f"task: {data.get('task', '')}")
+    for role, task_file in sorted((data.get("task_files") or {}).items()):
+        print(f"task.{role}: {task_file}")
+    evidence_dir = Path(data.get("evidence_dir") or (workflow_dir / "evidence"))
+    roles = [data.get("leader_role", "dev-leader"), *(data.get("child_roles") or [])]
+    for role in roles:
+        evidence_file = evidence_dir / f"{role}.md"
+        status = "ok" if evidence_file.exists() else "missing"
+        print(f"evidence.{role}: {status} {evidence_file}")
+    return 0
+
+
+def cmd_dev_workflow_evidence(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    workflow_dir = resolve_dev_workflow_dir(framework, args.workflow)
+    data = load_dev_workflow(workflow_dir)
+    evidence_dir = Path(data.get("evidence_dir") or (workflow_dir / "evidence"))
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    evidence_file = evidence_dir / f"{args.role}.md"
+    files = args.file or []
+    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [none]"
+    evidence_file.write_text(
+        f"""# Dev Workflow Evidence
+
+workflow_id: {data.get('workflow_id', workflow_dir.name)}
+recorded_at: {utc_stamp()}
+role: {args.role}
+status: {args.status}
+
+## Summary
+
+{args.summary}
+
+## Evidence Files
+
+{file_lines}
+""",
+        encoding="utf-8",
+    )
+    evidence = data.setdefault("evidence", {})
+    evidence[args.role] = {
+        "status": args.status,
+        "summary": args.summary,
+        "file": str(evidence_file),
+        "recorded_at": utc_stamp(),
+        "evidence_files": files,
+    }
+    save_dev_workflow(workflow_dir, data)
+    print(f"workflow_id: {data.get('workflow_id', workflow_dir.name)}")
+    print(f"evidence.{args.role}: {evidence_file}")
+    print(f"status: {args.status}")
     return 0
 
 
@@ -1675,6 +1923,31 @@ def build_parser() -> argparse.ArgumentParser:
     user_surface_update = user_surface_sub.add_parser("update")
     add_common(user_surface_update)
     user_surface_update.set_defaults(func=cmd_dev_user_surface_update)
+
+    dev_workflow = dev_sub.add_parser("workflow")
+    add_common(dev_workflow)
+    dev_workflow_sub = dev_workflow.add_subparsers(dest="dev_workflow_command", required=True)
+
+    workflow_start = dev_workflow_sub.add_parser("start")
+    add_common(workflow_start)
+    workflow_start.add_argument("task")
+    workflow_start.add_argument("--file", action="append")
+    workflow_start.add_argument("--role", action="append")
+    workflow_start.set_defaults(func=cmd_dev_workflow_start)
+
+    workflow_status = dev_workflow_sub.add_parser("status")
+    add_common(workflow_status)
+    workflow_status.add_argument("workflow")
+    workflow_status.set_defaults(func=cmd_dev_workflow_status)
+
+    workflow_evidence = dev_workflow_sub.add_parser("evidence")
+    add_common(workflow_evidence)
+    workflow_evidence.add_argument("workflow")
+    workflow_evidence.add_argument("role")
+    workflow_evidence.add_argument("--status", choices=["pass", "fail", "blocked", "info"], default="info")
+    workflow_evidence.add_argument("--summary", required=True)
+    workflow_evidence.add_argument("--file", action="append")
+    workflow_evidence.set_defaults(func=cmd_dev_workflow_evidence)
 
     for runtime_name in ["runtime", "rt"]:
         runtime = dev_sub.add_parser(runtime_name)

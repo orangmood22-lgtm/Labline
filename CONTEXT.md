@@ -260,6 +260,10 @@ _Avoid_: creating one-off dev CLI namespaces for individual helper roles
 The development-only orchestration role for maintaining Labline itself. Dev Leader decomposes framework work, delegates bounded tasks to development runtime roles such as Dev Real-Machine Tester and Cheap Worker, reads their evidence, and reports decisions back to the maintainer; it is not the user-facing project Leader.
 _Avoid_: using the user Leader role for framework maintenance; letting Dev Leader replace independent review; treating delegated development evidence as automatic release approval
 
+**Dev Workflow**:
+A development-only, evidence-backed maintenance run coordinated by Dev Leader. It records framework-maintenance task files, delegated development role assignments, and evidence artifacts under Developer Material; it is not a user research workflow and not the general Workflow Runtime.
+_Avoid_: mixing framework-maintenance workflow state into research projects; treating a Dev Workflow as release approval; using it as a user-facing Labline capability
+
 **Dev Real-Machine Tester**:
 A development-only runtime role, normally delegated by Dev Leader, that validates Labline changes on an actual managed server or container by following the published deployment and operations docs, recording command evidence, logs, versions, and pass/fail results. It is not a User Skill, not a research project Deployer, and not part of the user Labline Role graph.
 _Avoid_: treating real-machine validation as release approval; testing from undocumented private steps; mutating user projects or credentials during validation

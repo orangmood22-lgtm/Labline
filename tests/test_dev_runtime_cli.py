@@ -261,6 +261,64 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("- CONTEXT.md", content)
         self.assertIn("- tools/lane", content)
 
+    def test_dev_workflow_start_status_and_evidence_connect_roles(self) -> None:
+        start = self._run(
+            "dev",
+            "workflow",
+            "start",
+            "validate deployment proxy docs",
+            "--file",
+            "deploy/DEPLOY_GUIDE.md",
+        )
+        self.assertEqual(start.returncode, 0, msg=start.stderr)
+        self.assertIn("workflow_id: ", start.stdout)
+        self.assertIn("leader_task: ", start.stdout)
+        self.assertIn("task.dev-worker: ", start.stdout)
+        self.assertIn("task.dev-realtest: ", start.stdout)
+        self.assertIn("evidence_dir: ", start.stdout)
+
+        workflow_dir = Path(next(line for line in start.stdout.splitlines() if line.startswith("workflow_dir: ")).split(": ", 1)[1])
+        manifest = json.loads((workflow_dir / "workflow.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["status"], "open")
+        self.assertEqual(manifest["leader_role"], "dev-leader")
+        self.assertEqual(manifest["child_roles"], ["dev-worker", "dev-realtest"])
+        self.assertEqual(manifest["files"], ["deploy/DEPLOY_GUIDE.md"])
+
+        leader_task = (workflow_dir / "tasks" / "dev-leader.md").read_text(encoding="utf-8")
+        realtest_task = (workflow_dir / "tasks" / "dev-realtest.md").read_text(encoding="utf-8")
+        self.assertIn("role: dev-leader", leader_task)
+        self.assertIn("child_roles: dev-worker, dev-realtest", leader_task)
+        self.assertIn("Write role evidence to `evidence/<role>.md`", leader_task)
+        self.assertIn("role: dev-realtest", realtest_task)
+        self.assertIn("Report only concrete findings", realtest_task)
+        self.assertNotIn("super-secret-value", leader_task + realtest_task)
+
+        status = self._run("dev", "workflow", "status", str(workflow_dir))
+        self.assertEqual(status.returncode, 0, msg=status.stderr)
+        self.assertIn("evidence.dev-realtest: missing", status.stdout)
+
+        evidence = self._run(
+            "dev",
+            "workflow",
+            "evidence",
+            str(workflow_dir),
+            "dev-realtest",
+            "--status",
+            "pass",
+            "--summary",
+            "GPU compose smoke passed",
+            "--file",
+            "to-developer/logs/dev-workflow/demo.log",
+        )
+        self.assertEqual(evidence.returncode, 0, msg=evidence.stderr)
+        self.assertIn("status: pass", evidence.stdout)
+        evidence_file = workflow_dir / "evidence" / "dev-realtest.md"
+        self.assertIn("GPU compose smoke passed", evidence_file.read_text(encoding="utf-8"))
+
+        status_after = self._run("dev", "workflow", "status", manifest["workflow_id"])
+        self.assertEqual(status_after.returncode, 0, msg=status_after.stderr)
+        self.assertIn("evidence.dev-realtest: ok", status_after.stdout)
+
     def test_dev_runtime_load_env_file_binds_provider_and_run_uses_saved_secret(self) -> None:
         received = {}
 

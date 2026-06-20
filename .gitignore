@@ -53,6 +53,7 @@ patent/
 .aris/dev-runtime.env
 .aris/installed-dev-skills.txt
 to-developer/logs/dev-runtime/
+to-developer/logs/dev-workflow/
 
 # Developer-local private notes
 to-developer/discussions/settings*.json
