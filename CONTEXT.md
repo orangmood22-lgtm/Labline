@@ -256,8 +256,12 @@ _Avoid_: editing User Skills for maintainer-only needs; silently duplicating ski
 The development-only provider, model, role-binding, prompt, and run surface for maintainer helper agents. It is controlled by `lane dev runtime ...` with `lane dev rt ...` as the short alias; legacy `lane dev worker ...` is not part of the canonical CLI.
 _Avoid_: creating one-off dev CLI namespaces for individual helper roles
 
+**Dev Leader**:
+The development-only orchestration role for maintaining Labline itself. Dev Leader decomposes framework work, delegates bounded tasks to development runtime roles such as Dev Real-Machine Tester and Cheap Worker, reads their evidence, and reports decisions back to the maintainer; it is not the user-facing project Leader.
+_Avoid_: using the user Leader role for framework maintenance; letting Dev Leader replace independent review; treating delegated development evidence as automatic release approval
+
 **Dev Real-Machine Tester**:
-A development-only runtime role that validates Labline changes on an actual managed server or container by following the published deployment and operations docs, recording command evidence, logs, versions, and pass/fail results. It is not a User Skill, not a research project Deployer, and not part of the user Labline Role graph.
+A development-only runtime role, normally delegated by Dev Leader, that validates Labline changes on an actual managed server or container by following the published deployment and operations docs, recording command evidence, logs, versions, and pass/fail results. It is not a User Skill, not a research project Deployer, and not part of the user Labline Role graph.
 _Avoid_: treating real-machine validation as release approval; testing from undocumented private steps; mutating user projects or credentials during validation
 
 **Skill Invocation Edge**:
@@ -329,6 +333,10 @@ Maintainer: "Do not release. Internal `to-developer/` changes are not framework 
 Developer: "The Docker docs changed; can I call the research Deployer to validate them on the 5090 server?"
 
 Maintainer: "Use the Dev Real-Machine Tester. It follows the published docs on the real server, records evidence and logs, and reports findings; it does not approve the release or become a user project role."
+
+Developer: "Who coordinates developer-side helpers as this process becomes more agentic?"
+
+Maintainer: "The Dev Leader coordinates them. It can delegate to Dev Real-Machine Tester or Cheap Worker, but independent review and maintainer approval remain separate."
 
 Developer: "This change touched skills, tools, and docs. Where do I record the developer detail?"
 

@@ -253,6 +253,25 @@ def default_dev_runtime_config() -> dict:
             }
         },
         "roles": {
+            "dev-leader": {
+                "provider": "codex_subagent",
+                "transport": "codex_subagent",
+                "model": "gpt-5.4-mini",
+                "allowed_work": [
+                    "decompose Labline framework maintenance tasks",
+                    "delegate bounded work to dev-worker and dev-realtest roles",
+                    "read development evidence, logs, test output, and doc diffs",
+                    "coordinate implementation, validation, and documentation follow-up",
+                    "summarize risks, blockers, and recommended maintainer decisions",
+                ],
+                "forbidden_work": [
+                    "replacing independent review",
+                    "release or promote decisions without explicit maintainer approval",
+                    "editing credentials, private keys, or secret-bearing config",
+                    "mutating production user projects, datasets, or pretrained caches",
+                    "blurring user-facing Labline roles with developer runtime roles",
+                ],
+            },
             "dev-worker": {
                 "provider": "codex_subagent",
                 "transport": "codex_subagent",

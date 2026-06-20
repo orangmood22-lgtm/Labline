@@ -65,6 +65,7 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("default_provider: codex_subagent", config.stdout)
         self.assertIn("default_transport: codex_subagent", config.stdout)
         self.assertIn("default_model: gpt-5.4-mini", config.stdout)
+        self.assertIn("role.dev-leader: provider=codex_subagent codex_subagent/gpt-5.4-mini", config.stdout)
         self.assertIn("role.dev-realtest: provider=codex_subagent codex_subagent/gpt-5.4-mini", config.stdout)
         self.assertIn("role.dev-worker: provider=codex_subagent codex_subagent/gpt-5.4-mini", config.stdout)
 
@@ -73,6 +74,9 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertEqual(payload["defaults"]["provider"], "codex_subagent")
         self.assertEqual(payload["defaults"]["transport"], "codex_subagent")
         self.assertEqual(payload["defaults"]["model"], "gpt-5.4-mini")
+        self.assertEqual(payload["roles"]["dev-leader"]["provider"], "codex_subagent")
+        self.assertIn("delegate bounded work to dev-worker and dev-realtest roles", payload["roles"]["dev-leader"]["allowed_work"])
+        self.assertIn("blurring user-facing Labline roles with developer runtime roles", payload["roles"]["dev-leader"]["forbidden_work"])
         self.assertEqual(payload["roles"]["dev-realtest"]["provider"], "codex_subagent")
         self.assertIn("build and run GPU and non-GPU Docker deployment smoke tests", payload["roles"]["dev-realtest"]["allowed_work"])
         self.assertIn("silently deviating from published docs instead of reporting doc drift", payload["roles"]["dev-realtest"]["forbidden_work"])
@@ -230,6 +234,32 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("silently deviating from published docs instead of reporting doc drift", content)
         self.assertIn("- deploy/DEPLOY_GUIDE.md", content)
         self.assertIn("- deploy/docker-compose.gpu.yaml", content)
+
+    def test_dev_leader_prompt_documents_orchestration_scope(self) -> None:
+        result = self._run(
+            "dev",
+            "rt",
+            "prompt",
+            "dev-leader",
+            "coordinate validation for a deployment change",
+            "--file",
+            "CONTEXT.md",
+            "--file",
+            "tools/lane",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        task_line = next(line for line in result.stdout.splitlines() if line.startswith("task_file: "))
+        task_file = Path(task_line.split(": ", 1)[1])
+        content = task_file.read_text(encoding="utf-8")
+        self.assertIn("role: dev-leader", content)
+        self.assertIn("coordinate validation for a deployment change", content)
+        self.assertIn("decompose Labline framework maintenance tasks", content)
+        self.assertIn("delegate bounded work to dev-worker and dev-realtest roles", content)
+        self.assertIn("replacing independent review", content)
+        self.assertIn("blurring user-facing Labline roles with developer runtime roles", content)
+        self.assertIn("- CONTEXT.md", content)
+        self.assertIn("- tools/lane", content)
 
     def test_dev_runtime_load_env_file_binds_provider_and_run_uses_saved_secret(self) -> None:
         received = {}
