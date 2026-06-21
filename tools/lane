@@ -1124,6 +1124,65 @@ def progress_freshness(next_check_at: str | None) -> str:
     return "due" if utc_now() >= parsed else "fresh"
 
 
+def write_dev_workflow_question(
+    workflow_dir: Path,
+    data: dict,
+    role: str,
+    question: str,
+    context: str,
+    status: str,
+    files: list[str],
+) -> tuple[str, Path]:
+    questions_dir = Path(data.get("questions_dir") or (workflow_dir / "questions"))
+    role_dir = questions_dir / role
+    role_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    question_id = f"{role}-{stamp}-{sanitize_slug(question, limit=36)}"
+    question_file = role_dir / f"{question_id}.md"
+    file_lines = "\n".join(f"- {item}" for item in files) if files else "- [none]"
+    question_file.write_text(
+        f"""# Dev Workflow Question
+
+workflow_id: {data.get('workflow_id', workflow_dir.name)}
+question_id: {question_id}
+created_at: {utc_stamp()}
+role: {role}
+status: {status}
+
+## Question
+
+{question}
+
+## Context
+
+{context or '[none]'}
+
+## Related Files
+
+{file_lines}
+""",
+        encoding="utf-8",
+    )
+    questions = data.setdefault("questions", {})
+    questions[question_id] = {
+        "role": role,
+        "status": status,
+        "question": question,
+        "context": context,
+        "file": str(question_file),
+        "created_at": utc_stamp(),
+        "related_files": files,
+    }
+    return question_id, question_file
+
+
+def unresolved_dev_workflow_questions(data: dict) -> list[tuple[str, dict]]:
+    return sorted(
+        (item for item in (data.get("questions") or {}).items() if item[1].get("status", "open") != "resolved"),
+        key=lambda item: item[0],
+    )
+
+
 def runtime_binding_for_role(data: dict, role_name: str) -> tuple[dict, str, dict, str, str, str | None, str | None, str | None]:
     defaults = data["defaults"]
     roles = data.get("roles", {})
@@ -1148,9 +1207,11 @@ def cmd_dev_workflow_start(args: argparse.Namespace) -> int:
     tasks_dir = workflow_dir / "tasks"
     evidence_dir = workflow_dir / "evidence"
     progress_dir = workflow_dir / "progress"
+    questions_dir = workflow_dir / "questions"
     tasks_dir.mkdir(parents=True, exist_ok=False)
     evidence_dir.mkdir(parents=True, exist_ok=True)
     progress_dir.mkdir(parents=True, exist_ok=True)
+    questions_dir.mkdir(parents=True, exist_ok=True)
     files = args.file or []
     child_roles = args.role or ["dev-worker", "dev-realtest"]
     seen_roles: set[str] = set()
@@ -1164,11 +1225,13 @@ workflow_id: {workflow_id}
 workflow_dir: {workflow_dir}
 evidence_dir: {evidence_dir}
 progress_dir: {progress_dir}
+questions_dir: {questions_dir}
 child_roles: {', '.join(child_roles) if child_roles else '<none>'}
 next_check_at: {next_check_at}
 
 Write role evidence to `evidence/<role>.md`. Dev Leader reads those files before summarizing maintainer-facing status.
 Before `next_check_at`, every active role must update `progress/<role>.md` through `lane dev workflow update ...`, even when blocked or no work was completed.
+Record every question, ambiguity, missing decision, or environment uncertainty with `lane dev workflow question ...` as soon as it appears.
 """
     leader_role, provider_name, _provider, transport, model, base_url, api_key_env, effort = runtime_binding_for_role(data, "dev-leader")
     leader_task = f"""Coordinate this Labline developer workflow.
@@ -1241,8 +1304,10 @@ Report only concrete findings, changed files, commands, logs, and blockers. Writ
         "tasks_dir": str(tasks_dir),
         "evidence_dir": str(evidence_dir),
         "progress_dir": str(progress_dir),
+        "questions_dir": str(questions_dir),
         "task_files": role_task_files,
         "progress": {},
+        "questions": {},
         "evidence": {},
     }
     for role_name in ["dev-leader", *child_roles]:
@@ -1263,6 +1328,7 @@ Report only concrete findings, changed files, commands, logs, and blockers. Writ
         print(f"task.{role_name}: {role_task_files[role_name]}")
     print(f"progress_dir: {progress_dir}")
     print(f"evidence_dir: {evidence_dir}")
+    print(f"questions_dir: {questions_dir}")
     print(f"next_check_at: {next_check_at}")
     print("next: run the task files with the matching dev runtime roles, then record evidence with `lane dev workflow evidence ...`")
     return 0
@@ -1289,6 +1355,31 @@ def cmd_dev_workflow_status(args: argparse.Namespace) -> int:
         evidence_file = evidence_dir / f"{role}.md"
         status = "ok" if evidence_file.exists() else "missing"
         print(f"evidence.{role}: {status} {evidence_file}")
+    unresolved_questions = unresolved_dev_workflow_questions(data)
+    print(f"questions.open: {len(unresolved_questions)}")
+    for question_id, question in unresolved_questions:
+        print(f"question.{question_id}: {question.get('status', 'open')} role={question.get('role', '')} {question.get('file', '')}")
+    return 0
+
+
+def cmd_dev_workflow_question(args: argparse.Namespace) -> int:
+    framework = resolve_labline_repo(args)
+    workflow_dir = resolve_dev_workflow_dir(framework, args.workflow)
+    data = load_dev_workflow(workflow_dir)
+    question_id, question_file = write_dev_workflow_question(
+        workflow_dir,
+        data,
+        args.role,
+        args.question,
+        args.context or "",
+        args.status,
+        args.file or [],
+    )
+    save_dev_workflow(workflow_dir, data)
+    print(f"workflow_id: {data.get('workflow_id', workflow_dir.name)}")
+    print(f"question_id: {question_id}")
+    print(f"question_file: {question_file}")
+    print(f"status: {args.status}")
     return 0
 
 
@@ -2051,6 +2142,16 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(workflow_status)
     workflow_status.add_argument("workflow")
     workflow_status.set_defaults(func=cmd_dev_workflow_status)
+
+    workflow_question = dev_workflow_sub.add_parser("question")
+    add_common(workflow_question)
+    workflow_question.add_argument("workflow")
+    workflow_question.add_argument("role")
+    workflow_question.add_argument("question")
+    workflow_question.add_argument("--context", default="")
+    workflow_question.add_argument("--status", choices=["open", "answered", "resolved"], default="open")
+    workflow_question.add_argument("--file", action="append")
+    workflow_question.set_defaults(func=cmd_dev_workflow_question)
 
     workflow_update = dev_workflow_sub.add_parser("update")
     add_common(workflow_update)

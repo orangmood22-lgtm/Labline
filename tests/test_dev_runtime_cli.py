@@ -277,6 +277,7 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("task.dev-realtest: ", start.stdout)
         self.assertIn("progress_dir: ", start.stdout)
         self.assertIn("evidence_dir: ", start.stdout)
+        self.assertIn("questions_dir: ", start.stdout)
         self.assertIn("next_check_at: ", start.stdout)
 
         workflow_dir = Path(next(line for line in start.stdout.splitlines() if line.startswith("workflow_dir: ")).split(": ", 1)[1])
@@ -286,6 +287,8 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertEqual(manifest["child_roles"], ["dev-worker", "dev-realtest"])
         self.assertEqual(manifest["files"], ["deploy/DEPLOY_GUIDE.md"])
         self.assertIn("progress_dir", manifest)
+        self.assertIn("questions_dir", manifest)
+        self.assertEqual(manifest["questions"], {})
         self.assertEqual(manifest["progress"]["dev-realtest"]["status"], "pending")
         self.assertIn("next_check_at", manifest["progress"]["dev-realtest"])
 
@@ -294,7 +297,9 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertIn("role: dev-leader", leader_task)
         self.assertIn("child_roles: dev-worker, dev-realtest", leader_task)
         self.assertIn("progress_dir:", leader_task)
+        self.assertIn("questions_dir:", leader_task)
         self.assertIn("Before `next_check_at`, every active role must update `progress/<role>.md`", leader_task)
+        self.assertIn("Record every question, ambiguity, missing decision, or environment uncertainty", leader_task)
         self.assertIn("Write role evidence to `evidence/<role>.md`", leader_task)
         self.assertIn("role: dev-realtest", realtest_task)
         self.assertIn("Report only concrete findings", realtest_task)
@@ -304,6 +309,30 @@ class DevRuntimeCliTest(unittest.TestCase):
         self.assertEqual(status.returncode, 0, msg=status.stderr)
         self.assertIn("progress.dev-realtest: pending fresh", status.stdout)
         self.assertIn("evidence.dev-realtest: missing", status.stdout)
+        self.assertIn("questions.open: 0", status.stdout)
+
+        question = self._run(
+            "dev",
+            "workflow",
+            "question",
+            str(workflow_dir),
+            "dev-realtest",
+            "Which proxy port should the 5090 host use?",
+            "--context",
+            "Deploy docs allow user-selected proxy ports; real host value is not known.",
+            "--file",
+            "deploy/DEPLOY_GUIDE.md",
+        )
+        self.assertEqual(question.returncode, 0, msg=question.stderr)
+        self.assertIn("question_id: dev-realtest-", question.stdout)
+        question_file = Path(next(line for line in question.stdout.splitlines() if line.startswith("question_file: ")).split(": ", 1)[1])
+        self.assertTrue(question_file.exists())
+        self.assertIn("Which proxy port should the 5090 host use?", question_file.read_text(encoding="utf-8"))
+
+        status_with_question = self._run("dev", "workflow", "status", str(workflow_dir))
+        self.assertEqual(status_with_question.returncode, 0, msg=status_with_question.stderr)
+        self.assertIn("questions.open: 1", status_with_question.stdout)
+        self.assertIn("role=dev-realtest", status_with_question.stdout)
 
         update = self._run(
             "dev",
