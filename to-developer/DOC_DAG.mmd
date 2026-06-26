@@ -4,6 +4,7 @@ graph LR
     CHANGELOG_md["CHANGELOG.md<br/><small>用户可见变更 · stable</small>"]
     CONTEXT_md["CONTEXT.md<br/><small>框架治理术语 · stable</small>"]
     deploy_DEPLOY_GUIDE_md["deploy/DEPLOY_GUIDE.md<br/><small>Stable 管理员部署指南 · stable</small>"]
+    deploy_IMAGE_PACKAGING_md["deploy/IMAGE_PACKAGING.md<br/><small>Stable 镜像打包与预构建部署指南 · stable</small>"]
     docs_DOC_DAG_yaml["docs/DOC_DAG.yaml<br/><small>Stable 文档 DAG · stable</small>"]
     docs_FEISHU_INTEGRATION_md["docs/FEISHU_INTEGRATION.md<br/><small>飞书用户集成文档 · stable</small>"]
     docs_FRAMEWORK_STRUCTURE_md["docs/FRAMEWORK_STRUCTURE.md<br/><small>Stable 框架三层结构 · stable</small>"]
@@ -69,6 +70,8 @@ graph LR
     to_developer_plans_20260613_LANGGRAPH_EVALUATION_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
     to_developer_plans_20260610_codex_migration_md -- "informs" --> to_developer_20260615_FRAMEWORK_MODULES_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "constrains" --> deploy_DEPLOY_GUIDE_md
+    to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "constrains" --> deploy_IMAGE_PACKAGING_md
+    deploy_IMAGE_PACKAGING_md -- "summarized_by" --> deploy_DEPLOY_GUIDE_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "constrains" --> docs_OPERATIONS_GUIDE_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "informs" --> to_developer_20260615_FRAMEWORK_MODULES_md
     to_developer_plans_20260616_CLI_DEPLOY_RUNTIME_md -- "informs" --> to_developer_20260617_FRAMEWORK_TOP_LEVEL_DESIGN_md
@@ -118,4 +121,4 @@ graph LR
     class to_developer_20260613_DEVELOPMENT_LOG_md,to_developer_logs_20260613_AGENT_STATUS_STREAM_VALIDATION_20260613_md,to_developer_logs_20260615_SKILL_USABILITY_AUDIT_20260614_md,to_developer_logs___md,to_developer_logs_skill_usability_parts___md log
     class to_developer_plans_20260613_BRANCH_AND_PROMOTE_GUIDE_md,to_developer_plans_20260613_PROMOTE_FLOW_md promote
     class to_developer_plans_20260613_VERSION_MANAGEMENT_md release
-    class CHANGELOG_md,CONTEXT_md,deploy_DEPLOY_GUIDE_md,docs_DOC_DAG_yaml,docs_FEISHU_INTEGRATION_md,docs_FRAMEWORK_STRUCTURE_md,docs_OPERATIONS_GUIDE_md,docs_PROMOTE_FLOW_md,docs_README_md,docs_TOOLS_INDEX_md stable
+    class CHANGELOG_md,CONTEXT_md,deploy_DEPLOY_GUIDE_md,deploy_IMAGE_PACKAGING_md,docs_DOC_DAG_yaml,docs_FEISHU_INTEGRATION_md,docs_FRAMEWORK_STRUCTURE_md,docs_OPERATIONS_GUIDE_md,docs_PROMOTE_FLOW_md,docs_README_md,docs_TOOLS_INDEX_md stable

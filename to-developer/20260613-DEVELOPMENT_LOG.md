@@ -27,6 +27,7 @@
 - Added `tools/generate_dev_skill_catalog.py` and `tools/generate_dev_skill_dag.py` for dev-only skill catalog and DAG generation.
 - Added optional `tools/generate_skill_dag.py --fail-on-inferred` gate so weak body mentions can be reported and eventually blocked without changing default DAG generation behavior.
 - 新增 `tools/update_developer_docs.py`，用于校验 dev-only 文档覆盖并重新生成 `to-developer/DOC_DAG.mmd`。
+- `tools/update_developer_docs.py` 忽略 `to-developer/logs/dev-runtime/` 与 `to-developer/logs/dev-workflow/`，避免把本机运行态日志误当作必须进入开发者文档 DAG 的规范材料。
 - Added `tools/feishu_control.py` for session registration, inbox routing, control leases, approvals, `/interrupt`, and `/btw`.
 - Added `tools/labline_feishu_session.py` for managed `codex exec` sessions and live tmux injection with Feishu status-card updates.
 - Added `tools/agent_status.py` for schema-v1 per-agent status snapshots with `start`, `update`, `finish`, `list`, `summary`, and `validate`.
@@ -65,6 +66,8 @@
 - Added `to-developer/plans/20260613-VERSION_MANAGEMENT.md`.
 
 ### deploy
+- 新增预构建镜像部署路径：`deploy/docker-compose.image.yaml` 和 `deploy/docker-compose.gpu.image.yaml` 只使用已构建镜像，目标服务器不再现场 build；`.env` 示例补充 `LABLINE_IMAGE`、`LABLINE_IMAGE_USERNAME`、`LABLINE_GPU_IMAGE` 与 `GITEA_URL`。
+- 新增 `deploy/IMAGE_PACKAGING.md`，说明普通/GPU 镜像的构建、推送、离线 tar 包导入、预构建部署和版本回滚边界；`deploy/DEPLOY_GUIDE.md` 增加从现场 build 到预构建 image compose 的入口。
 - 更新部署文档和 `.env` 示例，补齐 Feishu bridge/session runner 部署、git proxy、大小写 proxy 环境变量一致性说明。
 - 加固 `deploy/entrypoint.sh`，将大小写 proxy 变量和可选 git proxy 配置持久化到 `docker exec` 会话。
 - Hardened GPU server deployment flow, including 3090x2 deployment assumptions and Docker guidance.
@@ -73,6 +76,7 @@
 - Extended `mcp-servers/feishu-bridge/` with `/update`, `/control/*`, Feishu long-connection inbound routing, and configurable receive ID types.
 - Documented MCP bridge inventory and provider requirements.
 - Made Codex review bridge portable across local paths.
+- Fixed `mcp-servers/codex-image2/server.py` so binary stdio wrapping happens only in MCP server `main()` instead of at import time, keeping pytest/module imports from corrupting stdout capture.
 
 ### tests
 - Added dev runtime CLI, dev skill installer, and dev skill surface tests covering `aris dev rt/runtime`, `aris dev skills`, dev-only catalog/DAG generation, and legacy `aris dev worker` rejection.

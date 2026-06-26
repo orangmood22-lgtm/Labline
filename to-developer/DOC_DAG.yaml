@@ -171,6 +171,10 @@ nodes:
     title: "Stable 管理员部署指南"
     layer: stable
     kind: stable_target
+  deploy/IMAGE_PACKAGING.md:
+    title: "Stable 镜像打包与预构建部署指南"
+    layer: stable
+    kind: stable_target
   docs/PROMOTE_FLOW.md:
     title: "Stable Promote 规范"
     layer: stable
@@ -283,6 +287,14 @@ edges:
     to: deploy/DEPLOY_GUIDE.md
     type: constrains
     reason: "CLI 与部署运行时机制约束管理员部署手册中的拓扑、状态文件和自动检查更新说明。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: deploy/IMAGE_PACKAGING.md
+    type: constrains
+    reason: "预构建镜像部署仍受 CLI/deploy runtime 的容器 ABI、framework copy、项目路径和状态挂载边界约束。"
+  - from: deploy/IMAGE_PACKAGING.md
+    to: deploy/DEPLOY_GUIDE.md
+    type: summarized_by
+    reason: "管理员部署指南只保留预构建镜像入口，完整构建、推送、离线导入和回滚流程由镜像打包指南承载。"
   - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
     to: docs/OPERATIONS_GUIDE.md
     type: constrains
