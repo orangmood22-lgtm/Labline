@@ -136,6 +136,26 @@ _Avoid_: shared agent state file, central writable scratchpad
 A durable pointer to a long-running task that can be checked independently of the agent that launched it, such as a tmux or screen session name, queue state file, watchdog task name, log path, or result directory. The Leader treats the job handle as the source of truth for task liveness when an agent status file stops updating.
 _Avoid_: foreground SSH command, agent transcript as progress source
 
+**Durable Task Supervisor**:
+The local owner of a long-running Labline task's lifecycle, liveness, recovery metadata, and final artifact pointers. It remains authoritative even when the Remote Session Inbox, chat transport, or Remote Status Projection disconnects or fails to update.
+_Avoid_: lark-channel-bridge as workflow runtime, chat card as process owner, single agent turn as long-task lifecycle
+
+**Local Job Service**:
+A lightweight, local service that implements Durable Task Supervisor behavior for the current user and bridge profile. It manages supervised job queueing, child execution, lifecycle state, logs, verdicts, and handoff records without using a tmux session as the default execution container.
+_Avoid_: daemon-lite, per-job tmux session as the normal backend, full multi-user scheduler
+
+**Bridge-Managed Job Service**:
+A Local Job Service whose availability is checked, started, and re-discovered by the Feishu bridge for the active bridge profile. Users should not need to start a separate service manually before launching remote long tasks.
+_Avoid_: manual job-service prerequisite, hidden setup step for mobile entry, unmanaged background process with no bridge health check
+
+**Detached Profile Job Service**:
+A Bridge-Managed Job Service that is scoped to one bridge profile and continues running jobs independently of the bridge process that launched or discovered it. Bridge exit, restart, or session turnover must not by itself stop active supervised jobs.
+_Avoid_: bridge child process lifecycle, killing jobs when the chat turn ends, one global job service shared across unrelated profiles
+
+**Stale Long Job**:
+A supervised job whose durable record remains available but whose previous execution process can no longer be trusted after a host-level interruption such as reboot. It preserves handoff and logs for explicit continuation rather than automatically resuming execution.
+_Avoid_: silent auto-resume after host reboot, losing job records on restart, treating stale as failed without inspection
+
 **Expected Update Time**:
 The next time an agent or its associated long-running job is expected to provide a meaningful new signal. It is a pacing hint for Leader observation, not a deadline or failure condition by itself.
 _Avoid_: timeout, SLA, polling loop
@@ -151,6 +171,10 @@ _Avoid_: equating Reviewer with Codex MCP only, executor self-review
 **Project Runtime State**:
 Local, non-versioned state written inside a research project while Labline workflows run, such as agent status snapshots and transient coordination metadata. The Labline framework repository provides tools and protocols for this state but must not contain real project runtime state.
 _Avoid_: framework-owned runtime status, committed agent snapshots
+
+**Project Handoff Surface**:
+The project-owned files and snapshots that let a fresh session or role understand current work, decisions, open questions, status, and artifact pointers without relying on hidden model context. Long job records may reference or mirror this surface, but must not replace project-owned evidence.
+_Avoid_: hidden conversation memory, duplicating full transcripts as handoff, treating chat cards as project evidence
 
 **Project Registry**:
 A non-versioned registry in a User Workspace that records Labline project paths initialized for that user. Framework updates use it to keep registered projects in sync with the user's framework copy, and project detach removes projects from it.
@@ -168,6 +192,70 @@ _Avoid_: remote shell, global session authorization, approve-all mode
 A Feishu-mediated input channel that delivers user messages to a live Codex Session. The bridge records messages and returns session responses, but tool and skill execution still happens inside the Codex Session under the normal local permission model.
 _Avoid_: bridge-executed tools, remote agent runner, Feishu shell
 
+**Remote Status Projection**:
+A derived, remote-visible view of a live Codex Session's liveness, progress, blockers, and final notifications. It is not the source of execution truth; local Project Runtime State, Agent Status Snapshots, and Long-Running Job Handles remain authoritative.
+_Avoid_: authoritative chat card, execution state stored in Feishu, using remote display success as proof of run completion
+
+**Conversation-Anchored Segmented Projection**:
+A Remote Status Projection for supervised long tasks that appears inside the initiating conversation as a small sequence of meaningful status segments. The current segment absorbs ordinary progress updates; new segments are reserved for important boundaries, input requests, and terminal results.
+_Avoid_: per-job dashboard card, one-card-per-heartbeat, status feed detached from the conversation
+
+**Long Job Heartbeat**:
+A liveness update emitted by the Local Job Service while a supervised long job is still running, especially when the active agent or child process is waiting without producing user-visible output. It patches the active Conversation-Anchored Segmented Projection rather than creating a new status segment.
+_Avoid_: requiring Leader output for liveness, new card per heartbeat, treating heartbeat as evidence of task progress
+
+**Long Job Surface Pointers**:
+A short, high-signal set of project paths or artifact references shown in a long job's remote projection so the user can inspect the relevant Project Handoff Surface. These pointers identify handoff files, trackers, result directories, or logs without inlining their contents into the card.
+_Avoid_: full logs in chat cards, long path dumps, hiding project-owned evidence behind chat-only summaries
+
+**Long Job Final Reply**:
+A new user-visible message sent in the originating conversation when a long job reaches a terminal state. It accompanies the final status-card patch so completion, failure, or stop results are visible as a fresh chat notification rather than only as an edited card.
+_Avoid_: terminal state only as card patch, silent completion, requiring users to inspect old status cards for final results
+
+**Projection Delivery State**:
+The Remote Message Archive record of whether a Remote Status Projection update, terminal card patch, or Long Job Final Reply has been delivered, is pending, or failed and needs retry. It is separate from the long job's lifecycle verdict.
+_Avoid_: marking a completed job incomplete because Feishu send failed, losing retry intent, using delivery success as proof of task completion
+
+**Long Job Stop Request**:
+An explicit stop intent interpreted by the Leader for a supervised long job. `/stop` may pause the current Leader turn without directly killing background work; a user-facing request such as "stop the task" is handled by the Leader as the long job stop decision.
+_Avoid_: direct process kill from remote projection, card-only cancellation path, bypassing the Leader for job stop decisions
+
+**Leader-Mediated Long Job Control**:
+The rule that user queries, status checks, requirement changes, continuation requests, and stop intents enter through the Leader conversation. The Leader reads long job state and decides whether to update, continue, stop, or leave background work running; long jobs do not consume user messages directly.
+_Avoid_: background job chat endpoint, user-to-job direct routing, bypassing Leader for ordinary control flow
+
+**BTW Side Channel**:
+A read-only remote side question that can be answered while the Leader conversation or a long job continues running. It may use recent transcript, Remote Message Archive facts, and Project Handoff Surface pointers as context, but it must not modify files, advance tasks, or inject text into the Leader conversation.
+_Avoid_: side-channel task execution, hidden Leader interruption, merging BTW answers into job state as decisions
+
+**Remote File Broker**:
+A bridge-mediated file transfer surface that lets Feishu users request, receive, or upload files through controlled paths under the active workspace or approved roots. It does not provide direct remote filesystem editing; file modifications remain Leader-mediated project work.
+_Avoid_: Feishu file manager, remote shell filesystem access, direct chat command for arbitrary file writes
+
+**Bridge-Compatible Card Semantics**:
+The constraint that long-task status projections preserve the existing Feishu bridge card behavior, supported interactions, and fallback expectations rather than inventing a separate card surface for supervised jobs.
+_Avoid_: special long-job card protocol, degraded card feature subset, divergent button semantics
+
+**Remote Projection Boundary**:
+The responsibility boundary where a Durable Task Supervisor owns long-task lifecycle state, while the Feishu bridge owns remote rendering, card patching, callbacks, and user-visible fallback behavior.
+_Avoid_: supervisor calling chat APIs directly, duplicating bridge card logic inside jobs, treating card delivery as task execution
+
+**Remote Message Archive**:
+The bridge-owned archive for Feishu/Lark conversation records, remote session traces, long job identity, projection metadata, and handoff state. It may reference many project workspaces; projects remain responsible for code, experiment outputs, and durable research artifacts.
+_Avoid_: project-local chat archive as the authority, storing job identity only inside a workspace, treating Feishu cloud history as the local archive
+
+**Project Long Job Mirror**:
+A project-local, read-only discovery surface for a supervised job whose authoritative record lives in the Remote Message Archive. It helps a local session find the remote job, handoff snapshot, and artifact pointers without creating a second writable source of lifecycle truth.
+_Avoid_: project-owned remote job state, two-way status sync, editing mirrored job files to control the task
+
+**Single-Workspace Long Job**:
+A supervised remote job whose execution, recovery context, permissions, logs, and artifact pointers are anchored to one workspace or current working directory. Multi-workspace work is represented as orchestration across multiple jobs, not as one job with several mutable workspace roots.
+_Avoid_: cross-workspace job state, implicit cwd switching inside one job, one remote job owning multiple projects
+
+**Explicit Long Task Entry**:
+A deliberate user request to start a long-running task under a Durable Task Supervisor instead of a single chat-triggered agent turn. Ordinary status queries and casual follow-up messages are not Explicit Long Task Entries.
+_Avoid_: treating every remote message as a background job, implicit detached execution for status checks, accidental new runs from progress questions
+
 **Feishu-Controlled Session**:
 An opt-in Codex Session that is registered for Remote Session Inbox messages, Remote Action Approval, status reporting, and response forwarding through Feishu. Sessions that never opt in are invisible to Feishu control.
 _Avoid_: auto-attached session, hijacked terminal, uncontrolled thread takeover
@@ -183,6 +271,22 @@ _Avoid_: simultaneous unsynchronised input, permanent remote lockout
 **Phone Session Report**:
 A mergeable record of work performed through a Feishu-Controlled Session while the user is away. It captures auditable facts such as messages, responses, commands, file changes, decisions, and open questions; it is not a dump of hidden model context.
 _Avoid_: transcript merge, hidden context merge, memory graft
+
+**Job Handoff Snapshot**:
+A compact, agent-readable summary for resuming or inspecting a Durable Task Supervisor job from a new local or remote session. It includes the current objective, status, decisions, open questions, next action, artifact pointers, and log paths; it does not inline the full transcript or raw logs.
+_Avoid_: full log replay, chat transcript as recovery context, attaching a new agent to a hidden live process
+
+**Long Job Handoff Sync**:
+The process of keeping a long job's handoff record aligned with relevant Project Handoff Surface entries and Remote Message Archive facts. It links or mirrors auditable facts and artifact pointers without claiming that hidden model context moved between sessions.
+_Avoid_: two writable handoff authorities, copying entire logs into every job record, context transfer claims
+
+**Structured Task Verdict**:
+The machine-readable status a supervised long task writes at the end of each agent turn, including whether the task is done, blocked, or ready to continue. Agent self-assessment may inform the verdict, but the Durable Task Supervisor compares it against explicit done criteria before ending the job.
+_Avoid_: accepting free-text "done" as completion, ending a long task at every milestone, relying on chat wording as lifecycle state
+
+**Compact Continuation Context**:
+The bounded context packet supplied to each automatic continuation turn of a supervised long task. It contains the original task goal and done criteria, the latest Job Handoff Snapshot, the previous Structured Task Verdict, and selected log excerpts or artifact pointers rather than full transcripts.
+_Avoid_: replaying complete chat history, stuffing full logs into every continuation, relying on hidden model context for progress
 
 **User Workspace**:
 The administrator-assigned research workspace for one Labline user in a managed deployment. A User Workspace owns that user's framework copy and project area while sharing group-level research assets.

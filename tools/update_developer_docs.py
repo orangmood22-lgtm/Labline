@@ -140,6 +140,7 @@ def validate(data: dict[str, Any]) -> list[str]:
     node_names = set(nodes)
     ignored_roots = [
         REPO_ROOT / "to-developer" / "logs" / "dev-runtime",
+        REPO_ROOT / "to-developer" / "logs" / "dev-workflow",
     ]
     for path in sorted((REPO_ROOT / "to-developer").glob("**/*")):
         if path.is_file() and path.suffix in {".md", ".txt"}:

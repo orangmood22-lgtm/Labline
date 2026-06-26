@@ -1,0 +1,66 @@
+# LABLINE Single-User GPU Deployment with a prebuilt image.
+#
+# Use this when a CI/build machine has already built and pushed the GPU image.
+# The target GPU server only pulls the image and mounts user/workspace paths.
+#
+# Usage:
+#   1. Copy .env.gpu.example -> .env and set LABLINE_GPU_IMAGE plus host paths
+#   2. docker compose -f docker-compose.gpu.image.yaml pull
+#   3. docker compose -f docker-compose.gpu.image.yaml up -d
+#   4. docker exec -it labline-gpu bash
+
+services:
+  labline:
+    image: ${LABLINE_GPU_IMAGE:?set LABLINE_GPU_IMAGE in .env}
+    container_name: labline-gpu
+    hostname: labline-gpu
+    network_mode: host
+    environment:
+      - LABLINE_PROXY_ENABLED=${LABLINE_PROXY_ENABLED:-1}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
+      - http_proxy=${http_proxy:-}
+      - https_proxy=${https_proxy:-}
+      - no_proxy=${no_proxy:-}
+      - GIT_HTTP_PROXY=${GIT_HTTP_PROXY:-}
+      - GIT_HTTPS_PROXY=${GIT_HTTPS_PROXY:-}
+      - LABLINE_AUTO_CHECK_UPDATE=${LABLINE_AUTO_CHECK_UPDATE:-1}
+      - LABLINE_UPDATE_CHECK_INTERVAL=${LABLINE_UPDATE_CHECK_INTERVAL:-1d}
+      - LABLINE_UPDATE_CHECK_TIMEOUT=${LABLINE_UPDATE_CHECK_TIMEOUT:-10s}
+      - FEISHU_APP_ID=${FEISHU_APP_ID:-}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET:-}
+      - FEISHU_USER_ID=${FEISHU_USER_ID:-}
+      - FEISHU_RECEIVE_ID_TYPE=${FEISHU_RECEIVE_ID_TYPE:-open_id}
+      - FEISHU_ENABLE_WS=${FEISHU_ENABLE_WS:-0}
+      - BRIDGE_PORT=${BRIDGE_PORT:-5000}
+      - LABLINE_PROJECT_ROOT=${LABLINE_PROJECT_ROOT:-/labline/framework}
+      - LABLINE_FEISHU_CONTROL_ROOT=${LABLINE_FEISHU_CONTROL_ROOT:-}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-}
+    volumes:
+      - ${FRAMEWORK_PATH:?set FRAMEWORK_PATH in .env}:/labline/framework
+      - ${DEV_FRAMEWORK_PATH:?set DEV_FRAMEWORK_PATH in .env}:/labline/labline-dev
+      - ${PROJECT_PATH:?set PROJECT_PATH in .env}:/labline/projects
+      - ${DATASETS_PATH:?set DATASETS_PATH in .env}:/labline/shared/datasets:ro
+      - ${PRETRAINED_PATH:?set PRETRAINED_PATH in .env}:/labline/shared/pretrained
+      - ${SSH_PATH:?set SSH_PATH in .env}:/run/secrets/ssh:ro
+      - claude-config:/home/${USERNAME:-researcher}/.claude
+      - codex-config:/home/${USERNAME:-researcher}/.codex
+      - labline-state:/home/${USERNAME:-researcher}/.labline
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    command: ["bash"]
+
+volumes:
+  claude-config:
+  codex-config:
+  labline-state:

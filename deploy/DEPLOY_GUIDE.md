@@ -116,12 +116,24 @@ vim .env   # 填写 framework/projects/shared/ssh 路径和代理端口
 docker compose -f docker-compose.gpu.yaml up -d
 docker exec -it labline-gpu bash
 
+# 2A-image. 使用预构建 GPU 镜像部署（目标服务器不现场 build）
+# 先在 .env 填 LABLINE_GPU_IMAGE=你的registry/labline-gpu:tag
+docker compose -f docker-compose.gpu.image.yaml pull
+docker compose -f docker-compose.gpu.image.yaml up -d
+
 # 2B. 多人普通 compose 部署
 cp .env.example .env
 vim .env   # 填写 LABLINE_ROOT、用户名、共享数据路径、代理端口
 docker compose up -d
 docker exec -it labline-zhangsan bash
+
+# 2B-image. 使用预构建普通镜像部署
+# 先在 .env 填 LABLINE_IMAGE=你的registry/labline:tag
+docker compose -f docker-compose.image.yaml pull
+docker compose -f docker-compose.image.yaml up -d
 ```
+
+预构建镜像的构建、推送、离线 tar 包和回滚流程见 `deploy/IMAGE_PACKAGING.md`。
 
 ## 详细步骤
 
