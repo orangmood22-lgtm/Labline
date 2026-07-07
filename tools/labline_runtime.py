@@ -1477,6 +1477,78 @@ def detached_job_candidate_from_task(project: Path, task: dict[str, Any]) -> dic
     return candidate
 
 
+def observe_tmux_job_handle(project: Path, task: dict[str, Any], handle: dict[str, Any], missing_artifacts: list[str]) -> dict[str, Any]:
+    session = str(handle.get("session") or "")
+    active = tmux_session_active(project, session) if session else None
+    exit_code_ref = str(handle.get("exit_code_ref") or "")
+    exit_code = read_exit_code_ref(project, exit_code_ref)
+    required_artifacts = string_list(task.get("required_artifacts"))
+    if active is True:
+        observation_status = "running"
+    elif active is None:
+        observation_status = "unknown"
+    elif exit_code is not None and exit_code != 0:
+        observation_status = "exited_failed"
+    elif missing_artifacts:
+        observation_status = "exited_missing_artifact"
+    elif required_artifacts:
+        observation_status = "exited_completed"
+    else:
+        observation_status = "exited_unverified"
+
+    observation = {
+        "backend": "tmux",
+        "job_id": handle.get("job_id"),
+        "session": session,
+        "session_active": active,
+        "observation_status": observation_status,
+        "log_ref": handle.get("log_ref"),
+        "job_ref": handle.get("job_ref"),
+        "exit_code_ref": exit_code_ref or None,
+        "exit_code": exit_code,
+        "required_artifacts": required_artifacts,
+        "missing_artifacts": missing_artifacts,
+    }
+    return {key: value for key, value in observation.items() if value is not None}
+
+
+def observe_job_status(args: argparse.Namespace) -> dict[str, Any]:
+    project = resolve_project(getattr(args, "project", None))
+    task = load_task(project, args.task_id)
+    handles = task.get("job_handles") if isinstance(task.get("job_handles"), list) else []
+    missing_artifacts = missing_required_artifact_refs(project, task)
+    observations: list[dict[str, Any]] = []
+    for handle in handles:
+        if not isinstance(handle, dict):
+            continue
+        if handle.get("type") == "tmux" or handle.get("backend") == "tmux":
+            observations.append(observe_tmux_job_handle(project, task, handle, missing_artifacts))
+        else:
+            observations.append(
+                {
+                    "backend": handle.get("backend") or handle.get("type") or "unknown",
+                    "job_id": handle.get("job_id"),
+                    "observation_status": "unsupported_handle",
+                }
+            )
+    candidate = detached_job_candidate_from_task(project, task)
+    result = {
+        "task_id": task.get("task_id"),
+        "title": task.get("title"),
+        "status": task.get("status"),
+        "execution_mode": task.get("execution_mode"),
+        "durability": task.get("durability"),
+        "observation": task.get("observation"),
+        "heartbeat": task.get("heartbeat"),
+        "next_expected_update": task.get("next_expected_update"),
+        "required_artifacts": string_list(task.get("required_artifacts")),
+        "missing_artifacts": missing_artifacts,
+        "job_observations": observations,
+        "wakeup_candidate": candidate,
+    }
+    return {key: value for key, value in result.items() if value is not None}
+
+
 def escalation_candidate_from_file(project: Path, path: Path, escalation: dict[str, Any]) -> dict[str, Any] | None:
     if escalation.get("resume_allowed") is False:
         return None
@@ -2761,6 +2833,10 @@ def cmd_tmux_job(args: argparse.Namespace) -> int:
     return emit_json_or_error(start_tmux_job, args)
 
 
+def cmd_job_status(args: argparse.Namespace) -> int:
+    return emit_json_or_error(observe_job_status, args)
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     summary, summary_md = summarize_runtime(getattr(args, "project", None), write=True)
     if getattr(args, "json_output", False):
@@ -2970,6 +3046,11 @@ def build_parser() -> argparse.ArgumentParser:
     tmux_job.add_argument("--tmux-bin", default="tmux")
     add_now_arg(tmux_job)
     tmux_job.set_defaults(func=cmd_tmux_job)
+    job_status = workflow_sub.add_parser("job-status")
+    add_project_arg(job_status)
+    job_status.add_argument("task_id")
+    job_status.add_argument("--json", dest="json_output", action="store_true")
+    job_status.set_defaults(func=cmd_job_status)
     return parser
 
 

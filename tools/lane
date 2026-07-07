@@ -2020,6 +2020,10 @@ def cmd_workflow_tmux_job(args: argparse.Namespace) -> int:
     return load_labline_runtime().cmd_tmux_job(args)
 
 
+def cmd_workflow_job_status(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_job_status(args)
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     return load_labline_runtime().cmd_status(args)
 
@@ -3041,6 +3045,12 @@ def build_parser() -> argparse.ArgumentParser:
     tmux_job.add_argument("--tmux-bin", default="tmux")
     add_runtime_now_arg(tmux_job)
     tmux_job.set_defaults(func=cmd_workflow_tmux_job)
+
+    job_status = workflow_sub.add_parser("job-status")
+    add_runtime_common(job_status)
+    job_status.add_argument("task_id")
+    job_status.add_argument("--json", dest="json_output", action="store_true")
+    job_status.set_defaults(func=cmd_workflow_job_status)
 
     debug = sub.add_parser("debug")
     add_common(debug)

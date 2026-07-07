@@ -2669,6 +2669,83 @@ def test_workflow_wakeup_plan_reports_nonzero_exit_even_when_artifact_exists():
                 "exit_code_ref": exit_code_ref,
             }
         ]
+        status = json.loads(
+            run_lane(
+                ["workflow", "job-status", "task_train_retry3", "--json"],
+                cwd=project,
+                env_update=env,
+            ).stdout
+        )
+        assert status["job_observations"][0]["observation_status"] == "exited_failed"
+        assert status["job_observations"][0]["exit_code"] == 2
+        assert status["wakeup_candidate"]["escalation_type"] == "detached_job_exited"
+
+
+def test_workflow_job_status_reports_tmux_observation_and_wakeup_candidate():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        project = tmp_path / "project"
+        project.mkdir()
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        fake_tmux = write_fake_tmux(tmp_path)
+        (bin_dir / "tmux").symlink_to(fake_tmux)
+        artifact = project / "outputs" / "epoch_2.pth"
+        artifact.parent.mkdir()
+        artifact.write_text("checkpoint\n", encoding="utf-8")
+        exit_code_ref = ".labline/runtime/jobs/job_retry3.exitcode"
+        exit_code_path = project / exit_code_ref
+        exit_code_path.parent.mkdir(parents=True, exist_ok=True)
+        exit_code_path.write_text("0\n", encoding="utf-8")
+        env = {
+            "PATH": f"{bin_dir}:{os.environ['PATH']}",
+            "FAKE_TMUX_CALLS": str(tmp_path / "tmux-calls.jsonl"),
+            "FAKE_TMUX_HAS_SESSION": "0",
+        }
+        run_lane(
+            [
+                "runtime",
+                "task",
+                "create",
+                "task_train_retry3",
+                "--kind",
+                "agent",
+                "--title",
+                "train retry3",
+                "--execution-mode",
+                "detached_job",
+                "--durability",
+                "supervised",
+                "--heartbeat",
+                "escalation_gated",
+                "--status",
+                "waiting_on_job",
+                "--next-expected-update",
+                "2026-06-30T00:00:00Z",
+                "--job-handle",
+                '{"type":"tmux","session":"train_retry3","job_id":"job_retry3","exit_code_ref":".labline/runtime/jobs/job_retry3.exitcode"}',
+                "--required-artifact",
+                "outputs/epoch_2.pth",
+            ],
+            cwd=project,
+        )
+
+        status = json.loads(
+            run_lane(
+                ["workflow", "job-status", "task_train_retry3", "--json"],
+                cwd=project,
+                env_update=env,
+            ).stdout
+        )
+
+        observation = status["job_observations"][0]
+        assert observation["backend"] == "tmux"
+        assert observation["session"] == "train_retry3"
+        assert observation["session_active"] is False
+        assert observation["exit_code"] == 0
+        assert observation["observation_status"] == "exited_completed"
+        assert observation["missing_artifacts"] == []
+        assert status["wakeup_candidate"]["escalation_type"] == "detached_job_completed"
 
 
 def test_workflow_wakeup_plan_reports_exited_detached_tmux_job_when_artifact_missing():

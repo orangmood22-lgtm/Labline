@@ -565,6 +565,14 @@ lane workflow tmux-job task-deployer-r003-stage-a-teacher-train-retry2 \
 
 该命令会启动 tmux session，并写入 Runtime Task `job_handles`、`.labline/runtime/jobs/<job_id>.json`、`.labline/runtime/agents/<agent_id>.json`、`.labline/runtime/jobs/<job_id>.exitcode` 路径和 `job.started` 事件。启动者只负责留下 durable handle，可以在确认 handle 写入后退出；它不代表训练成功。成功仍以 exit code、log、session 状态和声明的 `--required-artifact` 为准。`lane workflow wakeup-plan` 会检查 detached tmux session：session 已退出、exit code 为 0 或暂不可得、且 required artifact 存在时产生 `detached_job_completed` candidate；session 已退出但 exit code 非 0 或 required artifact 缺失时产生 `detached_job_exited` candidate，交给 Leader 检查日志并记录终态。`TASK_ID` 使用 `task-deployer-...`，不要使用 `agent-deployer-...`，避免和派生 agent status task 撞名。
 
+需要人工或脚本即时查看同一套判定时，用只读观察命令：
+
+```bash
+lane workflow job-status task-deployer-r003-stage-a-teacher-train-retry2 --json
+```
+
+它读取 Runtime Task 的 `job_handles`，检查 tmux session、`.exitcode`、log ref 和 required artifacts，并返回 `job_observations` 与可能的 `wakeup_candidate`。该命令不写 runtime 状态，也不会把 task 标为 completed/failed；终态仍由 Leader 或明确的 runtime task 命令记录。
+
 需要检查 due task 或长期任务时使用 heartbeat：
 
 ```bash
