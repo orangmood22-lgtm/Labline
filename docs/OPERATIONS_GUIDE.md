@@ -11,6 +11,8 @@
    - [项目生命周期](#项目生命周期)
      - [创建项目](#创建项目)
      - [日常开发](#日常开发)
+     - [运行态状态与心跳](#运行态状态与心跳)
+     - [本地 Debug Smoke](#本地-debug-smoke)
      - [更新框架](#更新框架)
    - [三边架构使用](#三边架构使用)
      - [启动方式](#启动方式)
@@ -295,10 +297,25 @@ Agent 遇到权限/网络/资源阻塞时：
 这些是默认 Runtime Binding，不改变 Role Contract。需要更高质量或更低成本时，可以按部署策略覆盖模型，但不能改变 Leader / Planner / Coder / Deployer / Writer / Reviewer 的职责边界。
 - 输出审查报告（pass/fail + 具体问题）
 
+#### Runtime Task Protocol
+
+Leader / Planner / Coder / Deployer / Writer / Reviewer 都必须遵循 `skills/shared-references/runtime-task-protocol.md`。这不是普通建议，而是 `lane status`、heartbeat 和 auto-wakeup 能正确判断任务是否仍活跃的文件协议。
+
+- 被派生 agent 启动、更新、完成时写自己的 agent status。
+- 长任务必须先写 job handle、日志路径、结果路径和 `next_expected_update`。
+- Leader 创建派生 Runtime Task 时必须带 `--next-expected-update`；缺失会在创建/更新时被拒绝。
+- 需要作为成功条件的产物用 `--required-artifact PATH` 声明；`completed` / `resolved` 前路径必须存在。
+- Reviewer 的终态成功必须带 `--verdict-artifact PATH`，且 verdict 文件必须存在；缺 verdict 不等价于 Reviewer fail，而是派生 Agent 可观测性失败。
+- 重试必须创建新的 Runtime Task id，并用 `--retry-of OLD_TASK_ID` 链回旧尝试；不能复用同一个 task id。
+- 旧任务被新任务、主会话例外或人工决策替代时，Leader 写 `task.superseded` / `task.resolved_by`。
+- Leader 判定旧任务不能恢复时，写带终态 status 的 `leader.decision`。
+- Leader 的嵌入式 Coder/Deployer/Writer prompt 和 Reviewer prompt 模板也必须显式带上 `agent_id`、status 写入要求和 verdict/result artifact 路径；只在 Skill DAG 上声明依赖不够。
+- 缺 status、缺 expected update、缺 terminal artifact、缺 verdict artifact 或缺 resolution 会被框架硬校验为拒绝创建/终态、`stale`、`anomaly` 或 wakeup candidate。
+
 #### 文件协作
 
 各 agent 在同一项目目录通过文件通信：
-- Leader 产出：`refine-logs/EXPERIMENT_PLAN.md`、`PIPELINE_STATE.json`
+- Leader 产出：`refine-logs/EXPERIMENT_PLAN.md`、`.labline/runtime/pipelines/leader.json`、`CLAUDE.md` Pipeline Status
 - Coder 产出：`code/`、测试、偏差记录
 - Deployer 产出：job handle、日志、`refine-logs/EXPERIMENT_RESULTS/`
 - Writer 产出：`paper/`、报告、rebuttal
@@ -499,6 +516,109 @@ bash tools/sync.sh pull
 bash tools/sync.sh deploy --server gpu-server-1
 bash tools/sync.sh status
 ```
+
+#### 运行态状态与心跳
+
+Labline 新项目的机器可读运行态写在项目内 `.labline/runtime/`。这里保存 Runtime Task、事件、lease、heartbeat、watchdog/queue mirror、foreground transport 记录和派生摘要；根目录 `PIPELINE_STATE.json` 只作为旧项目迁移输入，新项目不再创建。
+
+首次需要 runtime 状态时可以显式初始化：
+
+```bash
+lane runtime init
+```
+
+查看当前项目状态：
+
+```bash
+lane status --json
+lane status --brief
+```
+
+`lane status --json` 面向脚本和 bridge；`lane status --brief` 面向人类快速扫描。两者都会从 `.labline/runtime/`、兼容的旧 agent status、queue、watchdog 和 pipeline state 聚合当前状态，并写入 `.labline/runtime/summaries/current.json` / `current.md`。
+
+`lane status --json` 同时输出 `metrics.delegated_agent_observability`。其中 `observability_failure_rate = observability_failures / delegated_agent_tasks`，只统计 Leader 派生 agent 的可观测性失败，不代表实验失败率、Reviewer verdict 失败率或总体任务失败率。`lane workflow wakeup-plan` 会把同一指标透传为 `summary_metrics`，供 Leader 判断当前是否是 executor/transport 健康问题。
+
+Runtime terminal gate 会在 `lane runtime task complete` / `resolved` 类成功终态上检查声明产物：`--required-artifact` 指向的路径必须存在；Reviewer 还必须提供已存在的 `--verdict-artifact`。如果只是缺状态或缺 verdict 文件，按 Delegated Agent Observability Failure 处理，由 Leader 决定是否新建 retry task；runtime 不会自动把旧 task 重试成同一个身份。
+
+短时 Reviewer gate 可以用 foreground transport 明确留下可观测 handle：
+
+```bash
+lane workflow foreground-review task-reviewer-r003-retry2 \
+  --agent-id reviewer-r003-retry2 \
+  --prompt-file prompts/reviewer-r003.md \
+  --verdict-artifact refine-logs/R003_REVIEW.md
+```
+
+该命令会在运行前写入 `cli_session` job handle 和 `.labline/runtime/agents/<agent_id>.json`，执行 `codex exec` 后只有在返回码为 0 且 verdict artifact 存在时才把 Runtime Task 标为 completed；否则标为 failed。`TASK_ID` 使用 `task-reviewer-...`，避免与派生 agent status task `agent:<agent_id>` 的文件名相撞。它用于短 gate、review 和可观测性 retry，不用于训练、部署、下载或其它长任务。
+
+长训练、部署、下载或批量实验需要先暴露 durable handle，再等待产物。优先使用 tmux launcher：
+
+```bash
+lane workflow tmux-job task-deployer-r003-stage-a-teacher-train-retry2 \
+  --agent-id deployer-r003-stage-a-teacher-train-retry2 \
+  --session r003_stage_a_teacher_train_retry2 \
+  --command 'python tools/train.py configs/r003_stage_a_teacher.py --work-dir refine-logs/EXPERIMENT_RESULTS/R003_stage_a_teacher/work_dirs/stage_a_teacher_sanity' \
+  --log refine-logs/EXPERIMENT_RESULTS/R003_stage_a_teacher/stage_a_teacher_train_retry2.log \
+  --required-artifact refine-logs/EXPERIMENT_RESULTS/R003_stage_a_teacher/work_dirs/stage_a_teacher_sanity/epoch_2.pth \
+  --next-expected-update 2026-07-06T18:30:00Z
+```
+
+该命令会启动 tmux session，并写入 Runtime Task `job_handles`、`.labline/runtime/jobs/<job_id>.json`、`.labline/runtime/agents/<agent_id>.json` 和 `job.started` 事件。启动者只负责留下 durable handle，可以在确认 handle 写入后退出；它不代表训练成功。成功仍以 log、session 状态和声明的 `--required-artifact` 为准。`lane workflow wakeup-plan` 会检查 detached tmux session：session 已退出且 required artifact 存在时产生 `detached_job_completed` candidate；session 已退出但 required artifact 缺失时产生 `detached_job_exited` candidate，交给 Leader 检查日志并记录终态。`TASK_ID` 使用 `task-deployer-...`，不要使用 `agent-deployer-...`，避免和派生 agent status task 撞名。
+
+需要检查 due task 或长期任务时使用 heartbeat：
+
+```bash
+lane heartbeat
+lane heartbeat --dry-run
+lane heartbeat --task TASK_ID
+```
+
+默认 heartbeat 是 escalation-gated：正常平台期只写本地 runtime 事件和 heartbeat 状态，不向用户连续推送，也不唤醒 Leader；只有 terminal、blocked、need_decision、anomaly、stale 等需要处理的状态才写 heartbeat escalation，并通过 lease 避免多个入口同时控制同一任务。`lane workflow wakeup-plan` 不要求先运行 heartbeat：未被 `leader.decision` / `task.resolved` / `task.superseded` 处理过、且未被后续 `retry_of` 取代的 `failed` / `cancelled` 终态会直接成为 `terminal_result` wakeup candidate；detached tmux job 结束后也会按 required artifact 是否存在成为 `detached_job_completed` 或 `detached_job_exited` candidate。`ready_to_continue` 表示正常阶段边界已满足，不作为普通 heartbeat escalation；`lane workflow wakeup-plan` 会直接把它归类为 `phase_boundary_ready` wakeup candidate，交给 Leader 做下一步编排。
+
+#### 本地 Debug Smoke
+
+想从用户侧验证一个真实项目是否能跑新 runtime 链路，可以用本地 smoke 命令。默认会复制项目到 debug 工作目录执行，不改源项目，也不需要 Docker：
+
+```bash
+lane debug runtime-smoke --project /path/to/project
+```
+
+需要脚本读取时：
+
+```bash
+lane debug runtime-smoke --project /path/to/project --json
+```
+
+它会检查：
+
+- `lane project update` / `lane project doctor`
+- 根目录不生成新的 `PIPELINE_STATE.json`
+- `lane runtime init`
+- 创建临时 Runtime Task
+- `lane status --json`
+- `lane heartbeat --dry-run` 和真实 heartbeat
+- fake Feishu Remote Observation 路由
+- `.labline/runtime/` 中不泄漏 chat id、open id 或消息正文
+
+报告写到 `$LABLINE_WORKSPACE/.labline/debug/runtime-smoke/.../debug-report.json` 和 `debug-report.md`。只有明确要原地写入当前项目 runtime 时才使用：
+
+```bash
+lane debug runtime-smoke --project . --in-place --yes
+```
+
+如果要验证真实长任务生命周期，而不只验证 runtime/Feishu projection 链路，可以运行本地长任务 smoke。它会启动一个短时本地 Python 进程，把它登记为 supervised detached Runtime Task，先确认运行中 heartbeat 是 healthy，再等待进程结束并确认 terminal heartbeat 产生 escalation：
+
+```bash
+lane debug longtask-smoke --project /path/to/project
+```
+
+需要机器可读报告时：
+
+```bash
+lane debug longtask-smoke --project /path/to/project --json
+```
+
+默认同样是 copy 模式，不改源项目。报告写到 `$LABLINE_WORKSPACE/.labline/debug/longtask-smoke/.../debug-report.json` 和 `debug-report.md`；工作副本里的 `outputs/labline-debug-longtask/` 会保留 `progress.json`、`result.json` 和 `job.log`。
 
 ---
 
@@ -774,6 +894,17 @@ lane feishu logs --tail 50
 lane feishu run --no-proxy
 ```
 
+如果 `--no-proxy` 能连飞书，但 Codex 子进程卡在 `Network unreachable` / `request timed out`，保留 `--no-proxy`，同时只给 agent 子进程设置代理：
+
+```bash
+LABLINE_AGENT_HTTP_PROXY=http://127.0.0.1:[你的代理端口] \
+LABLINE_AGENT_HTTPS_PROXY=http://127.0.0.1:[你的代理端口] \
+LABLINE_AGENT_NO_PROXY=127.0.0.1,localhost,::1 \
+lane feishu run --no-proxy
+```
+
+`LABLINE_AGENT_*_PROXY` 会注入普通 Codex bridge turn 和 `native-codex` auto-wakeup；不会让 Feishu SDK 走代理。
+
 Claude Code 用独立 profile：
 
 ```bash
@@ -782,6 +913,12 @@ lane feishu run --profile lane-claude --agent claude
 ```
 
 飞书入口只是 transport adapter，不是远程 shell，也不替代 Leader。实际代码修改、工具执行和权限判断仍发生在本地 Codex/Claude Code session 中。详细配置见 `docs/FEISHU_INTEGRATION.md`。
+
+远控长任务不要占住当前飞书卡片。预计超过 3 分钟的安装、编译、下载、训练、部署、批量评估或长时间等待，必须先写 `.labline/runtime/` 状态和 durable job handle；Leader 最多短等 120 秒后收口，后续通过 `/status`、`/follow`、heartbeat 或 monitor 投影。普通 progress 由当前 workspace/project 的 `/follow` poller 节流更新同一张投影状态卡；换 bridge profile 后应在新 bot chat 里重新 `/follow`，只有确认新旧 profile 使用同一个可投递 bot/chat 权限时才开启 `LABLINE_PROJECTION_INCLUDE_CROSS_PROFILE=1`。completed、failed、cancelled、blocked、need_decision、anomaly、heartbeat escalation、phase_boundary_ready wakeup，以及卡片长时间停在“正在调用工具/正在输出”等旧阶段时的 `stale_projection` 提示，才需要新的可见推送；`stale_projection` 只表示飞书显示可能过期，不表示任务失败。
+
+普通飞书消息的 streaming card 也有显示层兜底，不要求用户提前判断是否是长任务。bridge 会优先更新原卡片；如果 stream/update 报错、update 超时，或运行中健康探针发现上一张卡片已经不能确认更新，会自动发新的续接卡片并继续在新卡片上更新。若 profile 使用 markdown streaming，终态更新会等待 Feishu markdown card 的 throttle flush 和 update queue drain，并默认 fetch 校验原 streaming message 是否仍含“正在调用工具/正在输出/正在思考”；若校验失败或仍是旧运行态，会额外发送一条普通 markdown 终态镜像。续接卡片和终态镜像只是显示通道兜底，不表示本地 Codex 任务重启；如需完全关闭终态镜像，可设置 `LABLINE_MARKDOWN_TERMINAL_FALLBACK_ENABLED=off`。
+
+需要自动唤醒 Leader 时，按 profile 显式设置 `LABLINE_AUTO_WAKEUP_ENABLED=1` 并重启 bridge。启用后 bridge 只做轻量触发：定时运行 `lane workflow wakeup-plan`，当 runtime escalation、未处理的 `failed` / `cancelled` terminal Runtime Task、detached tmux job 已退出且需要 Leader 检查 artifact/log，或 `phase_boundary_ready` candidate 可接手且 `leader_session` lease 可用时，启动 `lane workflow wakeup --backend native-codex`。去重、lease、prompt、完成/失败记录都写在 `.labline/runtime/`；高风险 control intent 仍需要人工确认，不会被自动执行。若确认同一 `wakeup_key` 的上一次唤醒没有真正接手，可以先用 `lane workflow wakeup-plan --force` 预览，再用 `lane workflow wakeup --force --backend native-codex` 重试；`--force` 只绕过去重，不绕过高风险确认和 `leader_session` lease。`native-codex` wakeup 默认用 `codex exec -s danger-full-access`，不依赖 `bwrap` sandbox；如需收紧可设置 `LABLINE_AUTO_WAKEUP_CODEX_SANDBOX=workspace-write|read-only` 或传 `--codex-sandbox`。bridge 会把 started、completed、failed、非健康 skip 和 `needs_confirmation` 发到当前 profile/project 的 active `/follow` chat；也可用 `LABLINE_AUTO_WAKEUP_CHAT_ID` 指定固定投递 chat。跨 profile 通知默认关闭，只有确认同一个 bot 可以投递目标 chat 时才开启 `LABLINE_AUTO_WAKEUP_INCLUDE_CROSS_PROFILE=1`。同一检查结果按 `LABLINE_AUTO_WAKEUP_NOTICE_THROTTLE_MS` 限流。用户可见的自动唤醒结论默认使用中文解释，英文只保留在必要的标识符、路径、状态值中。
 
 多人共用同一台服务器、同一 Linux 账户时，至少用不同 `--home`、`--profile` 和 `--workspace` 隔离：
 

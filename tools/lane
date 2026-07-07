@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
+import textwrap
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -1942,6 +1944,775 @@ def emit_framework_update_status(args: argparse.Namespace, framework: Path, data
     return returncode
 
 
+def cmd_runtime_init(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_init(args)
+
+
+def cmd_runtime_event_append(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_event_append(args)
+
+
+def cmd_runtime_task_get(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_get(args)
+
+
+def cmd_runtime_task_list(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_list(args)
+
+
+def cmd_runtime_task_create(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_create(args)
+
+
+def cmd_runtime_task_update(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_update(args)
+
+
+def cmd_runtime_task_complete(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_complete(args)
+
+
+def cmd_runtime_task_fail(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_fail(args)
+
+
+def cmd_runtime_task_cancel(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_task_cancel(args)
+
+
+def cmd_runtime_lease_acquire(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_lease_acquire(args)
+
+
+def cmd_runtime_lease_release(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_lease_release(args)
+
+
+def cmd_runtime_lease_status(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_lease_status(args)
+
+
+def cmd_runtime_intent_submit(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_intent_submit(args)
+
+
+def cmd_runtime_summarize(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_summarize(args)
+
+
+def cmd_heartbeat(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_heartbeat(args)
+
+
+def cmd_workflow_wakeup_plan(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_wakeup_plan(args)
+
+
+def cmd_workflow_wakeup(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_wakeup(args)
+
+
+def cmd_workflow_foreground_review(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_foreground_review(args)
+
+
+def cmd_workflow_tmux_job(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_tmux_job(args)
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    return load_labline_runtime().cmd_status(args)
+
+
+def load_labline_runtime():
+    path = REPO_ROOT / "tools" / "labline_runtime.py"
+    spec = importlib.util.spec_from_file_location("labline_runtime", path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"cannot load runtime helper: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def limit_debug_text(value: str, limit: int = 4000) -> str:
+    if len(value) <= limit:
+        return value
+    return value[:limit] + "\n...<truncated>"
+
+
+def debug_runtime_smoke_report_dir(args: argparse.Namespace, source_project: Path) -> tuple[Path, str]:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    if args.report_dir:
+        return args.report_dir.expanduser().resolve(), stamp
+    return state_root() / "debug" / "runtime-smoke" / f"{stamp}-{sanitize_slug(source_project.name)}", stamp
+
+
+def debug_longtask_smoke_report_dir(args: argparse.Namespace, source_project: Path) -> tuple[Path, str]:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    if args.report_dir:
+        return args.report_dir.expanduser().resolve(), stamp
+    return state_root() / "debug" / "longtask-smoke" / f"{stamp}-{sanitize_slug(source_project.name)}", stamp
+
+
+def copy_project_for_runtime_smoke(source: Path, destination: Path) -> None:
+    ignore = shutil.ignore_patterns(
+        ".git",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".venv",
+        "venv",
+        "node_modules",
+        "outputs",
+        "wandb",
+        "datasets",
+        "*.pth",
+        "*.pt",
+        "*.onnx",
+        "*.tar.gz",
+        "*.zip",
+    )
+    shutil.copytree(source, destination, symlinks=True, ignore=ignore)
+
+
+def append_debug_check(checks: list[dict], name: str, status: str, details: dict | None = None) -> None:
+    checks.append({"name": name, "status": status, "details": details or {}})
+
+
+def run_debug_subprocess(name: str, cmd: list[str], cwd: Path, env: dict[str, str], checks: list[dict]) -> subprocess.CompletedProcess:
+    result = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, env=env)
+    details = {
+        "cmd": cmd,
+        "returncode": result.returncode,
+        "stdout": limit_debug_text(result.stdout),
+        "stderr": limit_debug_text(result.stderr),
+    }
+    append_debug_check(checks, name, "pass" if result.returncode == 0 else "fail", details)
+    if result.returncode != 0:
+        raise RuntimeError(f"{name} failed")
+    return result
+
+
+def runtime_tree_text(project: Path) -> str:
+    root = project / STATE_DIR_NAME / "runtime"
+    if not root.exists():
+        return ""
+    chunks = []
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            chunks.append(path.read_text(encoding="utf-8", errors="replace"))
+    return "\n".join(chunks)
+
+
+def write_runtime_smoke_reports(report: dict, report_dir: Path) -> tuple[Path, Path]:
+    report_json = report_dir / "debug-report.json"
+    report_md = report_dir / "debug-report.md"
+    report["report_json"] = str(report_json)
+    report["report_md"] = str(report_md)
+    report_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    lines = [
+        "# Labline Runtime Smoke Report",
+        "",
+        f"status: {report['status']}",
+        f"source_project: {report['source_project']}",
+        f"working_project: {report['working_project']}",
+        f"in_place: {str(report['in_place']).lower()}",
+        "",
+        "| check | status |",
+        "|---|---|",
+    ]
+    for check in report["checks"]:
+        lines.append(f"| {check['name']} | {check['status']} |")
+    report_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report_json, report_md
+
+
+def debug_longtask_inline_script() -> str:
+    return textwrap.dedent(
+        """
+        from __future__ import annotations
+
+        import json
+        import os
+        import sys
+        import time
+        from datetime import datetime, timezone
+        from pathlib import Path
+
+        def utc_now() -> str:
+            return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+        def write_json(path: Path, payload: dict) -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+            tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+            tmp.replace(path)
+
+        seconds = int(sys.argv[1])
+        out_dir = Path(sys.argv[2])
+        interval = float(sys.argv[3])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        progress_path = out_dir / "progress.json"
+        result_path = out_dir / "result.json"
+        started_at = utc_now()
+        deadline = time.monotonic() + seconds
+        step = 0
+        while True:
+            remaining = max(0.0, deadline - time.monotonic())
+            write_json(
+                progress_path,
+                {
+                    "status": "running" if remaining > 0 else "completed",
+                    "pid": os.getpid(),
+                    "step": step,
+                    "started_at": started_at,
+                    "updated_at": utc_now(),
+                    "target_seconds": seconds,
+                    "result_path": str(result_path),
+                },
+            )
+            print(f"[debug-longtask] step={step} remaining={remaining:.1f}s", flush=True)
+            if remaining <= 0:
+                break
+            step += 1
+            time.sleep(min(interval, remaining))
+        write_json(
+            result_path,
+            {
+                "status": "completed",
+                "pid": os.getpid(),
+                "started_at": started_at,
+                "completed_at": utc_now(),
+                "target_seconds": seconds,
+                "steps": step + 1,
+            },
+        )
+        print(f"[debug-longtask] completed result={result_path}", flush=True)
+        """
+    )
+
+
+def cmd_debug_runtime_smoke(args: argparse.Namespace) -> int:
+    if args.in_place and not args.yes:
+        print("--in-place requires --yes because it mutates the target project", file=sys.stderr)
+        return 2
+
+    framework = resolve_labline_repo(args)
+    source_project = args.project.expanduser().resolve()
+    if not source_project.is_dir():
+        print(f"project not found: {source_project}", file=sys.stderr)
+        return 2
+
+    report_dir, stamp = debug_runtime_smoke_report_dir(args, source_project)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    workspace = report_dir / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    bridge_state = report_dir / "bridge-state"
+    working_project = source_project if args.in_place else report_dir / "work-project"
+    checks: list[dict] = []
+    report = {
+        "schema_version": 1,
+        "status": "running",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "source_project": str(source_project),
+        "working_project": str(working_project),
+        "framework": str(framework),
+        "report_dir": str(report_dir),
+        "in_place": bool(args.in_place),
+        "workspace": str(workspace),
+        "bridge_state": str(bridge_state),
+        "checks": checks,
+    }
+
+    env = os.environ.copy()
+    env["LABLINE_WORKSPACE"] = str(workspace)
+    lane_bin = Path(__file__).resolve()
+    remote_observation = framework / "tools" / "labline_remote_observation.py"
+
+    try:
+        if args.in_place:
+            append_debug_check(checks, "prepare_work_project", "pass", {"mode": "in_place"})
+        else:
+            if working_project.exists():
+                shutil.rmtree(working_project)
+            copy_project_for_runtime_smoke(source_project, working_project)
+            append_debug_check(checks, "prepare_work_project", "pass", {"mode": "copy", "ignored_heavy_paths": True})
+
+        run_debug_subprocess(
+            "project_update",
+            [sys.executable, str(lane_bin), "project", "update", str(working_project), "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        run_debug_subprocess(
+            "project_doctor",
+            [sys.executable, str(lane_bin), "project", "doctor", str(working_project), "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+
+        pipeline_state = working_project / "PIPELINE_STATE.json"
+        append_debug_check(checks, "no_root_pipeline_state", "pass" if not pipeline_state.exists() else "fail", {"path": str(pipeline_state)})
+        if pipeline_state.exists():
+            raise RuntimeError("root PIPELINE_STATE.json exists")
+
+        run_debug_subprocess(
+            "runtime_init",
+            [sys.executable, str(lane_bin), "runtime", "init", "--project", str(working_project), "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        task_id = f"debug_smoke_{sanitize_slug(stamp)}"
+        run_debug_subprocess(
+            "runtime_task_create",
+            [
+                sys.executable,
+                str(lane_bin),
+                "runtime",
+                "task",
+                "create",
+                task_id,
+                "--project",
+                str(working_project),
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+                "--kind",
+                "debug",
+                "--title",
+                "debug runtime smoke task",
+                "--execution-mode",
+                "agent_turn",
+                "--durability",
+                "resumable",
+                "--observation",
+                "enabled",
+                "--heartbeat",
+                "passive",
+                "--status",
+                "running",
+                "--next-expected-update",
+                "1970-01-01T00:00:00Z",
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        status_result = run_debug_subprocess(
+            "status_json",
+            [sys.executable, str(lane_bin), "status", "--project", str(working_project), "--json", "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        status_payload = json.loads(status_result.stdout)
+        if status_payload.get("source_counts", {}).get("runtime_tasks", 0) < 1:
+            checks[-1]["status"] = "fail"
+            checks[-1]["details"]["reason"] = "runtime_tasks not aggregated"
+            raise RuntimeError("status_json did not aggregate runtime task")
+
+        now = args.now or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        run_debug_subprocess(
+            "heartbeat_dry_run",
+            [
+                sys.executable,
+                str(lane_bin),
+                "heartbeat",
+                "--project",
+                str(working_project),
+                "--dry-run",
+                "--task",
+                task_id,
+                "--now",
+                now,
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        heartbeat_result = run_debug_subprocess(
+            "heartbeat",
+            [
+                sys.executable,
+                str(lane_bin),
+                "heartbeat",
+                "--project",
+                str(working_project),
+                "--task",
+                task_id,
+                "--now",
+                now,
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        heartbeat_payload = json.loads(heartbeat_result.stdout)
+        if heartbeat_payload.get("action_counts", {}).get("healthy", 0) < 1:
+            checks[-1]["status"] = "fail"
+            checks[-1]["details"]["reason"] = "healthy heartbeat action missing"
+            raise RuntimeError("heartbeat did not record a healthy check")
+
+        archive_result = run_debug_subprocess(
+            "remote_archive_message",
+            [
+                sys.executable,
+                str(remote_observation),
+                "--state-root",
+                str(bridge_state),
+                "archive-message",
+                "--profile",
+                "labline-debug",
+                "--workspace",
+                "debug-workspace",
+                "--chat-id",
+                "oc_debug_secret",
+                "--sender-open-id",
+                "ou_debug_secret",
+                "--message-id",
+                "om_debug_001",
+                "--text",
+                "现在怎么样了",
+                "--now",
+                now,
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        archive_ref = json.loads(archive_result.stdout)["archive_ref"]
+        route_result = run_debug_subprocess(
+            "remote_observation_route",
+            [
+                sys.executable,
+                str(remote_observation),
+                "--state-root",
+                str(bridge_state),
+                "route-message",
+                "--project",
+                str(working_project),
+                "--profile",
+                "labline-debug",
+                "--workspace",
+                "debug-workspace",
+                "--archive-ref",
+                archive_ref,
+                "--chat-id",
+                "oc_debug_secret",
+                "--sender-open-id",
+                "ou_debug_secret",
+                "--text",
+                "现在怎么样了",
+                "--now",
+                now,
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        route_payload = json.loads(route_result.stdout)
+        checks[-1]["details"]["route"] = route_payload.get("route")
+        checks[-1]["details"]["inject_tui"] = route_payload.get("inject_tui")
+        if route_payload.get("route") != "observation" or route_payload.get("inject_tui") is not False:
+            checks[-1]["status"] = "fail"
+            raise RuntimeError("remote message did not route to observation")
+
+        runtime_text = runtime_tree_text(working_project)
+        leaked = [value for value in ["oc_debug_secret", "ou_debug_secret", "现在怎么样了"] if value in runtime_text]
+        append_debug_check(checks, "no_remote_identity_leak", "pass" if not leaked else "fail", {"leaked": leaked})
+        if leaked:
+            raise RuntimeError("remote identity or text leaked into project runtime")
+
+        report["status"] = "pass"
+    except Exception as exc:
+        if not any(check.get("status") == "fail" for check in checks):
+            append_debug_check(checks, "internal_error", "fail", {"error": str(exc)})
+        report["status"] = "fail"
+        report["error"] = str(exc)
+    finally:
+        write_runtime_smoke_reports(report, report_dir)
+
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(f"status: {report['status']}")
+        print(f"report: {report['report_md']}")
+        print(f"json: {report['report_json']}")
+        print(f"working_project: {report['working_project']}")
+    return 0 if report["status"] == "pass" else 1
+
+
+def cmd_debug_longtask_smoke(args: argparse.Namespace) -> int:
+    if args.in_place and not args.yes:
+        print("--in-place requires --yes because it mutates the target project", file=sys.stderr)
+        return 2
+    if args.seconds <= 0:
+        print("--seconds must be positive", file=sys.stderr)
+        return 2
+
+    framework = resolve_labline_repo(args)
+    source_project = args.project.expanduser().resolve()
+    if not source_project.is_dir():
+        print(f"project not found: {source_project}", file=sys.stderr)
+        return 2
+
+    report_dir, stamp = debug_longtask_smoke_report_dir(args, source_project)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    workspace = report_dir / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    working_project = source_project if args.in_place else report_dir / "work-project"
+    checks: list[dict] = []
+    report = {
+        "schema_version": 1,
+        "status": "running",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "source_project": str(source_project),
+        "working_project": str(working_project),
+        "framework": str(framework),
+        "report_dir": str(report_dir),
+        "in_place": bool(args.in_place),
+        "workspace": str(workspace),
+        "checks": checks,
+    }
+
+    env = os.environ.copy()
+    env["LABLINE_WORKSPACE"] = str(workspace)
+    lane_bin = Path(__file__).resolve()
+    process: subprocess.Popen | None = None
+
+    try:
+        if args.in_place:
+            append_debug_check(checks, "prepare_work_project", "pass", {"mode": "in_place"})
+        else:
+            if working_project.exists():
+                shutil.rmtree(working_project)
+            copy_project_for_runtime_smoke(source_project, working_project)
+            append_debug_check(checks, "prepare_work_project", "pass", {"mode": "copy", "ignored_heavy_paths": True})
+
+        run_debug_subprocess(
+            "project_update",
+            [sys.executable, str(lane_bin), "project", "update", str(working_project), "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        run_debug_subprocess(
+            "project_doctor",
+            [sys.executable, str(lane_bin), "project", "doctor", str(working_project), "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        pipeline_state = working_project / "PIPELINE_STATE.json"
+        append_debug_check(checks, "no_root_pipeline_state", "pass" if not pipeline_state.exists() else "fail", {"path": str(pipeline_state)})
+        if pipeline_state.exists():
+            raise RuntimeError("root PIPELINE_STATE.json exists")
+
+        run_debug_subprocess(
+            "runtime_init",
+            [sys.executable, str(lane_bin), "runtime", "init", "--project", str(working_project), "--labline-repo", str(framework), "--quiet"],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+
+        out_dir = working_project / "outputs" / "labline-debug-longtask"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        log_path = out_dir / "job.log"
+        progress_path = out_dir / "progress.json"
+        result_path = out_dir / "result.json"
+        log_handle = log_path.open("w", encoding="utf-8")
+        process = subprocess.Popen(
+            [sys.executable, "-c", debug_longtask_inline_script(), str(args.seconds), str(out_dir), str(args.interval)],
+            cwd=str(working_project),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+        )
+        log_handle.close()
+        append_debug_check(checks, "longtask_process_start", "pass", {"pid": process.pid, "log": str(log_path), "seconds": args.seconds})
+
+        task_id = f"debug_longtask_{sanitize_slug(stamp)}"
+        job_handle = json.dumps(
+            {
+                "type": "local_process",
+                "pid": process.pid,
+                "log": str(log_path.relative_to(working_project)),
+                "progress": str(progress_path.relative_to(working_project)),
+                "result": str(result_path.relative_to(working_project)),
+            },
+            ensure_ascii=False,
+        )
+        run_debug_subprocess(
+            "runtime_task_create_detached",
+            [
+                sys.executable,
+                str(lane_bin),
+                "runtime",
+                "task",
+                "create",
+                task_id,
+                "--project",
+                str(working_project),
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+                "--kind",
+                "debug",
+                "--title",
+                "debug detached long task smoke",
+                "--execution-mode",
+                "detached_job",
+                "--durability",
+                "supervised",
+                "--observation",
+                "enabled",
+                "--heartbeat",
+                "passive",
+                "--status",
+                "running",
+                "--current-action",
+                "local debug long task running",
+                "--next-expected-update",
+                "1970-01-01T00:00:00Z",
+                "--next-check-reason",
+                "debug longtask smoke",
+                "--job-handle",
+                job_handle,
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+
+        now_running = args.now_running or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        running_hb = run_debug_subprocess(
+            "heartbeat_running",
+            [
+                sys.executable,
+                str(lane_bin),
+                "heartbeat",
+                "--project",
+                str(working_project),
+                "--task",
+                task_id,
+                "--now",
+                now_running,
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        running_payload = json.loads(running_hb.stdout)
+        healthy = running_payload.get("action_counts", {}).get("healthy", 0)
+        checks[-1]["details"]["healthy"] = healthy
+        if healthy < 1:
+            checks[-1]["status"] = "fail"
+            raise RuntimeError("running heartbeat did not record healthy action")
+
+        timeout = max(args.seconds + 10, 10)
+        try:
+            returncode = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            process.kill()
+            process.wait(timeout=5)
+            append_debug_check(checks, "longtask_process_wait", "fail", {"timeout": timeout, "pid": process.pid})
+            raise RuntimeError("long task timed out") from exc
+        process = None
+        append_debug_check(checks, "longtask_process_wait", "pass" if returncode == 0 else "fail", {"returncode": returncode, "result": str(result_path)})
+        if returncode != 0:
+            raise RuntimeError("long task process failed")
+        if not result_path.exists():
+            checks[-1]["status"] = "fail"
+            checks[-1]["details"]["reason"] = "result missing"
+            raise RuntimeError("long task result missing")
+
+        run_debug_subprocess(
+            "runtime_task_complete",
+            [
+                sys.executable,
+                str(lane_bin),
+                "runtime",
+                "task",
+                "complete",
+                task_id,
+                "--project",
+                str(working_project),
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+                "--artifact",
+                str(result_path.relative_to(working_project)),
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+
+        now_terminal = args.now_terminal or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        terminal_hb = run_debug_subprocess(
+            "heartbeat_terminal",
+            [
+                sys.executable,
+                str(lane_bin),
+                "heartbeat",
+                "--project",
+                str(working_project),
+                "--task",
+                task_id,
+                "--now",
+                now_terminal,
+                "--labline-repo",
+                str(framework),
+                "--quiet",
+            ],
+            cwd=working_project,
+            env=env,
+            checks=checks,
+        )
+        terminal_payload = json.loads(terminal_hb.stdout)
+        escalated = terminal_payload.get("action_counts", {}).get("escalated", 0)
+        checks[-1]["details"]["escalated"] = escalated
+        if escalated < 1:
+            checks[-1]["status"] = "fail"
+            raise RuntimeError("terminal heartbeat did not escalate")
+
+        report["status"] = "pass"
+    except Exception as exc:
+        if process and process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+        if not any(check.get("status") == "fail" for check in checks):
+            append_debug_check(checks, "internal_error", "fail", {"error": str(exc)})
+        report["status"] = "fail"
+        report["error"] = str(exc)
+    finally:
+        write_runtime_smoke_reports(report, report_dir)
+
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(f"status: {report['status']}")
+        print(f"report: {report['report_md']}")
+        print(f"json: {report['report_json']}")
+        print(f"working_project: {report['working_project']}")
+    return 0 if report["status"] == "pass" else 1
+
+
 def notify_framework_update_once_per_day(framework: Path, data: dict, returncode: int = 0) -> int:
     if data.get("status") != "update available":
         return returncode
@@ -2005,6 +2776,38 @@ def add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--quiet", action="store_true")
 
 
+def add_runtime_common(p: argparse.ArgumentParser) -> None:
+    add_common(p)
+    p.add_argument("--project", type=Path)
+
+
+def add_runtime_task_write_args(p: argparse.ArgumentParser, include_create_required: bool = False) -> None:
+    add_runtime_common(p)
+    p.add_argument("--kind", required=include_create_required)
+    p.add_argument("--title", required=include_create_required)
+    p.add_argument("--owner")
+    p.add_argument("--parent-task-id")
+    p.add_argument("--execution-mode", choices=["agent_turn", "detached_job", "inline"])
+    p.add_argument("--durability", choices=["ephemeral", "resumable", "supervised"])
+    p.add_argument("--observation", choices=["disabled", "enabled"])
+    p.add_argument("--heartbeat", choices=["escalation_gated", "none", "passive"])
+    p.add_argument("--status")
+    p.add_argument("--current-action")
+    p.add_argument("--next-expected-update")
+    p.add_argument("--next-check-reason")
+    p.add_argument("--job-handle", action="append", default=[])
+    p.add_argument("--artifact", action="append", default=[])
+    p.add_argument("--required-artifact", action="append", default=[])
+    p.add_argument("--verdict-artifact")
+    p.add_argument("--retry-of")
+    p.add_argument("--supersedes")
+    p.add_argument("--blocker")
+
+
+def add_runtime_now_arg(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--now")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="lane")
     add_common(p)
@@ -2053,6 +2856,218 @@ def build_parser() -> argparse.ArgumentParser:
     feishu = sub.add_parser("feishu")
     add_common(feishu)
     feishu_sub = feishu.add_subparsers(dest="feishu_command", required=True)
+
+    runtime = sub.add_parser("runtime")
+    add_common(runtime)
+    runtime_sub = runtime.add_subparsers(dest="runtime_command", required=True)
+
+    runtime_init = runtime_sub.add_parser("init")
+    add_runtime_common(runtime_init)
+    runtime_init.set_defaults(func=cmd_runtime_init)
+
+    runtime_event = runtime_sub.add_parser("event")
+    add_common(runtime_event)
+    runtime_event_sub = runtime_event.add_subparsers(dest="runtime_event_command", required=True)
+
+    runtime_event_append = runtime_event_sub.add_parser("append")
+    add_runtime_common(runtime_event_append)
+    runtime_event_append.add_argument("--type", dest="event_type", required=True)
+    runtime_event_append.add_argument("--task-id")
+    runtime_event_append.add_argument("--json", dest="json_payload")
+    runtime_event_append.set_defaults(func=cmd_runtime_event_append)
+
+    runtime_task = runtime_sub.add_parser("task")
+    add_common(runtime_task)
+    runtime_task_sub = runtime_task.add_subparsers(dest="runtime_task_command", required=True)
+
+    runtime_task_get = runtime_task_sub.add_parser("get")
+    add_runtime_common(runtime_task_get)
+    runtime_task_get.add_argument("task_id")
+    runtime_task_get.set_defaults(func=cmd_runtime_task_get)
+
+    runtime_task_list = runtime_task_sub.add_parser("list")
+    add_runtime_common(runtime_task_list)
+    runtime_task_list.set_defaults(func=cmd_runtime_task_list)
+
+    runtime_task_create = runtime_task_sub.add_parser("create")
+    runtime_task_create.add_argument("task_id")
+    add_runtime_task_write_args(runtime_task_create, include_create_required=True)
+    runtime_task_create.set_defaults(func=cmd_runtime_task_create)
+
+    runtime_task_update = runtime_task_sub.add_parser("update")
+    runtime_task_update.add_argument("task_id")
+    add_runtime_task_write_args(runtime_task_update)
+    runtime_task_update.set_defaults(func=cmd_runtime_task_update)
+
+    runtime_task_complete = runtime_task_sub.add_parser("complete")
+    runtime_task_complete.add_argument("task_id")
+    add_runtime_task_write_args(runtime_task_complete)
+    runtime_task_complete.set_defaults(func=cmd_runtime_task_complete)
+
+    runtime_task_fail = runtime_task_sub.add_parser("fail")
+    runtime_task_fail.add_argument("task_id")
+    add_runtime_task_write_args(runtime_task_fail)
+    runtime_task_fail.set_defaults(func=cmd_runtime_task_fail)
+
+    runtime_task_cancel = runtime_task_sub.add_parser("cancel")
+    runtime_task_cancel.add_argument("task_id")
+    add_runtime_task_write_args(runtime_task_cancel)
+    runtime_task_cancel.set_defaults(func=cmd_runtime_task_cancel)
+
+    runtime_lease = runtime_sub.add_parser("lease")
+    add_common(runtime_lease)
+    runtime_lease_sub = runtime_lease.add_subparsers(dest="runtime_lease_command", required=True)
+
+    runtime_lease_acquire = runtime_lease_sub.add_parser("acquire")
+    add_runtime_common(runtime_lease_acquire)
+    runtime_lease_acquire.add_argument("lease_id")
+    runtime_lease_acquire.add_argument("--owner", required=True)
+    runtime_lease_acquire.add_argument("--ttl", type=int, required=True)
+    runtime_lease_acquire.add_argument("--purpose", required=True)
+    add_runtime_now_arg(runtime_lease_acquire)
+    runtime_lease_acquire.set_defaults(func=cmd_runtime_lease_acquire)
+
+    runtime_lease_release = runtime_lease_sub.add_parser("release")
+    add_runtime_common(runtime_lease_release)
+    runtime_lease_release.add_argument("lease_id")
+    runtime_lease_release.add_argument("--owner", required=True)
+    runtime_lease_release.set_defaults(func=cmd_runtime_lease_release)
+
+    runtime_lease_status = runtime_lease_sub.add_parser("status")
+    add_runtime_common(runtime_lease_status)
+    runtime_lease_status.add_argument("lease_id", nargs="?")
+    add_runtime_now_arg(runtime_lease_status)
+    runtime_lease_status.set_defaults(func=cmd_runtime_lease_status)
+
+    runtime_intent = runtime_sub.add_parser("intent")
+    add_common(runtime_intent)
+    runtime_intent_sub = runtime_intent.add_subparsers(dest="runtime_intent_command", required=True)
+
+    runtime_intent_submit = runtime_intent_sub.add_parser("submit")
+    add_runtime_common(runtime_intent_submit)
+    runtime_intent_submit.add_argument("--intent-id")
+    runtime_intent_submit.add_argument("--action", required=True)
+    runtime_intent_submit.add_argument("--risk-level", required=True, choices=["high", "low", "medium"])
+    runtime_intent_submit.add_argument("--confirmation-status", required=True, choices=["confirmed", "not_required", "rejected", "required"])
+    runtime_intent_submit.add_argument("--target", default="{}")
+    runtime_intent_submit.add_argument("--source-entry", default="local")
+    runtime_intent_submit.add_argument("--archive-ref")
+    runtime_intent_submit.add_argument("--lease-scope", required=True)
+    add_runtime_now_arg(runtime_intent_submit)
+    runtime_intent_submit.set_defaults(func=cmd_runtime_intent_submit)
+
+    runtime_summarize = runtime_sub.add_parser("summarize")
+    add_runtime_common(runtime_summarize)
+    runtime_summarize.add_argument("--json", dest="json_output", action="store_true")
+    runtime_summarize.add_argument("--brief", action="store_true")
+    runtime_summarize.set_defaults(func=cmd_runtime_summarize)
+
+    status = sub.add_parser("status")
+    add_runtime_common(status)
+    status.add_argument("--json", dest="json_output", action="store_true")
+    status.add_argument("--brief", action="store_true")
+    status.set_defaults(func=cmd_status)
+
+    heartbeat = sub.add_parser("heartbeat")
+    add_runtime_common(heartbeat)
+    heartbeat.add_argument("--dry-run", action="store_true")
+    heartbeat.add_argument("--task", dest="task_id")
+    heartbeat.add_argument("--runner", default="local-heartbeat")
+    heartbeat.add_argument("--lease-ttl", type=int, default=60)
+    heartbeat.add_argument("--force", action="store_true")
+    add_runtime_now_arg(heartbeat)
+    heartbeat.set_defaults(func=cmd_heartbeat)
+
+    workflow = sub.add_parser("workflow")
+    add_common(workflow)
+    workflow_sub = workflow.add_subparsers(dest="workflow_command", required=True)
+
+    wakeup_plan = workflow_sub.add_parser("wakeup-plan")
+    add_runtime_common(wakeup_plan)
+    wakeup_plan.add_argument("--json", dest="json_output", action="store_true")
+    wakeup_plan.add_argument("--task", dest="task_id")
+    wakeup_plan.add_argument("--owner", default="labline-wakeup")
+    wakeup_plan.add_argument("--force", action="store_true")
+    add_runtime_now_arg(wakeup_plan)
+    wakeup_plan.set_defaults(func=cmd_workflow_wakeup_plan)
+
+    wakeup = workflow_sub.add_parser("wakeup")
+    add_runtime_common(wakeup)
+    wakeup.add_argument("--json", dest="json_output", action="store_true")
+    wakeup.add_argument("--task", dest="task_id")
+    wakeup.add_argument("--owner", default="labline-wakeup")
+    wakeup.add_argument("--force", action="store_true")
+    wakeup.add_argument("--lease-ttl", type=int, default=600)
+    wakeup.add_argument("--backend", choices=["native-codex", "prompt-only"], default="prompt-only")
+    wakeup.add_argument("--codex-bin", default="codex")
+    wakeup.add_argument("--codex-profile")
+    wakeup.add_argument("--codex-sandbox", choices=["danger-full-access", "read-only", "workspace-write"])
+    wakeup.add_argument("--codex-timeout", type=int, default=600)
+    add_runtime_now_arg(wakeup)
+    wakeup.set_defaults(func=cmd_workflow_wakeup)
+
+    foreground_review = workflow_sub.add_parser("foreground-review")
+    add_runtime_common(foreground_review)
+    foreground_review.add_argument("task_id")
+    foreground_review.add_argument("--json", dest="json_output", action="store_true")
+    foreground_review.add_argument("--agent-id", required=True)
+    foreground_review.add_argument("--role", default="Reviewer")
+    foreground_review.add_argument("--prompt-file", type=Path, required=True)
+    foreground_review.add_argument("--verdict-artifact", required=True)
+    foreground_review.add_argument("--review-independence", default="fresh_original_inputs")
+    foreground_review.add_argument("--next-expected-update")
+    foreground_review.add_argument("--next-check-reason")
+    foreground_review.add_argument("--codex-bin", default="codex")
+    foreground_review.add_argument("--codex-profile")
+    foreground_review.add_argument("--codex-sandbox", choices=["danger-full-access", "read-only", "workspace-write"])
+    foreground_review.add_argument("--codex-timeout", type=int, default=600)
+    add_runtime_now_arg(foreground_review)
+    foreground_review.set_defaults(func=cmd_workflow_foreground_review)
+
+    tmux_job = workflow_sub.add_parser("tmux-job")
+    add_runtime_common(tmux_job)
+    tmux_job.add_argument("task_id")
+    tmux_job.add_argument("--json", dest="json_output", action="store_true")
+    tmux_job.add_argument("--agent-id", required=True)
+    tmux_job.add_argument("--role", default="Deployer")
+    tmux_job.add_argument("--title")
+    tmux_job.add_argument("--session", required=True)
+    tmux_job.add_argument("--command", required=True)
+    tmux_job.add_argument("--log", type=Path, required=True)
+    tmux_job.add_argument("--current-action")
+    tmux_job.add_argument("--next-expected-update")
+    tmux_job.add_argument("--next-check-reason")
+    tmux_job.add_argument("--required-artifact", action="append")
+    tmux_job.add_argument("--tmux-bin", default="tmux")
+    add_runtime_now_arg(tmux_job)
+    tmux_job.set_defaults(func=cmd_workflow_tmux_job)
+
+    debug = sub.add_parser("debug")
+    add_common(debug)
+    debug_sub = debug.add_subparsers(dest="debug_command", required=True)
+
+    runtime_smoke = debug_sub.add_parser("runtime-smoke")
+    add_common(runtime_smoke)
+    runtime_smoke.add_argument("--project", type=Path, default=Path("."))
+    runtime_smoke.add_argument("--in-place", action="store_true")
+    runtime_smoke.add_argument("--yes", action="store_true")
+    runtime_smoke.add_argument("--report-dir", type=Path)
+    runtime_smoke.add_argument("--json", dest="json", action="store_true")
+    runtime_smoke.add_argument("--now")
+    runtime_smoke.set_defaults(func=cmd_debug_runtime_smoke)
+
+    longtask_smoke = debug_sub.add_parser("longtask-smoke")
+    add_common(longtask_smoke)
+    longtask_smoke.add_argument("--project", type=Path, default=Path("."))
+    longtask_smoke.add_argument("--in-place", action="store_true")
+    longtask_smoke.add_argument("--yes", action="store_true")
+    longtask_smoke.add_argument("--report-dir", type=Path)
+    longtask_smoke.add_argument("--json", dest="json", action="store_true")
+    longtask_smoke.add_argument("--seconds", type=int, default=5)
+    longtask_smoke.add_argument("--interval", type=float, default=1.0)
+    longtask_smoke.add_argument("--now-running")
+    longtask_smoke.add_argument("--now-terminal")
+    longtask_smoke.set_defaults(func=cmd_debug_longtask_smoke)
 
     feishu_install = feishu_sub.add_parser("install")
     add_common(feishu_install)

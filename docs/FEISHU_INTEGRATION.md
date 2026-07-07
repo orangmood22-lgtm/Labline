@@ -181,6 +181,17 @@ lane feishu run --no-proxy
 lane feishu start --no-proxy
 ```
 
+有些服务器上飞书开放平台必须直连，但 Codex API 必须走本机代理。这时 bridge 父进程仍用 `--no-proxy`，只给 agent 子进程注入代理：
+
+```bash
+LABLINE_AGENT_HTTP_PROXY=http://127.0.0.1:[你的代理端口] \
+LABLINE_AGENT_HTTPS_PROXY=http://127.0.0.1:[你的代理端口] \
+LABLINE_AGENT_NO_PROXY=127.0.0.1,localhost,::1 \
+lane feishu run --no-proxy
+```
+
+这些 `LABLINE_AGENT_*_PROXY` 变量只会映射给 Codex agent 子进程和 `native-codex` auto-wakeup，不让 Node/Lark SDK 走代理。
+
 常用飞书 / Lark 命令：
 
 | 命令 | 作用 |
@@ -188,6 +199,8 @@ lane feishu start --no-proxy
 | `/cd <path>` | 切换当前项目 / 工作区目录 |
 | `/ws` | 管理已保存工作区，例如 list/save/use |
 | `/status` | 显示 profile、agent、工作目录、session、身份和运行状态 |
+| `/fork [名称]` | Codex profile 下 fork 当前 Codex thread，并可选设置新 thread 名称 |
+| `/rename <名称>` | Codex profile 下重命名当前 Codex thread |
 
 如果启动时没有传 `--workspace`，或者想把一个聊天线程切到另一个 Labline 项目，用：
 
@@ -200,6 +213,48 @@ lane feishu start --no-proxy
 飞书 / Lark 集成在 Labline 里属于 Transport Adapter Skill 边界。bridge 只负责在聊天和本地 agent 进程之间传输消息、状态、审批、文件或报告。
 
 它不是 Leader，不是 workflow runtime，也不是远程 shell。研究编排仍由当前 Codex / Claude Code 会话和其调用的 Labline skills 负责。
+
+## Remote Observation 和 `/follow`
+
+Labline runtime 状态的项目内真相在 `.labline/runtime/`。Feishu/Lark 只做 Remote Observation 和交互入口：它可以观察 Runtime Task、发送 `/status`、订阅 `/follow`，也可以把“停掉实验”这类请求转成 Runtime Control Intent，但不成为任务 owner。
+
+常见远程消息：
+
+| 消息 | 行为 |
+|------|------|
+| `/status` | 读取项目 runtime 摘要并返回当前状态 |
+| `/follow` | 订阅当前项目或 parent Runtime Task 的进度投影 |
+| `/follow <task_id>` | 订阅指定 child/detail task |
+| `/unfollow` | 取消当前聊天的投影订阅 |
+| “现在怎么样了” | 只读状态问题，走 Remote Observation，不注入 TUI |
+| “顺便解释一下结果含义” | 走 bridge-owned BTW thread，不打断当前任务 |
+| “停掉这个实验” | 转为高风险 control intent，需要确认或由 Leader/lease 处理 |
+
+`/fork [名称]` 只适用于 Codex profile。它调用 Codex app-server 的 `thread/fork`，把当前 chat 切到 fork 后的新 Codex thread；如果传入名称，再调用 `thread/name/set`。它不会用飞书聊天记录摘要伪造上下文，也不会复制正在运行中的半截 turn；当前任务运行中时应先等待完成或 `/stop`。
+
+`/rename <名称>` 只适用于 Codex profile。它调用 Codex app-server 的 `thread/name/set` 修改当前 chat 绑定的 active Codex thread 名称，不 fork 新 thread，不重命名飞书会话，也不改变消息上下文；当前任务运行中时应先等待完成或 `/stop`。
+
+状态归属规则：
+
+- bridge-owned state：飞书 chat id、open id、消息 archive、Remote Observation subscription、projection delivery state、BTW thread。
+- project runtime state：Runtime Task、runtime events、lease、heartbeat、escalation、`archive_ref`、`task_id`、路由诊断。
+- 项目 `.labline/runtime/` 不保存飞书 chat/open id、token、私有消息正文或投递失败详情。
+
+普通进度会节流更新同一张投影状态卡；如果旧投影没有可更新的飞书 `message_id`，bridge 会补发一张状态卡并记录后续更新目标。completed、failed、cancelled、blocked、need_decision、anomaly、escalation 会 fresh reply。若同一活动状态已经投递过，但卡片长时间停在“正在调用工具/正在输出”等阶段，或超过 `next_expected_update` 后仍没有新状态，Remote Observation 会发一次 `stale_projection` 提示；这只是飞书显示层可能过期的提醒，不代表任务失败。heartbeat 正常平台期不会产生可见飞书推送。
+
+普通飞书消息不需要提前 `/follow` 才能获得卡片保护。Labline bridge shim 会继续优先更新原 streaming card；如果 stream/update 报错、update 超时，或运行中健康探针发现上一张卡片已经不能确认更新，就自动发送“续接卡片”并把后续状态更新切到新卡片。若 profile 使用 markdown streaming，终态更新会等待 Feishu markdown card 的 throttle flush 和 update queue drain，并默认 fetch 校验原 streaming message 是否仍含“正在调用工具/正在输出/正在思考”；若校验失败或仍是旧运行态，会额外发送一条普通 markdown 终态镜像。续接卡片和终态镜像只表示飞书显示通道兜底，不表示 Codex 任务重启。默认 update 超时由 `LABLINE_STREAM_FLUSH_TIMEOUT_MS` 控制，运行中健康探针由 `LABLINE_CARD_CONTINUATION_IDLE_MS` 控制，卡片最大年龄兜底由 `LABLINE_CARD_CONTINUATION_MAX_AGE_MS` 控制，markdown 终态校验超时由 `LABLINE_MARKDOWN_TERMINAL_VERIFY_TIMEOUT_MS` 控制；如需完全关闭终态镜像，可设置 `LABLINE_MARKDOWN_TERMINAL_FALLBACK_ENABLED=off`。
+
+`/follow` 的可见推送由当前 bridge profile 内置的 Remote Observation poller 完成。poller 默认只扫描当前 workspace/project 且当前 profile 创建的 active subscription；如果换了 bridge profile，建议在新 bot chat 里重新发送 `/follow`。只有确认新旧 profile 使用同一个可投递 bot/chat 权限时，才设置 `LABLINE_PROJECTION_INCLUDE_CROSS_PROFILE=1` 让当前 project poller 接管跨 profile 订阅。poller 会调用 `projection-plan`；`patch` 动作会更新上一张投影状态卡或补发一张可更新状态卡，`fresh_reply` 动作用于 terminal/blocked/anomaly/stale_projection 等需要用户注意的状态。同一 state signature 成功投递后会记录 `delivery-record`，避免 blocked/terminal/stale_projection 状态重复刷屏。可以用 `LABLINE_PROJECTION_POLL_DISABLED=1` 关闭，或用 `LABLINE_PROJECTION_POLL_INTERVAL_MS` 调整轮询间隔。
+
+项目自己的 debug monitor 可以额外发送监控告警，但它必须显式配置 alert chat；它不是 `/follow` 协议投递器，也不会替代 bridge-owned subscription。
+
+如果需要让 Leader 在 runtime escalation、未处理的 terminal failure，或 detached tmux job 退出后自动跑一轮接手，可以显式打开 bridge auto-wakeup：设置 `LABLINE_AUTO_WAKEUP_ENABLED=1` 后重启对应 bridge profile。bridge 只定时调用 `lane workflow wakeup-plan` 判断；`wakeup-plan` 会直接识别未被 `leader.decision` / resolution 处理过、且未被后续 `retry_of` 取代的 `failed` / `cancelled` Runtime Task，也会检查 `tmux` handle：session 已退出且 required artifact 存在时产生 `detached_job_completed` candidate，session 已退出但 required artifact 缺失时产生 `detached_job_exited` candidate，不依赖先跑 heartbeat。真正启动由 `lane workflow wakeup --backend native-codex` 执行，并通过 `.labline/runtime/` 的 `leader_session` lease 和 `wakeup.*` 事件去重。默认检查间隔由 `LABLINE_AUTO_WAKEUP_INTERVAL_MS` 控制，默认 backend 是 `native-codex`；高风险 control intent 仍会停在 `needs_confirmation`，不会自动执行。若维护者确认上一次同一 `wakeup_key` 没有实际唤醒成功，可以手动运行 `lane workflow wakeup-plan --force` 预览，或运行 `lane workflow wakeup --force --backend native-codex` 重试；`--force` 只绕过去重，并继续保留高风险确认和 `leader_session` lease。`native-codex` wakeup 默认用 `codex exec -s danger-full-access`，避免在不支持 unprivileged namespace 的环境里触发 `bwrap` sandbox 失败；可用 `--codex-sandbox` 或 `LABLINE_AUTO_WAKEUP_CODEX_SANDBOX` 覆盖。bridge 会把 started、completed、failed、非健康 skip（例如 `wakeup_already_started`、`lease_unavailable`）和 `needs_confirmation` 通知回投到当前 profile/project 的 active `/follow` chat；没有 `/follow` 订阅但仍需要固定投递时，可用逗号分隔的 `LABLINE_AUTO_WAKEUP_CHAT_ID` 指定 chat。只有确认跨 profile chat 由同一个 bot 可投递时，才设置 `LABLINE_AUTO_WAKEUP_INCLUDE_CROSS_PROFILE=1`。同一检查结果会按 `LABLINE_AUTO_WAKEUP_NOTICE_THROTTLE_MS` 限流，避免每轮计划都刷屏。该输出是用户可见通知，Leader prompt 会要求默认用中文解释决策和下一步，只保留必要的英文状态值、路径和 task id。
+
+长任务规则：
+
+- 预计超过 3 分钟的安装、编译、下载、训练、部署、批量评估或长时间 agent 等待，必须先落到 `.labline/runtime/`：Runtime Task 或 Agent Status Snapshot、durable job handle、日志/结果路径、`next_expected_update`。
+- Leader 在飞书 turn 里最多短等 120 秒用于捕获即时失败；任务仍在运行时必须结束当前回复，给出 task id、状态路径、日志路径和后续 `/status` / `/follow` 查询方式。
+- 新的可见推送只用于 `completed`、`failed`、`cancelled`、`blocked`、`need_decision`、`anomaly` 或 heartbeat escalation；健康运行平台期只更新本地 runtime/节流投影，不能连续刷屏。
 
 ## 旧方案 / Fallback：Labline 托管 Runner
 
