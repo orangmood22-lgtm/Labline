@@ -1,0 +1,528 @@
+version: 1
+description: "Labline 开发者文档 DAG。边方向为：源材料 -> 需要同步更新的计划、日志、规范或索引。"
+
+nodes:
+  to-developer/DOC_DAG.yaml:
+    title: "开发者文档 DAG 源数据"
+    layer: governance
+    kind: source
+  to-developer/DOC_DAG.mmd:
+    title: "开发者文档 DAG Mermaid 图"
+    layer: generated
+    kind: generated
+  to-developer/20260613-DEVELOPMENT_LOG.md:
+    title: "开发日志"
+    layer: log
+    kind: log
+  to-developer/20260615-FRAMEWORK_MODULES.md:
+    title: "开发者侧框架模块说明"
+    layer: architecture
+    kind: guide
+  to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md:
+    title: "Labline 顶层设计与开发地图"
+    layer: architecture
+    kind: guide
+  to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md:
+    title: "Labline 全框架测试矩阵"
+    layer: architecture
+    kind: guide
+  to-developer/20260613-HANDOFF_CLAUDE_TO_CODEX.md:
+    title: "Claude 到 Codex handoff"
+    layer: handoff
+    kind: handoff
+  to-developer/20260613-handoff-2026-06-11.md:
+    title: "历史 handoff"
+    layer: handoff
+    kind: handoff
+
+  to-developer/plans/20260613-BRANCH_AND_PROMOTE_GUIDE.md:
+    title: "分支和 Promote 指南"
+    layer: promote
+    kind: plan
+  to-developer/plans/20260613-PROMOTE_FLOW.md:
+    title: "Dev Promote 流程草案"
+    layer: promote
+    kind: plan
+  to-developer/plans/20260613-VERSION_MANAGEMENT.md:
+    title: "版本管理方案"
+    layer: release
+    kind: plan
+  to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md:
+    title: "仓库演进计划"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260613-AGENT_STATUS_STREAM.md:
+    title: "Agent Status Stream 计划"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260613-LANGGRAPH_EVALUATION.md:
+    title: "LangGraph 引入评估"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md:
+    title: "CLI 与部署运行时机制"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md:
+    title: "cheap worker 默认分工"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md:
+    title: "多 Provider 本地 Coding Agent 框架 Spike"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md:
+    title: "Developer Agent Surface PRD"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md:
+    title: "Runtime Heartbeat / Feishu Projection 实施计划"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md:
+    title: "Workflow Runtime 状态图与 Adapter Spike"
+    layer: architecture
+    kind: plan
+  to-developer/plans/20260610-codex-migration.md:
+    title: "Codex 迁移记录"
+    layer: architecture
+    kind: plan
+
+  to-developer/adr/*.md:
+    title: "开发者 ADR"
+    layer: architecture
+    kind: glob
+  to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md:
+    title: "Developer Skill 安装面 ADR"
+    layer: architecture
+    kind: adr
+  to-developer/DEV_SKILL_CATALOG.md:
+    title: "Developer Skill 目录"
+    layer: generated
+    kind: generated
+  to-developer/DEV_SKILL_DAG.yaml:
+    title: "Developer Skill DAG 源数据"
+    layer: generated
+    kind: generated
+  to-developer/DEV_SKILL_DAG.mmd:
+    title: "Developer Skill DAG Mermaid 图"
+    layer: generated
+    kind: generated
+  to-developer/skills/dev-*/SKILL.md:
+    title: "Developer Skill 源文件"
+    layer: architecture
+    kind: glob
+  to-developer/docs/*.md:
+    title: "开发者文档维护规则"
+    layer: governance
+    kind: glob
+
+  to-developer/deploy-QAs/20260613-clash_with_servers.md:
+    title: "服务器代理 QA"
+    layer: deploy
+    kind: qa
+  to-developer/realtest/20260616-REALTEST_CONTAINER.md:
+    title: "实机测试容器说明"
+    layer: deploy
+    kind: guide
+
+  to-developer/discussions/*.md:
+    title: "开发讨论记录"
+    layer: discussion
+    kind: glob
+  to-developer/discussions/*.txt:
+    title: "开发讨论文本"
+    layer: discussion
+    kind: glob
+  to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md:
+    title: "Labline Runtime 升级计划"
+    layer: architecture
+    kind: discussion
+  to-developer/discussions/20260626-对话记录.txt:
+    title: "Runtime heartbeat/status 讨论记录"
+    layer: discussion
+    kind: source
+  to-developer/context-archive/*.md:
+    title: "Design Grilling Context 归档"
+    layer: discussion
+    kind: glob
+  to-developer/logs/*.md:
+    title: "开发验证日志"
+    layer: log
+    kind: glob
+  to-developer/logs/20260613-AGENT_STATUS_STREAM_VALIDATION_20260613.md:
+    title: "Agent Status Stream 验证日志"
+    layer: log
+    kind: log
+  to-developer/logs/20260615-SKILL_USABILITY_AUDIT_20260614.md:
+    title: "Skill 可用性审计汇总"
+    layer: log
+    kind: log
+  to-developer/logs/skill-usability-parts/*.md:
+    title: "Skill 可用性审计分片"
+    layer: log
+    kind: glob
+
+  AGENTS.md:
+    title: "Dev Agent 指南"
+    layer: governance
+    kind: guide
+  CONTEXT.md:
+    title: "框架治理术语"
+    layer: stable
+    kind: glossary
+  CHANGELOG.md:
+    title: "用户可见变更"
+    layer: stable
+    kind: changelog
+  docs/README.md:
+    title: "Stable 用户文档索引"
+    layer: stable
+    kind: guide
+  docs/FEISHU_INTEGRATION.md:
+    title: "飞书用户集成文档"
+    layer: stable
+    kind: guide
+  docs/OPERATIONS_GUIDE.md:
+    title: "Stable 操作与运维手册"
+    layer: stable
+    kind: stable_target
+  deploy/DEPLOY_GUIDE.md:
+    title: "Stable 管理员部署指南"
+    layer: stable
+    kind: stable_target
+  deploy/IMAGE_PACKAGING.md:
+    title: "Stable 镜像打包与预构建部署指南"
+    layer: stable
+    kind: stable_target
+  docs/PROMOTE_FLOW.md:
+    title: "Stable Promote 规范"
+    layer: stable
+    kind: stable_target
+  docs/FRAMEWORK_STRUCTURE.md:
+    title: "Stable 框架三层结构"
+    layer: stable
+    kind: stable_target
+  docs/DOC_DAG.yaml:
+    title: "Stable 文档 DAG"
+    layer: stable
+    kind: stable_target
+  docs/TOOLS_INDEX.md:
+    title: "Stable 工具索引"
+    layer: stable
+    kind: stable_target
+
+edges:
+  - from: to-developer/DOC_DAG.yaml
+    to: to-developer/DOC_DAG.mmd
+    type: generates
+    reason: "开发者文档 DAG 源数据生成 Mermaid 图。"
+  - from: to-developer/DOC_DAG.yaml
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "仓库演进计划应知道 dev-only 文档结构。"
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: constrains
+    reason: "开发日志按框架模块说明中的模块边界记录。"
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: docs/FRAMEWORK_STRUCTURE.md
+    type: related_to
+    reason: "开发者侧模块边界需要和 stable 三层结构保持概念一致。"
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: docs/README.md
+    type: constrains
+    reason: "用户侧 docs 索引只保留用户安装、配置和使用文档。"
+  - from: CONTEXT.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: constrains
+    reason: "顶层设计必须使用 CONTEXT.md 中定义的治理术语和角色/运行时边界。"
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "顶层设计按已有开发者模块边界组织模块和接口。"
+  - from: docs/FRAMEWORK_STRUCTURE.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "顶层设计需要和 framework/project/dev 三层结构保持一致。"
+  - from: CONTEXT.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: constrains
+    reason: "完整测试矩阵必须使用 CONTEXT.md 中定义的 runtime、bridge、project surface 和治理术语。"
+  - from: to-developer/20260615-FRAMEWORK_MODULES.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: constrains
+    reason: "完整测试矩阵按开发者侧模块边界组织覆盖面。"
+  - from: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: informs
+    reason: "完整测试矩阵从顶层设计中的模块优先级、接口和缺口展开。"
+  - from: docs/FRAMEWORK_STRUCTURE.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: constrains
+    reason: "完整测试矩阵必须验证 framework/project/dev 边界不被测试或 realtest 污染。"
+  - from: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "顶层设计的模块优先级和路线图需要进入开发日志便于交接。"
+  - from: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "顶层模块地图会影响后续仓库演进和分层策略。"
+  - from: to-developer/docs/*.md
+    to: to-developer/DOC_DAG.yaml
+    type: constrains
+    reason: "开发者文档维护规则影响开发者 DAG 覆盖策略。"
+
+  - from: to-developer/plans/20260613-BRANCH_AND_PROMOTE_GUIDE.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
+    type: constrains
+    reason: "Promote 流程依赖分支角色约定。"
+  - from: to-developer/plans/20260613-VERSION_MANAGEMENT.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
+    type: constrains
+    reason: "Promote 后是否 release/tag 受版本管理方案约束。"
+  - from: to-developer/plans/20260613-PROMOTE_FLOW.md
+    to: docs/PROMOTE_FLOW.md
+    type: promotes_to
+    reason: "成熟的 promote 规范应进入 stable docs。"
+  - from: to-developer/plans/20260613-VERSION_MANAGEMENT.md
+    to: CONTEXT.md
+    type: promotes_to
+    reason: "成熟的版本术语应进入 stable governance context。"
+  - from: to-developer/plans/20260613-VERSION_MANAGEMENT.md
+    to: docs/PROMOTE_FLOW.md
+    type: constrains
+    reason: "Stable promote 规范中的 release gate 来自版本管理方案。"
+
+  - from: to-developer/plans/20260613-AGENT_STATUS_STREAM.md
+    to: docs/DOC_DAG.yaml
+    type: related_to
+    reason: "Agent status 文档变化会影响 stable 文档 DAG 的 architecture/ADR 节点。"
+  - from: to-developer/plans/20260613-AGENT_STATUS_STREAM.md
+    to: to-developer/logs/20260613-AGENT_STATUS_STREAM_VALIDATION_20260613.md
+    type: validated_by
+    reason: "计划由本地验证日志支撑。"
+  - from: to-developer/plans/20260613-AGENT_STATUS_STREAM.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "Agent Status Stream 是顶层设计中的 P1 runtime visibility 模块。"
+  - from: to-developer/plans/20260613-LANGGRAPH_EVALUATION.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "LangGraph 是否引入影响仓库演进和运行时边界。"
+  - from: to-developer/plans/20260613-LANGGRAPH_EVALUATION.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "LangGraph 在顶层设计中被定性为后置 workflow runtime。"
+  - from: to-developer/plans/20260613-LANGGRAPH_EVALUATION.md
+    to: to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md
+    type: informs
+    reason: "LangGraph 评估为 auto-wakeup 状态图提供可选 workflow backend 边界。"
+  - from: to-developer/plans/20260610-codex-migration.md
+    to: to-developer/20260615-FRAMEWORK_MODULES.md
+    type: informs
+    reason: "Codex 迁移记录影响开发者侧 runtime/module 边界理解。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: deploy/DEPLOY_GUIDE.md
+    type: constrains
+    reason: "CLI 与部署运行时机制约束管理员部署手册中的拓扑、状态文件和自动检查更新说明。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: deploy/IMAGE_PACKAGING.md
+    type: constrains
+    reason: "预构建镜像部署仍受 CLI/deploy runtime 的容器 ABI、framework copy、项目路径和状态挂载边界约束。"
+  - from: deploy/IMAGE_PACKAGING.md
+    to: deploy/DEPLOY_GUIDE.md
+    type: summarized_by
+    reason: "管理员部署指南只保留预构建镜像入口，完整构建、推送、离线导入和回滚流程由镜像打包指南承载。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: docs/OPERATIONS_GUIDE.md
+    type: constrains
+    reason: "用户操作手册中的 CLI、framework 更新和管理员手册说明应从运行时机制中蒸馏。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: to-developer/20260615-FRAMEWORK_MODULES.md
+    type: informs
+    reason: "CLI/deploy runtime 横跨 tools、deploy、templates、tests，需要反映到模块边界理解。"
+  - from: to-developer/plans/20260616-CLI_DEPLOY_RUNTIME.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "CLI 和部署运行时是顶层设计中的 P0/P1 主干模块。"
+  - from: to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "开发侧 cheap worker 默认分工需要进入开发日志，便于恢复和交接。"
+  - from: to-developer/plans/20260616-CHEAP_WORKER_DEFAULT_DIVISION.md
+    to: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    type: informs
+    reason: "cheap worker 从远端 LLM 调用器升级为本地 coding agent backend 的需求来源。"
+  - from: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "多 provider 本地 agent backend 影响后续仓库演进和 runtime 拓扑。"
+  - from: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    to: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    type: informs
+    reason: "调研结论收敛为 Developer Agent Surface 的短期实现路线和中长期计划。"
+  - from: to-developer/plans/20260617-MULTI_PROVIDER_AGENT_FRAMEWORK_SPIKE.md
+    to: to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md
+    type: informs
+    reason: "OpenClaw/OpenHands/Cline 等 backend 分层约束 workflow runtime adapter 的职责。"
+  - from: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    to: to-developer/plans/20260613-REPO_EVOLUTION_PLAN.md
+    type: informs
+    reason: "Developer Agent Surface 会新增 dev-only agent backend/runtime 层。"
+  - from: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "Developer Agent Surface 的阶段计划和边界需要进入开发日志便于恢复和交接。"
+  - from: to-developer/plans/20260617-DEV_AGENT_SURFACE_PRD.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "Developer Agent Surface 是顶层设计中的开发降本主线。"
+  - from: to-developer/adr/*.md
+    to: docs/FEISHU_INTEGRATION.md
+    type: informs
+    reason: "用户侧飞书文档只暴露结论，详细决策保留在开发者 ADR。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/20260615-FRAMEWORK_MODULES.md
+    type: constrains
+    reason: "Developer Skill 独立安装面约束开发者模块边界。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
+    type: constrains
+    reason: "Developer Skill 不应按用户能力 promote 到 stable。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/DEV_SKILL_CATALOG.md
+    type: constrains
+    reason: "Developer Skill 目录只收录 dev-only skill。"
+  - from: to-developer/skills/dev-*/SKILL.md
+    to: to-developer/DEV_SKILL_CATALOG.md
+    type: generates
+    reason: "Developer Skill 源文件生成 dev-only skill 目录。"
+  - from: to-developer/skills/dev-*/SKILL.md
+    to: to-developer/DEV_SKILL_DAG.yaml
+    type: generates
+    reason: "Developer Skill 源文件生成 dev-only DAG 源数据。"
+  - from: to-developer/adr/20260617-0005-developer-skills-use-separate-install-surface.md
+    to: to-developer/DEV_SKILL_DAG.yaml
+    type: constrains
+    reason: "Developer Skill DAG 独立于用户 Skill DAG。"
+  - from: to-developer/DEV_SKILL_DAG.yaml
+    to: to-developer/DEV_SKILL_DAG.mmd
+    type: generates
+    reason: "Developer Skill DAG 源数据生成 Mermaid 图。"
+
+  - from: to-developer/logs/*.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "开发验证日志需要蒸馏进模块级开发日志。"
+  - from: to-developer/logs/skill-usability-parts/*.md
+    to: to-developer/logs/20260615-SKILL_USABILITY_AUDIT_20260614.md
+    type: summarized_by
+    reason: "分片审计汇总为完整 skill 可用性审计。"
+  - from: to-developer/20260613-DEVELOPMENT_LOG.md
+    to: CHANGELOG.md
+    type: distilled_to
+    reason: "用户可见部分从开发日志蒸馏到 changelog。"
+
+  - from: to-developer/discussions/*.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "重要讨论结论进入开发日志。"
+  - from: to-developer/discussions/*.txt
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "历史讨论文本中的决策需要沉淀。"
+  - from: to-developer/discussions/20260626-对话记录.txt
+    to: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    type: summarized_by
+    reason: "原始讨论收敛为 runtime upgrade 计划。"
+  - from: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    to: CONTEXT.md
+    type: promotes_to
+    reason: "成熟的 runtime/heartbeat/surface 术语需要进入框架治理词汇。"
+  - from: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "Project Runtime State Root 与 heartbeat 协议会影响顶层 runtime 模块路线图。"
+  - from: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    to: docs/OPERATIONS_GUIDE.md
+    type: constrains
+    reason: "用户侧操作说明中的 Leader 状态产物路径需要从新 runtime 协议蒸馏。"
+  - from: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "runtime upgrade 结论需要进入模块级开发日志。"
+  - from: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    to: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    type: informs
+    reason: "runtime/heartbeat/Feishu 讨论结论收敛为分阶段实施计划。"
+  - from: to-developer/discussions/20260626-LABLINE_RUNTIME_UPGRADE_PLAN.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: informs
+    reason: "runtime upgrade 讨论中的 Project Runtime State、surface 边界和 heartbeat 语义需要进入完整测试矩阵。"
+  - from: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "Runtime Heartbeat 实施路线需要进入模块级开发日志便于恢复和交接。"
+  - from: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: informs
+    reason: "runtime heartbeat / Feishu projection 分阶段验收需要进入完整测试矩阵。"
+  - from: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    to: docs/OPERATIONS_GUIDE.md
+    type: constrains
+    reason: "实现完成后，用户侧操作手册需要蒸馏 runtime status、heartbeat 和 follow 行为。"
+  - from: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    to: docs/FEISHU_INTEGRATION.md
+    type: constrains
+    reason: "Feishu 投影和 BTW/Control Intent 稳定后需要同步用户侧集成文档。"
+  - from: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    to: docs/TOOLS_INDEX.md
+    type: constrains
+    reason: "新增 runtime/status/heartbeat CLI 后需要同步工具索引。"
+  - from: to-developer/plans/20260629-RUNTIME_HEARTBEAT_IMPLEMENTATION_PLAN.md
+    to: to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md
+    type: informs
+    reason: "heartbeat、projection、lease 和 escalation 的已实现边界是 auto-wakeup 状态图输入。"
+  - from: to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md
+    to: to-developer/20260617-FRAMEWORK_TOP_LEVEL_DESIGN.md
+    type: informs
+    reason: "auto-wakeup 状态图把 workflow engine 从后置评估推进到 adapter spike。"
+  - from: to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md
+    to: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    type: informs
+    reason: "后续 wakeup-plan/native apply/LangGraph/OpenClaw spike 需要进入测试矩阵。"
+  - from: to-developer/plans/20260704-WORKFLOW_RUNTIME_STATEGRAPH_SPIKE.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "workflow runtime 状态图和 adapter 边界需要进入模块级开发日志。"
+  - from: to-developer/context-archive/*.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "重要 context grilling 结论需要进入开发日志或后续功能 lineage。"
+  - from: to-developer/deploy-QAs/20260613-clash_with_servers.md
+    to: docs/TOOLS_INDEX.md
+    type: related_to
+    reason: "代理/部署 QA 可能影响工具索引和运行说明。"
+  - from: to-developer/realtest/20260616-REALTEST_CONTAINER.md
+    to: to-developer/20260613-DEVELOPMENT_LOG.md
+    type: summarized_by
+    reason: "实机测试容器是 dev-only 验证资产，变更需进入开发日志。"
+  - from: to-developer/20260703-FRAMEWORK_FULL_TEST_MATRIX.md
+    to: to-developer/logs/*.md
+    type: constrains
+    reason: "后续框架验证日志应按完整测试矩阵记录覆盖面、证据和缺口。"
+  - from: to-developer/realtest/20260616-REALTEST_CONTAINER.md
+    to: deploy/DEPLOY_GUIDE.md
+    type: constrains
+    reason: "管理员部署指南只保留 dev-only 实机测试容器的边界提示，不展开测试操作。"
+
+  - from: AGENTS.md
+    to: to-developer/plans/20260613-PROMOTE_FLOW.md
+    type: constrains
+    reason: "开发 agent 的 promote 行为受 Dev Agent 指南约束。"
+  - from: docs/DOC_DAG.yaml
+    to: to-developer/DOC_DAG.yaml
+    type: mirrors_boundary
+    reason: "developer DAG 需要和 stable DAG 保持边界一致：stable 不包含 to-developer。"

@@ -1,0 +1,94 @@
+version: 1
+generated_by: tools/generate_dev_skill_dag.py
+source: to-developer/skills/dev-*/SKILL.md
+nodes:
+  dev-caveman:
+    name: dev-caveman
+    path: to-developer/skills/dev-caveman/SKILL.md
+    description: 框架开发侧的超短反馈模式，用于压缩状态更新、审阅结论和排障摘要，但不影响技术事实
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: caveman
+    forked_from_path: skills/caveman/SKILL.md
+    forked_at: '2026-06-17'
+  dev-diagnose:
+    name: dev-diagnose
+    path: to-developer/skills/dev-diagnose/SKILL.md
+    description: 框架开发侧的故障诊断工作流，用于复现、缩小、假设、加探针并补回归
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: diagnose
+    forked_from_path: skills/diagnose/SKILL.md
+    forked_at: '2026-06-17'
+  dev-grill-docs:
+    name: dev-grill-docs
+    path: to-developer/skills/dev-grill-docs/SKILL.md
+    description: 框架开发侧的文档与术语追问工作流，用于逼清定义、核对上下文并同步更新 dev 文档
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: grill-with-docs
+    forked_from_path: skills/grill-with-docs/SKILL.md
+    forked_at: '2026-06-17'
+  dev-handoff:
+    name: dev-handoff
+    path: to-developer/skills/dev-handoff/SKILL.md
+    description: 框架开发侧的交接整理工作流，用于把当前会话压缩成可继续接手的背景包
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: handoff
+    forked_from_path: skills/handoff/SKILL.md
+    forked_at: '2026-06-17'
+  dev-review:
+    name: dev-review
+    path: to-developer/skills/dev-review/SKILL.md
+    description: 框架开发侧的 diff review 工作流，用于检查标准符合性和 dev 规格符合性，但只输出草案结论
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: review
+    forked_from_path: skills/review/SKILL.md
+    forked_at: '2026-06-17'
+  dev-tdd:
+    name: dev-tdd
+    path: to-developer/skills/dev-tdd/SKILL.md
+    description: 框架开发侧的测试先行工作流，用于把文档、工具和低风险改动绑定到可验证行为上
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: tdd
+    forked_from_path: skills/tdd/SKILL.md
+    forked_at: '2026-06-17'
+  dev-worker:
+    name: dev-worker
+    path: to-developer/skills/dev-worker/SKILL.md
+    description: 开发侧低成本辅助执行者 - 只做框架维护中的批量文档、引用清扫、测试草案和低风险 patch 草案；不进入用户项目 role graph
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+  dev-zoom-out:
+    name: dev-zoom-out
+    path: to-developer/skills/dev-zoom-out/SKILL.md
+    description: 框架开发侧的上下文扩展工作流，用于把局部代码放回模块、调用方和文档全局里理解
+    invokes: []
+    caller: developer
+    platform: codex
+    status: dev-only
+    forked_from: zoom-out
+    forked_from_path: skills/zoom-out/SKILL.md
+    forked_at: '2026-06-17'
+edges: []
+stats:
+  total_skills: 8
+  total_edges: 0
+  total_invokes: 0
