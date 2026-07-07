@@ -64,7 +64,22 @@ def resolve_status_root(args: argparse.Namespace) -> Path:
     if args.status_root:
         return Path(args.status_root)
     project_root = Path(args.project_root or ".")
+    return project_root / ".labline" / "runtime"
+
+
+def resolve_legacy_status_root(args: argparse.Namespace) -> Path:
+    project_root = Path(args.project_root or ".")
     return project_root / ".labline" / "status"
+
+
+def resolve_read_roots(args: argparse.Namespace) -> list[Path]:
+    primary = resolve_status_root(args)
+    roots = [primary]
+    if not args.status_root:
+        legacy = resolve_legacy_status_root(args)
+        if legacy != primary:
+            roots.append(legacy)
+    return roots
 
 
 def agent_file(status_root: Path, agent_id: str) -> Path:
@@ -185,6 +200,17 @@ def iter_snapshots(status_root: Path) -> list[dict]:
     return snapshots
 
 
+def iter_snapshots_for_args(args: argparse.Namespace) -> list[dict]:
+    by_agent_id: dict[str, dict] = {}
+    for root in resolve_read_roots(args):
+        for snapshot in iter_snapshots(root):
+            agent_id = str(snapshot.get("agent_id") or "")
+            if not agent_id:
+                continue
+            by_agent_id.setdefault(agent_id, snapshot)
+    return [by_agent_id[key] for key in sorted(by_agent_id)]
+
+
 def derived_state(snapshot: dict, now: datetime) -> str:
     status = snapshot.get("status", "")
     if status in TERMINAL_STATUSES:
@@ -196,10 +222,9 @@ def derived_state(snapshot: dict, now: datetime) -> str:
 
 
 def cmd_summary(args: argparse.Namespace) -> int:
-    status_root = resolve_status_root(args)
     now = parse_iso(args.now) if args.now else utc_now()
     assert now is not None
-    for snapshot in iter_snapshots(status_root):
+    for snapshot in iter_snapshots_for_args(args):
         state = derived_state(snapshot, now)
         print(
             " ".join(
@@ -215,8 +240,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
 
 
 def cmd_list(args: argparse.Namespace) -> int:
-    status_root = resolve_status_root(args)
-    for snapshot in iter_snapshots(status_root):
+    for snapshot in iter_snapshots_for_args(args):
         print(
             " ".join(
                 [
@@ -247,16 +271,21 @@ def validate_snapshot(snapshot: dict, filename: str) -> list[str]:
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    status_root = resolve_status_root(args)
-    agents_dir = status_root / "agents"
     errors = []
-    for path in sorted(agents_dir.glob("*.json")) if agents_dir.exists() else []:
-        try:
-            snapshot = read_snapshot(path)
-        except (OSError, json.JSONDecodeError) as exc:
-            errors.append(f"{path.name}: invalid json: {exc}")
-            continue
-        errors.extend(validate_snapshot(snapshot, path.name))
+    seen_agent_ids: set[str] = set()
+    for status_root in resolve_read_roots(args):
+        agents_dir = status_root / "agents"
+        for path in sorted(agents_dir.glob("*.json")) if agents_dir.exists() else []:
+            try:
+                snapshot = read_snapshot(path)
+            except (OSError, json.JSONDecodeError) as exc:
+                errors.append(f"{path.name}: invalid json: {exc}")
+                continue
+            agent_id = str(snapshot.get("agent_id") or path.stem)
+            if agent_id in seen_agent_ids:
+                continue
+            seen_agent_ids.add(agent_id)
+            errors.extend(validate_snapshot(snapshot, path.name))
     for error in errors:
         print(error)
     return 1 if errors else 0

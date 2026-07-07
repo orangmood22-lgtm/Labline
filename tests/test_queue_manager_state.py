@@ -35,6 +35,23 @@ class TestQueueManagerStatePersistence(unittest.TestCase):
         temp_files = list(Path(self.tmpdir).glob('.queue_state.json.*'))
         self.assertEqual(temp_files, [])
 
+    def test_save_state_can_mirror_to_project_runtime_queue(self):
+        project = Path(self.tmpdir) / 'project'
+        state = {
+            'meta': {'project': 'demo', 'started': '2026-05-13T00:00:00Z'},
+            'phases': [{'name': 'train', 'depends_on': [], 'status': 'running'}],
+            'jobs': [{'id': 'job1', 'status': 'running'}],
+        }
+
+        queue_manager.save_state(state, str(self.state_path), runtime_project=str(project), queue_id='formal-exp')
+
+        mirror = project / '.labline' / 'runtime' / 'queues' / 'formal-exp.json'
+        payload = json.loads(mirror.read_text())
+        self.assertEqual(payload['schema_version'], '0.1')
+        self.assertEqual(payload['queue_id'], 'formal-exp')
+        self.assertEqual(payload['state_ref'], str(self.state_path))
+        self.assertEqual(payload['state'], state)
+
     def test_load_state_initializes_default_shape(self):
         manifest = {
             '_path': '/tmp/manifest.json',

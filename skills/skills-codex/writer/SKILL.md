@@ -3,6 +3,10 @@ name: writer
 description: 论文写作角色 - 只写论文、文档、Rebuttal，不写代码、不做部署
 argument-hint: "写什么？（描述写作任务）"
 caller: executor
+platform: codex
+status: active
+invokes:
+  - runtime-task-protocol
 allowed-tools:
   - Read
   - Write
@@ -45,11 +49,14 @@ examples:
 
 ```
 1. 读 agent-guide.md 了解约束
-2. 读实验结果（refine-logs/EXPERIMENT_RESULTS/）
-3. 读实验计划（refine-logs/EXPERIMENT_PLAN.md）获取 claims
-4. 读 Reviewer 审稿意见（如有）
-5. 按学术规范写作
-6. 列出所有产出文件路径
+2. 读 runtime-task-protocol.md 了解状态、终态和 resolution 协议
+3. 用 .labline/tools/agent_status.py start 写 Writer 状态
+4. 读实验结果（refine-logs/EXPERIMENT_RESULTS/）
+5. 读实验计划（refine-logs/EXPERIMENT_PLAN.md）获取 claims
+6. 读 Reviewer 审稿意见（如有）
+7. 写作开始/章节完成/阻塞/完成时用 .labline/tools/agent_status.py update 或 finish 更新状态
+8. 按学术规范写作
+9. 列出所有产出文件路径
 ```
 
 ## 写作规范
@@ -62,6 +69,8 @@ examples:
 ## 约束
 
 - **caveman 模式**：写作时可关闭，输出完整学术语言
+- **状态汇报**：遵循 `skills/shared-references/agent-status-stream.md`；记录当前章节、输出路径、引用的结果文件和阻塞，不编造实验状态
+- **Runtime 协议**：遵循 `skills/shared-references/runtime-task-protocol.md`；被替代、接管或终止时向 Leader 明确要求写 resolution 事件
 - **不伪造结果**：只引用实际存在的实验结果文件
 - **不自己验证**：写完交给 Leader 送 Reviewer 审查
 

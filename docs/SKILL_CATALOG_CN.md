@@ -1,12 +1,12 @@
 # Labline Skill 目录（中文版）
 
-> 自动生成于 2026-06-18 17:23。共 95 个 skill，12 个分类。
+> 自动生成于 2026-07-07 10:06。共 98 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/translate_skill_catalog.py`
 
 ## 目录
 
-- [Pipeline/编排](#pipeline编排)（5）
+- [Pipeline/编排](#pipeline编排)（8）
 - [研究发现](#研究发现)（8）
 - [搜索/数据源](#搜索数据源)（7）
 - [实验](#实验)（10）
@@ -63,6 +63,16 @@
 /meta-optimize
 ```
 
+### `/planner`
+
+**计划角色：产出计划草案、依赖拆解、风险图和 checkpoint。**
+
+参数：`规划任务描述`
+
+```
+/planner
+```
+
 ### `/research-pipeline`
 
 **全自动研究 pipeline：想法发现→实现→自动审稿→论文撰写。**
@@ -71,6 +81,26 @@
 
 ```
 /research-pipeline "factorized gap in discrete diffusion LMs"
+```
+
+### `/reviewer`
+
+**独立 Reviewer 角色：从原始输入审查计划、代码、实验、claim 或论文。**
+
+参数：`审查对象、rubric 或目标`
+
+```
+/reviewer
+```
+
+### `/runtime-task-protocol`
+
+**派生角色运行时协议：统一 status、终态和 superseded/resolved 事件。**
+
+参数：`角色、task id 或状态场景`
+
+```
+/runtime-task-protocol
 ```
 
 ---

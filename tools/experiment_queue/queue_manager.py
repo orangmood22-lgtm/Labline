@@ -64,6 +64,7 @@ OOM_RE = re.compile(r"(CUDA out of memory|torch\.OutOfMemoryError)")
 DEFAULT_GPU_FREE_THRESHOLD_MIB = 500
 POLL_INTERVAL_SEC = 60
 UTC = timezone.utc
+RUNTIME_SCHEMA_VERSION = "0.1"
 
 
 def resolve_conda_hook(manifest_hook=None):
@@ -203,8 +204,29 @@ def _atomic_write_json(path, data):
         raise
 
 
-def save_state(state, state_file):
+def _safe_filename(value):
+    return re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value)).strip("-") or "queue"
+
+
+def mirror_runtime_queue_state(state, state_file, runtime_project, queue_id=None):
+    project = Path(runtime_project)
+    queue_name = queue_id or Path(state_file).stem
+    payload = {
+        "schema_version": RUNTIME_SCHEMA_VERSION,
+        "source": "experiment_queue",
+        "queue_id": queue_name,
+        "updated_at": now(),
+        "state_ref": str(state_file),
+        "state": state,
+    }
+    mirror = project / ".labline" / "runtime" / "queues" / f"{_safe_filename(queue_name)}.json"
+    _atomic_write_json(mirror, payload)
+
+
+def save_state(state, state_file, runtime_project=None, queue_id=None):
     _atomic_write_json(state_file, state)
+    if runtime_project:
+        mirror_runtime_queue_state(state, state_file, runtime_project, queue_id=queue_id)
 
 
 def phase_ready(phase_name, state):
@@ -323,7 +345,7 @@ def pending_jobs_in_active_phases(state, manifest):
     ]
 
 
-def step(manifest, state, state_file, log_dir):
+def step(manifest, state, state_file, log_dir, runtime_project=None, queue_id=None):
     """Run one scheduler step: poll, launch, update state."""
     cwd = manifest.get("cwd", ".")
     conda_env = manifest.get("conda", "base")
@@ -403,7 +425,7 @@ def step(manifest, state, state_file, log_dir):
                  for j in state["jobs"] if j.get("phase") == phase["name"]):
             phase["status"] = "running"
 
-    save_state(state, state_file)
+    save_state(state, state_file, runtime_project=runtime_project, queue_id=queue_id)
 
 
 def all_done(state):
@@ -418,6 +440,10 @@ def main():
     ap.add_argument("--log-dir", default=None,
                     help="Per-job log directory (default: cwd)")
     ap.add_argument("--poll", type=int, default=POLL_INTERVAL_SEC)
+    ap.add_argument("--runtime-project",
+                    help="Mirror queue state into <project>/.labline/runtime/queues")
+    ap.add_argument("--queue-id",
+                    help="Runtime queue id (default: state filename stem)")
     args = ap.parse_args()
 
     with open(args.manifest) as f:
@@ -429,14 +455,14 @@ def main():
 
     state = load_state(args.state, manifest)
     assign_jobs_to_phases(manifest, state)
-    save_state(state, args.state)
+    save_state(state, args.state, runtime_project=args.runtime_project, queue_id=args.queue_id)
 
     print(f"[{now()}] Queue manager started with {len(state['jobs'])} jobs")
     sys.stdout.flush()
 
     while not all_done(state):
         try:
-            step(manifest, state, args.state, log_dir)
+            step(manifest, state, args.state, log_dir, runtime_project=args.runtime_project, queue_id=args.queue_id)
         except Exception as e:
             print(f"[{now()}] Step error: {e}")
             sys.stdout.flush()

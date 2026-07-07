@@ -6,6 +6,7 @@ caller: executor
 platform: both
 status: active
 invokes:
+  - runtime-task-protocol
   - tdd
 allowed-tools:
   - Read
@@ -44,12 +45,13 @@ examples:
 
 ```
 1. 读 agent-guide.md 了解约束
-2. 用 .labline/tools/agent_status.py start 写 Coder 状态
-3. 读实验计划（refine-logs/EXPERIMENT_PLAN.md）获取需求
-4. 用 /tdd 先写测试再实现
-5. 实现/测试/阻塞/完成时用 .labline/tools/agent_status.py update 或 finish 更新状态
-6. 列出所有创建/修改的文件路径
-7. 写 no-deviation 声明
+2. 读 runtime-task-protocol.md 了解状态、终态和 superseded/resolved 事件协议
+3. 用 .labline/tools/agent_status.py start 写 Coder 状态
+4. 读实验计划（refine-logs/EXPERIMENT_PLAN.md）获取需求
+5. 用 /tdd 先写测试再实现
+6. 实现/测试/阻塞/完成时用 .labline/tools/agent_status.py update 或 finish 更新状态
+7. 列出所有创建/修改的文件路径
+8. 写 no-deviation 声明
 ```
 
 ## 约束
@@ -57,6 +59,7 @@ examples:
 - **caveman 模式**：精简回复，只保留技术内容
 - **TDD**：Python 代码必须先写测试再实现，用 `/tdd` skill
 - **状态汇报**：遵循 `skills/shared-references/agent-status-stream.md`；记录实现进度、测试状态、修改文件、阻塞和最终产物，不写质量自评
+- **Runtime 协议**：遵循 `skills/shared-references/runtime-task-protocol.md`；被替代、接管或终止时不要留下可唤醒的脏状态，向 Leader 明确要求写 resolution 事件
 - **偏离处理**：偏离实验计划时写 `IMPLEMENTATION_DEVIATIONS.json`，无偏离写 `no-deviation` 声明
 - **自审禁止**：写完代码交给 Leader 送 Reviewer 审查，不自己判断质量
 

@@ -35,6 +35,12 @@
 - 长训练、下载、队列、远程部署必须写 job handle。
 - Leader 只读状态摘要，不把状态流当任务队列或 agent 聊天室。
 
+### 飞书 / Lark 远控长任务
+
+- 预计超过 3 分钟的安装、编译、下载、训练、部署、批量评估或长时间等待，必须先写 runtime/agent status 和 job handle，再后台托管。
+- Leader 在远控 turn 里最多短等 120 秒；之后必须收口，让 `/status`、`/follow`、heartbeat 或 monitor 继续投影状态。
+- 正常进度不刷屏；只有完成、失败、取消、阻塞、需要决策、异常或 heartbeat escalation 才发新的可见推送。
+
 ## 角色边界
 
 详见 `role-contracts.md`（同目录）。

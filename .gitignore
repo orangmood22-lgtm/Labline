@@ -46,6 +46,12 @@ patent/
 # OMC runtime state
 .omc/
 
+# Labline project-local runtime state
+.labline/
+
+# Local recovery artifacts
+recovered-patches/
+
 # ARIS project-local runtime state
 .aris/status/
 .aris/feishu-control/

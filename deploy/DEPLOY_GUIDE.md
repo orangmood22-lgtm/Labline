@@ -135,6 +135,174 @@ docker compose -f docker-compose.image.yaml up -d
 
 预构建镜像的构建、推送、离线 tar 包和回滚流程见 `deploy/IMAGE_PACKAGING.md`。
 
+## 3090 单用户实机测试：GPU + 暴露端口
+
+这一节给 3090 服务器上的单用户实测用。目标是启动一个 `labline-gpu` 容器，确认 GPU、Labline runtime smoke 和宿主机端口访问都正常。默认 GPU compose 使用 `network_mode: host`，所以**不需要也不能靠 `ports:` / `-p` 做端口映射**；容器内进程只要监听 `0.0.0.0:18080`，宿主机的 `18080` 就会暴露出来。
+
+### 1. 在 3090 宿主机准备目录
+
+```bash
+export LABLINE_ROOT=/srv/labline-realtest
+export FRAMEWORK_PATH="$LABLINE_ROOT/framework"
+export DEV_FRAMEWORK_PATH="$LABLINE_ROOT/labline-dev"
+export PROJECT_PATH="$LABLINE_ROOT/projects"
+export DATASETS_PATH="$LABLINE_ROOT/shared/datasets"
+export PRETRAINED_PATH="$LABLINE_ROOT/shared/pretrained"
+export SSH_PATH="$HOME/.ssh"
+
+mkdir -p "$LABLINE_ROOT" "$PROJECT_PATH" "$DATASETS_PATH" "$PRETRAINED_PATH"
+
+# 如果还没有 framework checkout：
+git clone https://github.com/orangmood22-lgtm/Labline.git "$FRAMEWORK_PATH"
+
+# docker-compose.gpu.yaml 当前要求 DEV_FRAMEWORK_PATH 是存在的绝对路径。
+# 没有 dev checkout 时，可以先复用同一份 framework；需要开发版时再换成真实 dev checkout。
+ln -sfn "$FRAMEWORK_PATH" "$DEV_FRAMEWORK_PATH"
+```
+
+确认 GPU 和 Docker runtime：
+
+```bash
+nvidia-smi
+docker run --rm --gpus all nvidia/cuda:12.8.0-devel-ubuntu22.04 nvidia-smi
+docker compose version
+```
+
+### 2. 配置 GPU `.env`
+
+```bash
+cd "$FRAMEWORK_PATH/deploy"
+cp .env.gpu.example .env
+```
+
+把 `.env` 至少改成下面这些值。代理端口按 3090 服务器实际情况改；如果服务器直连可用，把 `LABLINE_PROXY_ENABLED=0` 并清空 HTTP/HTTPS proxy。
+
+```env
+USERNAME=researcher
+USER_UID=1000
+USER_GID=1000
+
+FRAMEWORK_PATH=/srv/labline-realtest/framework
+DEV_FRAMEWORK_PATH=/srv/labline-realtest/labline-dev
+PROJECT_PATH=/srv/labline-realtest/projects
+DATASETS_PATH=/srv/labline-realtest/shared/datasets
+PRETRAINED_PATH=/srv/labline-realtest/shared/pretrained
+SSH_PATH=/home/researcher/.ssh
+
+NVIDIA_VISIBLE_DEVICES=all
+CUDA_VISIBLE_DEVICES=
+
+LABLINE_PROXY_ENABLED=1
+HTTP_PROXY=http://127.0.0.1:7897
+HTTPS_PROXY=http://127.0.0.1:7897
+NO_PROXY=127.0.0.1,localhost
+http_proxy=http://127.0.0.1:7897
+https_proxy=http://127.0.0.1:7897
+no_proxy=127.0.0.1,localhost
+GIT_HTTP_PROXY=
+GIT_HTTPS_PROXY=
+```
+
+不要把 OpenAI、Anthropic、Feishu app secret 写进 `.env`。模型 provider 进容器后用 `cc-switch-cli` 配。
+
+### 3. 启动容器
+
+```bash
+cd "$FRAMEWORK_PATH/deploy"
+docker compose -f docker-compose.gpu.yaml up -d --build
+docker compose -f docker-compose.gpu.yaml ps
+docker exec -it labline-gpu bash
+```
+
+容器内快速确认：
+
+```bash
+nvidia-smi
+python3 - <<'PY'
+import torch
+print("cuda_available=", torch.cuda.is_available())
+print("gpu_count=", torch.cuda.device_count())
+PY
+lane framework --version
+```
+
+### 4. 创建测试项目并跑 Labline debug smoke
+
+容器内执行：
+
+```bash
+cd /labline/projects
+lane project init ./runtime-port-smoke --direction "3090 runtime exposed port smoke" --no-commit
+
+lane debug runtime-smoke \
+  --project /labline/projects/runtime-port-smoke \
+  --in-place \
+  --yes
+```
+
+等价单行命令：
+
+```bash
+lane debug runtime-smoke --project /labline/projects/runtime-port-smoke --in-place --yes
+```
+
+通过标准：
+
+- `status: pass`
+- 报告路径打印到 `debug-report.md` / `debug-report.json`
+- 项目内出现 `.labline/runtime/`
+- 根目录没有新的 `PIPELINE_STATE.json`
+
+### 5. 暴露 18080 端口做浏览器实测
+
+容器内启动一个最小 HTTP 服务：
+
+```bash
+cd /labline/projects/runtime-port-smoke
+tmux new-session -d -s port-smoke 'python3 -m http.server 18080 --bind 0.0.0.0'
+```
+
+宿主机检查监听：
+
+```bash
+ss -lntp | grep 18080
+curl -I http://127.0.0.1:18080
+```
+
+从你的本机浏览器访问：
+
+```text
+http://[服务器IP]:18080
+```
+
+如果访问不到，先分层排查：
+
+```bash
+# 3090 宿主机
+curl -I http://127.0.0.1:18080
+ss -lntp | grep 18080
+
+# 如果宿主机可访问、本机不可访问，检查防火墙/安全组。
+sudo ufw status
+# 只允许你的办公网或本机出口 IP 更安全；不要无脑长期开放给全网。
+sudo ufw allow from [你的本机出口IP或网段] to any port 18080 proto tcp
+```
+
+因为 compose 使用 `network_mode: host`，端口冲突也发生在宿主机层面。如果 `18080` 被占用，换一个未使用的高位端口，并同步替换上面的命令。
+
+### 6. 清理实测环境
+
+```bash
+# 容器内
+tmux kill-session -t port-smoke || true
+
+# 宿主机
+cd "$FRAMEWORK_PATH/deploy"
+docker compose -f docker-compose.gpu.yaml down
+```
+
+如果要保留容器供后续实测，不要执行 `down`；只停止端口 smoke 的 tmux session 即可。
+
 ## 详细步骤
 
 ### Step 1: 安装 Docker

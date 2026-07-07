@@ -1,12 +1,12 @@
 # Labline Skill Catalog
 
-> 自动生成于 2026-06-18 17:23。共 95 个 skill，12 个分类。
+> 自动生成于 2026-07-07 10:06。共 98 个 skill，12 个分类。
 >
 > 生成命令：`python3 tools/generate_skill_catalog.py`
 
 ## 目录
 
-- [Pipeline/编排](#pipeline编排)（5）
+- [Pipeline/编排](#pipeline编排)（8）
 - [研究发现](#研究发现)（8）
 - [搜索/数据源](#搜索数据源)（7）
 - [实验](#实验)（10）
@@ -63,6 +63,16 @@
 /meta-optimize
 ```
 
+### `/planner`
+
+**计划角色 - 产出计划草案、依赖拆解、风险图和 checkpoint，不执行计划、不越过 Leader。**
+
+参数：`规划什么？（描述研究/实验/写作计划任务）`
+
+```
+/planner
+```
+
 ### `/research-pipeline`
 
 **Full research pipeline: Workflow 1 (idea discovery) → implementation → Workflow 2 (auto review loop) → Workflow 3 (paper writing, optional). Goes f...**
@@ -71,6 +81,26 @@
 
 ```
 /research-pipeline "factorized gap in discrete diffusion LMs"
+```
+
+### `/reviewer`
+
+**独立 Reviewer 角色 - 从原始输入审查计划、代码、实验、claim 或论文；只产出 verdict 和 findings，不替 executor 修复。**
+
+参数：`审查什么？（文件路径、rubric、目标）`
+
+```
+/reviewer
+```
+
+### `/runtime-task-protocol`
+
+**Runtime Task protocol contract for dispatched Labline roles. Use when acting as or dispatching Leader, Planner, Coder, Deployer, Writer, or Reviewe...**
+
+参数：`[role/task-id/status-scenario]`
+
+```
+/runtime-task-protocol
 ```
 
 ---

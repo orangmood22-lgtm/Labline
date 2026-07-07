@@ -4,6 +4,7 @@
 import shutil
 import tempfile
 from pathlib import Path
+import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
@@ -99,6 +100,103 @@ def test_platform_metadata_does_not_declare_dead_end_compatibility():
             failures.append(f"{name}: status=claude-only conflicts with dual-track target")
 
     assert failures == [], "\n".join(failures)
+
+
+def test_runtime_task_protocol_is_wired_into_all_user_roles():
+    repo = Path(__file__).resolve().parent.parent
+    graph = build_graph(repo / "skills")
+    role_skills = {"leader", "planner", "coder", "deployer", "writer", "reviewer"}
+
+    assert (repo / "skills" / "shared-references" / "runtime-task-protocol.md").exists()
+    assert "runtime-task-protocol" in graph
+    missing_roles = sorted(role for role in role_skills if role not in graph)
+    assert missing_roles == []
+
+    missing_invokes = sorted(
+        role
+        for role in role_skills
+        if "runtime-task-protocol" not in graph[role].get("invokes", [])
+    )
+    assert missing_invokes == []
+
+    contract = (repo / "skills" / "shared-references" / "role-contracts.md").read_text(encoding="utf-8")
+    for role in ["Leader", "Planner", "Coder", "Deployer", "Writer", "Reviewer"]:
+        assert f"| {role} |" in contract
+    assert "runtime-task-protocol.md" in contract
+
+    protocol = (repo / "skills" / "shared-references" / "runtime-task-protocol.md").read_text(encoding="utf-8")
+    for term in [
+        "--next-expected-update",
+        "--required-artifact",
+        "--verdict-artifact",
+        "--retry-of",
+        "Runtime Task identity",
+        "terminal success",
+        "Observability Failure Retry Policy",
+        "transport evidence",
+        "NO_VERDICT_EXECUTION_FAILURE",
+    ]:
+        assert term in protocol
+
+
+def test_leader_embedded_dispatch_prompts_include_runtime_protocol():
+    repo = Path(__file__).resolve().parent.parent
+    leader = (repo / "skills" / "leader" / "SKILL.md").read_text(encoding="utf-8")
+
+    expected_agent_ids = [
+        "coder-${pipeline_id}-phase2",
+        "deployer-${pipeline_id}-sanity",
+        "deployer-${pipeline_id}-full",
+        "writer-${pipeline_id}-paper",
+    ]
+    for agent_id in expected_agent_ids:
+        assert f"agent_id: {agent_id}" in leader
+
+    expected_runtime_task_ids = [
+        "agent-coder-${pipeline_id}-phase2",
+        "agent-deployer-${pipeline_id}-sanity",
+        "agent-deployer-${pipeline_id}-full",
+        "agent-writer-${pipeline_id}-paper",
+    ]
+    for task_id in expected_runtime_task_ids:
+        assert f"runtime_task_id: {task_id}" in leader
+
+    assert leader.count("Runtime Task Contract") >= len(expected_agent_ids)
+    assert leader.count("Read .claude/skills/shared-references/runtime-task-protocol.md") >= len(
+        expected_agent_ids
+    )
+    assert leader.count(".labline/tools/agent_status.py") >= len(expected_agent_ids)
+    for term in [
+        "observability_failure=true",
+        "boot_no_progress",
+        "NO_VERDICT_EXECUTION_FAILURE",
+        "前台独立 review transport",
+    ]:
+        assert term in leader
+
+
+def test_leader_review_prompts_include_reviewer_runtime_status_contract():
+    repo = Path(__file__).resolve().parent.parent
+    prompts = (repo / "skills" / "shared-references" / "leader-review-prompts.md").read_text(
+        encoding="utf-8"
+    )
+    sections = re.split(r"\n## §\d+ ", prompts)[1:]
+
+    assert len(sections) == 5
+    required_terms = [
+        "agent_id",
+        "runtime-task-protocol.md",
+        ".labline/tools/agent_status.py",
+        "verdict artifact",
+        "terminal status",
+    ]
+    failures = []
+    for index, section in enumerate(sections, start=1):
+        missing = [term for term in required_terms if term not in section]
+        if missing:
+            failures.append(f"§{index}: {', '.join(missing)}")
+
+    assert not failures, "Reviewer prompts must carry runtime status contract:\n" + "\n".join(failures)
 
 
 if __name__ == "__main__":

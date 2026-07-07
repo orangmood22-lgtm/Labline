@@ -96,8 +96,10 @@ slides/
 ├── TALK_SCRIPT.md                  # full word-for-word talk script + Q&A (from /paper-slides)
 └── assets/                         # per-slide PNG previews
 
+.labline/runtime/pipelines/
+└── paper-talk.json                 # phase pointer, status, timestamps
+
 .labline/paper-talk/
-├── PIPELINE_STATE.json             # phase pointer, status, timestamps
 ├── FINAL_REPORT.md                 # human-readable summary at end
 ├── audit-input/                    # Phase-4 staging copies of slide text + notes + script (so /paper-claim-audit and /citation-audit can run on slide content as a synthetic "paper")
 │   ├── main.tex                    # \input{sections/slide_text.tex} \input{sections/notes.tex} \input{sections/script.tex}
@@ -130,8 +132,8 @@ The audit JSON files follow the shared 6-state schema; see
    - Codex MCP availability.
    - python-pptx (`python3 -c 'import pptx'`).
 3. **Resolve overrides** from `$ARGUMENTS`: `talk_type`, `minutes`, `assurance`, `reference`, `style`, `effort`.
-4. **State init**: write `.labline/paper-talk/PIPELINE_STATE.json` with `phase: 0`, timestamp, all resolved overrides.
-5. **Resume mode**: if `slides/SLIDE_OUTLINE.md` exists and `PIPELINE_STATE.json` shows recent in-progress work, prompt the user — resume from last phase or start fresh.
+4. **State init**: write `.labline/runtime/pipelines/paper-talk.json` with `phase: 0`, timestamp, all resolved overrides.
+5. **Resume mode**: if `slides/SLIDE_OUTLINE.md` exists and `.labline/runtime/pipelines/paper-talk.json` shows recent in-progress work, prompt the user — resume from last phase or start fresh.
 
 ### Phase 1: Slide Outline (Checkpoint)
 

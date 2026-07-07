@@ -11,6 +11,7 @@ MULTI_ENV_EXAMPLE = REPO_ROOT / "deploy" / ".env.example"
 GPU_DOCKERFILE = REPO_ROOT / "deploy" / "Dockerfile.gpu"
 MULTI_DOCKERFILE = REPO_ROOT / "deploy" / "Dockerfile"
 ENTRYPOINT = REPO_ROOT / "deploy" / "entrypoint.sh"
+DEPLOY_GUIDE = REPO_ROOT / "deploy" / "DEPLOY_GUIDE.md"
 
 
 class GpuDeployContractTest(unittest.TestCase):
@@ -124,6 +125,22 @@ class GpuDeployContractTest(unittest.TestCase):
                 self.assertNotIn("all_proxy=", content)
                 self.assertNotIn("ANTHROPIC_API_KEY=", content)
                 self.assertNotIn("OPENAI_API_KEY=", content)
+
+    def test_deploy_guide_documents_3090_exposed_port_smoke_path(self):
+        content = DEPLOY_GUIDE.read_text()
+
+        for item in [
+            "3090 单用户实机测试",
+            "docker compose -f docker-compose.gpu.yaml up -d --build",
+            "network_mode: host",
+            "0.0.0.0:18080",
+            "http://[服务器IP]:18080",
+            "lane debug runtime-smoke --project /labline/projects/runtime-port-smoke --in-place --yes",
+            "docker exec -it labline-gpu bash",
+            "ss -lntp | grep 18080",
+            "docker compose -f docker-compose.gpu.yaml down",
+        ]:
+            self.assertIn(item, content)
 
     def test_compose_files_pass_proxy_git_proxy_and_feishu_vars(self):
         required = [

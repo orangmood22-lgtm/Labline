@@ -164,6 +164,107 @@ def test_codex_shared_reference_links_exist() -> None:
     assert not failures, "Codex skill shared-reference links must resolve inside skills-codex:\n" + "\n".join(failures)
 
 
+def test_codex_runtime_task_protocol_role_wiring_matches_mainline() -> None:
+    role_skills = {"leader", "planner", "coder", "deployer", "writer", "reviewer"}
+    assert (CODEX_SKILLS / "shared-references" / "runtime-task-protocol.md").exists()
+    assert (CODEX_SKILLS / "runtime-task-protocol" / "SKILL.md").exists()
+
+    missing_roles = sorted(role for role in role_skills if not (CODEX_SKILLS / role / "SKILL.md").exists())
+    assert missing_roles == []
+
+    failures: list[str] = []
+    for role in sorted(role_skills):
+        text = read(CODEX_SKILLS / role / "SKILL.md")
+        if "runtime-task-protocol" not in text:
+            failures.append(role)
+
+    contract = read(CODEX_SKILLS / "shared-references" / "role-contracts.md")
+    for role in ["Leader", "Planner", "Coder", "Deployer", "Writer", "Reviewer"]:
+        if f"| {role} |" not in contract:
+            failures.append(f"role-contracts:{role}")
+    if "runtime-task-protocol.md" not in contract:
+        failures.append("role-contracts:runtime-task-protocol.md")
+
+    assert not failures, "Codex role skills must reference runtime-task-protocol:\n" + "\n".join(failures)
+
+    protocol = read(CODEX_SKILLS / "shared-references" / "runtime-task-protocol.md")
+    missing_terms = [
+        term
+        for term in [
+            "--next-expected-update",
+            "--required-artifact",
+            "--verdict-artifact",
+            "--retry-of",
+            "Runtime Task identity",
+            "terminal success",
+            "Observability Failure Retry Policy",
+            "transport evidence",
+            "NO_VERDICT_EXECUTION_FAILURE",
+        ]
+        if term not in protocol
+    ]
+    assert not missing_terms, "Codex runtime protocol missing hard-validation terms:\n" + "\n".join(missing_terms)
+
+
+def test_codex_leader_embedded_dispatch_prompts_include_runtime_protocol() -> None:
+    leader = read(CODEX_SKILLS / "leader" / "SKILL.md")
+    expected_agent_ids = [
+        "coder-${pipeline_id}-phase2",
+        "deployer-${pipeline_id}-sanity",
+        "deployer-${pipeline_id}-full",
+        "writer-${pipeline_id}-paper",
+    ]
+
+    failures: list[str] = []
+    for agent_id in expected_agent_ids:
+        if f"agent_id: {agent_id}" not in leader:
+            failures.append(f"missing agent_id {agent_id}")
+
+    expected_runtime_task_ids = [
+        "agent-coder-${pipeline_id}-phase2",
+        "agent-deployer-${pipeline_id}-sanity",
+        "agent-deployer-${pipeline_id}-full",
+        "agent-writer-${pipeline_id}-paper",
+    ]
+    for task_id in expected_runtime_task_ids:
+        if f"runtime_task_id: {task_id}" not in leader:
+            failures.append(f"missing runtime_task_id {task_id}")
+
+    if leader.count("Runtime Task Contract") < len(expected_agent_ids):
+        failures.append("embedded role prompts do not all inject Runtime Task Contract")
+    if leader.count("Read .agents/skills/shared-references/runtime-task-protocol.md") < len(expected_agent_ids):
+        failures.append("embedded role prompts do not all read runtime-task-protocol.md")
+    if leader.count(".labline/tools/agent_status.py") < len(expected_agent_ids):
+        failures.append("embedded role prompts do not all require agent_status.py")
+    for term in [
+        "observability_failure=true",
+        "boot_no_progress",
+        "NO_VERDICT_EXECUTION_FAILURE",
+        "前台独立 review transport",
+    ]:
+        if term not in leader:
+            failures.append(f"missing transport fallback term {term}")
+
+    assert not failures, "Codex Leader dispatch prompts must carry runtime protocol:\n" + "\n".join(failures)
+
+
+def test_codex_reviewer_routing_carries_labline_runtime_status_contract() -> None:
+    routing = read(CODEX_SKILLS / "shared-references" / "reviewer-routing.md")
+    required_terms = [
+        "Labline Leader",
+        "agent_id",
+        "runtime-task-protocol.md",
+        ".labline/tools/agent_status.py",
+        "verdict artifact",
+        "terminal status",
+    ]
+
+    missing = [term for term in required_terms if term not in routing]
+    assert not missing, "Codex reviewer routing must document Labline runtime status contract:\n" + "\n".join(
+        missing
+    )
+
+
 def test_codex_high_risk_skills_preserve_claude_semantics() -> None:
     required_terms = {
         "auto-review-loop": [

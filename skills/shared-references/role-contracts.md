@@ -27,10 +27,26 @@ Role Contract defines responsibility. Runtime Binding defines which model/sessio
 ## Handoff Rules
 
 - Leader dispatches tasks with role, scope, expected artifacts, tests/checks, and stop conditions.
+- Leader dispatches every delegated role with `runtime-task-protocol.md` requirements, including `agent_id`, Runtime Task id, status update cadence, `next_expected_update`, terminal status, required artifacts, and replacement/resolution rules.
 - Planner outputs drafts for Leader approval; it is not a hidden scheduler.
 - Coder, Deployer, and Writer update Agent Status Stream for long or delegated work.
 - Reviewer reads original inputs directly and records metadata separately from reasoning.
 - Any role that hits a boundary writes a blocker or handoff instead of expanding its own scope.
+
+## Runtime Task Protocol
+
+All user-side roles must follow `runtime-task-protocol.md` when they are dispatched as separate agents or when they dispatch/replace another task.
+
+| Role | Runtime obligation |
+|------|--------------------|
+| Leader | Assign `agent_id`, Runtime Task id, scope, expected artifacts, checks, stop condition, and status cadence; declare mandatory artifacts with `--required-artifact`; write `task.superseded`, `task.resolved_by`, or terminal `leader.decision` when old work is replaced or must not resume. |
+| Planner | Write planning status and final plan artifact refs when dispatched; declare required plan artifacts before terminal success; never execute the plan or approve its own plan. |
+| Coder | Write implementation progress, changed files, tests, blockers, deviations, and terminal artifacts; required implementation artifacts must exist before terminal success. |
+| Deployer | Write deployment progress, durable job handles, log/result paths, monitor cadence, blockers, and terminal verdicts; required logs/results must exist before terminal success. |
+| Writer | Write current section/document, output paths, cited result files, blockers, and terminal artifacts; required draft/report artifacts must exist before terminal success. |
+| Reviewer | Write metadata only: transport, input scope, trace path, `--verdict-artifact` path, and terminal status; keep reasoning in review artifacts. |
+
+Missing status, expected-update, required artifact, verdict artifact, or resolution is a runtime protocol violation, not merely a documentation issue. `lane status`, heartbeat, and auto-wakeup may derive `stale`, `anomaly`, or active escalation from missing fields. Runtime task validation rejects terminal success when required artifacts or Reviewer verdict artifacts are absent, and rejects retries that reuse the same task identity instead of linking with `--retry-of`.
 
 ## Model Override Rules
 

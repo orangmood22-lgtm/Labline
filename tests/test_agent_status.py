@@ -300,9 +300,85 @@ def test_project_root_writes_project_runtime_state():
             ]
         )
 
-        snapshot_path = project_root / ".labline" / "status" / "agents" / "writer-001.json"
+        snapshot_path = project_root / ".labline" / "runtime" / "agents" / "writer-001.json"
         assert snapshot_path.exists()
         assert json.loads(snapshot_path.read_text(encoding="utf-8"))["role"] == "writer"
+
+
+def test_project_root_reads_runtime_and_legacy_agent_status_with_runtime_precedence():
+    with tempfile.TemporaryDirectory() as tmp:
+        project_root = Path(tmp) / "project"
+        runtime_agents = project_root / ".labline" / "runtime" / "agents"
+        legacy_agents = project_root / ".labline" / "status" / "agents"
+        runtime_agents.mkdir(parents=True)
+        legacy_agents.mkdir(parents=True)
+        (runtime_agents / "writer-001.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "agent_id": "writer-001",
+                    "role": "writer",
+                    "status": "running",
+                    "task": "draft method",
+                    "last_updated": "2026-06-30T00:00:00Z",
+                    "current_action": "writing",
+                    "next_expected_update": "2026-06-30T00:10:00Z",
+                    "next_check_reason": "writing",
+                    "job_handles": [],
+                    "artifacts": [],
+                    "blocker": None,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (legacy_agents / "deployer-001.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "agent_id": "deployer-001",
+                    "role": "deployer",
+                    "status": "waiting_on_job",
+                    "task": "run experiments",
+                    "last_updated": "2026-06-30T00:00:00Z",
+                    "current_action": "training",
+                    "next_expected_update": "2026-06-30T00:10:00Z",
+                    "next_check_reason": "stable training",
+                    "job_handles": [{"type": "tmux", "session": "exp01"}],
+                    "artifacts": [],
+                    "blocker": None,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (legacy_agents / "writer-001.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "agent_id": "writer-001",
+                    "role": "writer",
+                    "status": "blocked",
+                    "task": "legacy duplicate",
+                    "last_updated": "2026-06-30T00:00:00Z",
+                    "current_action": "legacy",
+                    "next_expected_update": None,
+                    "next_check_reason": "terminal",
+                    "job_handles": [],
+                    "artifacts": [],
+                    "blocker": "legacy duplicate",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = run_agent_status(["--project-root", str(project_root), "list"])
+
+        assert result.stdout.splitlines() == [
+            "deployer-001 deployer waiting_on_job",
+            "writer-001 writer running",
+        ]
 
 
 def test_start_accepts_reviewer_transport_metadata():
@@ -358,6 +434,7 @@ if __name__ == "__main__":
         test_validate_reports_invalid_snapshot_schema,
         test_list_outputs_known_agents,
         test_project_root_writes_project_runtime_state,
+        test_project_root_reads_runtime_and_legacy_agent_status_with_runtime_precedence,
         test_start_accepts_reviewer_transport_metadata,
     ]
     failed = 0

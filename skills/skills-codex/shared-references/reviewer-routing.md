@@ -44,6 +44,18 @@ send_input:
     [follow-up materials only]
 ```
 
+## Labline Leader Runtime Contract
+
+When a Labline Leader dispatches a fresh reviewer agent, the reviewer prompt must carry the runtime status contract in addition to independence instructions:
+
+- include a stable `agent_id`
+- require reading `.agents/skills/shared-references/runtime-task-protocol.md`
+- require `.labline/tools/agent_status.py` start/update/finish when the reviewer has filesystem access
+- require a final verdict artifact path
+- require terminal status completed | failed | blocked with the verdict artifact path recorded in status metadata
+
+For transports that cannot write project files directly, the reviewer must return a structured status record containing `agent_id`, verdict artifact path, and terminal status so Leader can record the missing filesystem write as a transport limitation instead of leaving the task invisible.
+
 ## Oracle Pro Override
 
 When the user explicitly passes `--reviewer: oracle-pro`, switch only the reviewer route:

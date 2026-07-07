@@ -116,6 +116,9 @@ CATEGORY_MAP = {
 
     # Pipeline/编排
     "leader": "Pipeline/编排",
+    "planner": "Pipeline/编排",
+    "reviewer": "Pipeline/编排",
+    "runtime-task-protocol": "Pipeline/编排",
     "research-pipeline": "Pipeline/编排",
     "init-research": "Pipeline/编排",
     "dse-loop": "Pipeline/编排",
@@ -181,6 +184,9 @@ CATEGORY_ORDER = [
 # 示例命令（手动维护高频 skill，其余自动用 argument-hint 生成）
 EXAMPLES = {
     "leader": '/leader "基于频域特征的增量目标检测"',
+    "planner": "/planner",
+    "reviewer": "/reviewer",
+    "runtime-task-protocol": "/runtime-task-protocol",
     "init-research": '/init-research my-project --direction "研究方向" --server 4090x4',
     "research-pipeline": '/research-pipeline "factorized gap in discrete diffusion LMs"',
     "sync": "/sync push --message \"完成 backbone\"",

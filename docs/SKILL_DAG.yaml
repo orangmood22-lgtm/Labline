@@ -1,14 +1,14 @@
 version: 1
 generated_by: tools/generate_skill_dag.py
 stats:
-  total_skills: 95
-  total_edges: 29
+  total_skills: 98
+  total_edges: 38
   total_inferred_mentions: 131
   caller_distribution:
     executor: 37
-    any: 25
-    reviewer: 11
-    leader: 22
+    any: 26
+    reviewer: 12
+    leader: 23
   has_cycles: false
 nodes:
 - name: ablation-planner
@@ -135,6 +135,7 @@ nodes:
   caller: executor
   description: 代码实现角色 - 只写代码、测试、重构，不做部署、SSH、论文写作
   invokes:
+  - runtime-task-protocol
   - tdd
   platform: both
   status: active
@@ -169,6 +170,7 @@ nodes:
   description: 部署角色 - 只做 SSH 同步、启动训练、监控实验、收集结果，不写代码
   invokes:
   - monitor-experiment
+  - runtime-task-protocol
   platform: both
   status: active
   examples:
@@ -540,7 +542,10 @@ nodes:
   - experiment-queue
   - monitor-experiment
   - paper-writing
+  - planner
+  - reviewer
   - run-experiment
+  - runtime-task-protocol
   - sync
   - tdd
   - training-check
@@ -824,6 +829,18 @@ nodes:
   - /pixel-art a cute robot mascot
   - 画像素图 for README
   - pixel art logo for the project
+- name: planner
+  caller: leader
+  description: 计划角色 - 产出计划草案、依赖拆解、风险图和 checkpoint，不执行计划、不越过 Leader。
+  invokes:
+  - experiment-plan
+  - runtime-task-protocol
+  platform: both
+  status: active
+  examples:
+  - /planner split this research idea into phases
+  - 规划 R001-R003 experiment blocks
+  - draft task dependencies and checkpoints
 - name: prior-art-search
   caller: reviewer
   description: Search patent databases and academic literature for prior art relevant
@@ -1012,6 +1029,18 @@ nodes:
   - /review main
   - review since last commit
   - check PR changes against spec
+- name: reviewer
+  caller: reviewer
+  description: 独立 Reviewer 角色 - 从原始输入审查计划、代码、实验、claim 或论文；只产出 verdict 和 findings，不替
+    executor 修复。
+  invokes:
+  - runtime-task-protocol
+  platform: both
+  status: active
+  examples:
+  - /reviewer audit R003 config from source files
+  - independently review this experiment result
+  - check paper claims against raw results
 - name: run-experiment
   caller: executor
   description: Deploy and run ML experiments on local, remote, Vast.ai, or Modal serverless
@@ -1021,6 +1050,18 @@ nodes:
   - /run-experiment train baseline model
   - 跑实验 on 3090x2 server
   - deploy training to vast.ai
+- name: runtime-task-protocol
+  caller: any
+  description: Runtime Task protocol contract for dispatched Labline roles. Use when
+    acting as or dispatching Leader, Planner, Coder, Deployer, Writer, or Reviewer
+    so status snapshots, terminal decisions, and superseded/resolved task events are
+    written consistently.
+  platform: both
+  status: active
+  examples:
+  - /runtime-task-protocol coder-r003
+  - apply runtime protocol to this delegated task
+  - how should I mark this old task superseded
 - name: semantic-scholar
   caller: any
   description: Search published venue papers (IEEE, ACM, Springer, etc.) via Semantic
@@ -1174,6 +1215,10 @@ nodes:
 - name: writer
   caller: executor
   description: 论文写作角色 - 只写论文、文档、Rebuttal，不写代码、不做部署
+  invokes:
+  - runtime-task-protocol
+  platform: both
+  status: active
   examples:
   - /writer draft the method section
   - 写论文 introduction

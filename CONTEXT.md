@@ -132,28 +132,64 @@ _Avoid_: full transcript, verbose scratch log, agent memory dump
 A per-agent local file that contains exactly one agent's current Agent Status Snapshot. Each delegated agent owns its own status file, while the Leader reads those files to aggregate progress without requiring agents to write into a shared mutable snapshot.
 _Avoid_: shared agent state file, central writable scratchpad
 
+**Agent Status Contract**:
+The minimum observability evidence that every Leader-dispatched child role must leave for runtime observation, including current status, expected update or durable handle where applicable, terminal verdict, and required artifact pointers. The base contract is role-agnostic; individual roles add role-specific artifact expectations without changing the shared observability rules. The runtime schema and validator are the source of truth for this contract; role prompts and skills are projections that help agents comply.
+_Avoid_: skill text as final authority, transcript-only completion, role-specific status conventions without a shared base contract
+
+**Mandatory Runtime Contract Injection**:
+The dispatch rule that the Leader supplies the Agent Status Contract to every child-role task as part of the task context, instead of relying on the child role to discover or opt into a skill. Skill DAG entries may expose the contract, but dispatch-time injection and runtime validation preserve the contract.
+_Avoid_: optional status skill, agent-selected observability protocol, relying on memory from a previous conversation
+
+**Agent Observability Gate**:
+The lifecycle gate that checks the Agent Status Contract before dispatch, after child-role boot, and before accepting a terminal outcome. It prevents an unobservable child role from being mistaken for a successful task, failed role verdict, or clean phase-boundary continuation.
+_Avoid_: waiting indefinitely for missing status, accepting chat text as completion, converting unobservable child roles into phase readiness
+
+**Leader-Gated Agent Retry**:
+The recovery rule for a Delegated Agent Observability Failure: the runtime may wake or notify the Leader, but it must not silently retry the child role or overwrite the failed attempt. Any fresh retry is a new Leader decision and a new Runtime Task or event.
+_Avoid_: automatic child-agent respawn, overwriting failed attempts, hidden duplicate reviewer or deployer runs
+
+**Agent Retry Identity**:
+The audit identity rule that a fresh retry of a child-role task receives a new Runtime Task identity while linking back to the failed or superseded attempt. The latest successful retry may satisfy downstream gates, but earlier failed or unobservable attempts remain part of the project runtime record.
+_Avoid_: reusing failed task ids, erasing unobservable attempts, ambiguous reviewer report versions
+
+**Delegated Agent Observability Failure Rate**:
+The current runtime metric for how often Leader-dispatched child roles are unobservable: Delegated Agent Observability Failure count divided by the current delegated-agent task count in the runtime summary. It measures orchestration visibility health, not scientific failure, review quality, or experiment success.
+_Avoid_: overall task failure rate, reviewer fail rate, experiment failure rate
+
 **Long-Running Job Handle**:
 A durable pointer to a long-running task that can be checked independently of the agent that launched it, such as a tmux or screen session name, queue state file, watchdog task name, log path, or result directory. The Leader treats the job handle as the source of truth for task liveness when an agent status file stops updating.
 _Avoid_: foreground SSH command, agent transcript as progress source
 
+**Runtime Task**:
+The unified lifecycle object for Labline work that actually executes, whether it is short, interactive, delegated to an agent, or backed by a detached job. Runtime Tasks share events, status projection, observation, handoff, and terminal verdict semantics; pure status queries and read-only observations are not Runtime Tasks.
+_Avoid_: separate ordinary-task and long-task lifecycles, treating `/status` as a task, hiding execution outside task events
+
+**Runtime Task Capability Profile**:
+The capability description attached to a Runtime Task that states how it runs and how much supervision it needs, such as inline execution, agent turn, detached job, resumability, supervisor ownership, observation, and heartbeat behavior. It replaces the ordinary-task versus long-task split as an implementation decision.
+_Avoid_: task type explosion, forcing every short task through heavy supervision, implying every Runtime Task is resumable
+
+**Supervised Runtime Task**:
+A Runtime Task whose capability profile requires durable local supervision, usually because it is resumable, backed by a detached process or remote job, expected to outlive a single interactive turn, or needs escalation-gated heartbeat. It is the new canonical form of the older "long job" concept.
+_Avoid_: separate long-task lifecycle, every Runtime Task as supervised, chat-owned background work
+
 **Durable Task Supervisor**:
-The local owner of a long-running Labline task's lifecycle, liveness, recovery metadata, and final artifact pointers. It remains authoritative even when the Remote Session Inbox, chat transport, or Remote Status Projection disconnects or fails to update.
-_Avoid_: lark-channel-bridge as workflow runtime, chat card as process owner, single agent turn as long-task lifecycle
+The local owner of a Runtime Task when its capability profile requires durable supervision: lifecycle authority, liveness, recovery metadata, and final artifact pointers. It remains authoritative even when the Remote Session Inbox, chat transport, or Remote Status Projection disconnects or fails to update.
+_Avoid_: lark-channel-bridge as workflow runtime, chat card as process owner, treating all Runtime Tasks as heavy supervised jobs
 
 **Local Job Service**:
 A lightweight, local service that implements Durable Task Supervisor behavior for the current user and bridge profile. It manages supervised job queueing, child execution, lifecycle state, logs, verdicts, and handoff records without using a tmux session as the default execution container.
 _Avoid_: daemon-lite, per-job tmux session as the normal backend, full multi-user scheduler
 
 **Bridge-Managed Job Service**:
-A Local Job Service whose availability is checked, started, and re-discovered by the Feishu bridge for the active bridge profile. Users should not need to start a separate service manually before launching remote long tasks.
+A Local Job Service whose availability is checked, started, and re-discovered by the Feishu bridge for the active bridge profile. Users should not need to start a separate service manually before launching remote Supervised Runtime Tasks.
 _Avoid_: manual job-service prerequisite, hidden setup step for mobile entry, unmanaged background process with no bridge health check
 
 **Detached Profile Job Service**:
 A Bridge-Managed Job Service that is scoped to one bridge profile and continues running jobs independently of the bridge process that launched or discovered it. Bridge exit, restart, or session turnover must not by itself stop active supervised jobs.
 _Avoid_: bridge child process lifecycle, killing jobs when the chat turn ends, one global job service shared across unrelated profiles
 
-**Stale Long Job**:
-A supervised job whose durable record remains available but whose previous execution process can no longer be trusted after a host-level interruption such as reboot. It preserves handoff and logs for explicit continuation rather than automatically resuming execution.
+**Stale Supervised Runtime Task**:
+A Supervised Runtime Task whose durable record remains available, but whose previous execution process can no longer be trusted after a host-level interruption such as reboot. It preserves handoff and logs for explicit continuation rather than automatically resuming execution. "Stale Long Job" is the legacy name.
 _Avoid_: silent auto-resume after host reboot, losing job records on restart, treating stale as failed without inspection
 
 **Expected Update Time**:
@@ -164,17 +200,85 @@ _Avoid_: timeout, SLA, polling loop
 A non-mutating check that the Leader may perform when an Expected Update Time arrives, such as reading status files, queue state, watchdog summaries, logs, or monitor outputs. It must not restart jobs, change configuration, deploy code, or mutate project artifacts.
 _Avoid_: recovery action, automatic intervention
 
+**Phase-Boundary Continuation Wakeup**:
+A Leader wakeup requested when a declared workflow stage has completed normally and the next useful action is Leader orchestration, not failure recovery or human approval. It carries completed-stage evidence and asks the Leader to choose the next role, gate, or checkpoint without assuming that the next task should run automatically.
+_Avoid_: automatic continuation, treating every completed task as a continuation trigger, reusing blocked/stale/anomaly wakeups for clean stage completion
+
+**Phase-Boundary Runtime Task**:
+A Runtime Task that represents a declared workflow boundary rather than an executor-owned unit of work. It names the prerequisite tasks and required artifacts that must be terminal and present before a Phase-Boundary Continuation Wakeup is allowed.
+_Avoid_: encoding phase boundaries only in pipeline-stage strings, making child agent status own whole-stage readiness, inferring phase completion from any completed task
+
+**Ready-to-Continue Runtime Task**:
+A Runtime Task state for a declared workflow boundary whose prerequisites and required artifacts are satisfied, so the Leader can be woken to orchestrate the next step. It is not a human approval request and must not imply that the next executor action should start without Leader judgment.
+_Avoid_: overloading `need_decision`, treating readiness as approval, auto-starting the next experiment from readiness alone
+
+**Phase-Boundary Readiness Authority**:
+The ownership rule for phase-boundary readiness: the Leader declares the boundary and its prerequisites, the runtime observer verifies those prerequisites from task verdicts and artifacts, and child agents own only their own task verdicts. A child agent completion is evidence for a boundary, not authority over the boundary.
+_Avoid_: child agent declares whole-stage readiness, transcript-only phase completion, shared mutable pipeline readiness
+
+**Phase-Boundary Readiness Evidence**:
+The explicit, machine-checkable evidence required before a Phase-Boundary Runtime Task may become ready to continue. It includes prerequisite task verdicts, required project artifacts, required gate or reviewer verdicts, and the next Leader question to answer after wakeup. Delegated Agent Observability Failure is not a gate verdict and cannot satisfy readiness evidence.
+_Avoid_: inferring readiness from chat text, using recent activity as proof, hiding required artifacts in a prompt only
+
+**Leader Orchestration Authority**:
+The limited authority granted by a Ready-to-Continue Runtime Task wakeup. The Leader may inspect evidence, update its own orchestration state, choose the next role or gate, and decide whether a human decision is needed; it may not treat readiness as permission to launch high-cost, remote, deployment, or training work.
+_Avoid_: readiness as executor authorization, automatic experiment launch, skipping policy checkpoints after a clean phase boundary
+
+**One-Shot Phase-Boundary Wakeup**:
+The lifecycle rule that a Ready-to-Continue Runtime Task is consumed when the Leader wakes and records the next orchestration outcome. The boundary task should then become terminal, while any resulting human decision or follow-up work is represented by a new Runtime Task.
+_Avoid_: keeping consumed readiness active, repeated wakeups for the same boundary, mutating a phase-boundary trigger into the next executor task
+
+**Phase-Boundary-Ready Wakeup**:
+The auto-wakeup category for a Ready-to-Continue Runtime Task. It means a normal workflow boundary is ready for Leader orchestration and is distinct from stale recovery, blockers, anomalies, terminal-result notifications, and human-decision requests.
+_Avoid_: presenting clean continuation as an alert, reusing `need_decision` for Leader-only orchestration, mixing phase continuation with failure recovery
+
 **Reviewer Role**:
 The independent review role in Labline that audits plans, code, results, claims, citations, or paper artifacts from original inputs. The role may be implemented through an MCP-backed model call, a spawned agent, or a separate CLI session depending on platform, but its independence contract is the same.
 _Avoid_: equating Reviewer with Codex MCP only, executor self-review
+
+**Delegated Agent Observability Failure**:
+A failure mode where a Leader-dispatched Coder, Reviewer, Planner, or other child role does not leave enough Agent Status File, Long-Running Job Handle, expected-update, terminal verdict, or required artifact evidence for the Leader to observe the task outcome. It is classified from missing observability evidence before any role verdict is trusted; the Leader explains the failure and chooses recovery, but must not treat it as a substantive review, coding, or planning conclusion.
+_Avoid_: Reviewer failed, Coder failed, treating missing status or missing verdict artifacts as a substantive task conclusion
 
 **Project Runtime State**:
 Local, non-versioned state written inside a research project while Labline workflows run, such as agent status snapshots and transient coordination metadata. The Labline framework repository provides tools and protocols for this state but must not contain real project runtime state.
 _Avoid_: framework-owned runtime status, committed agent snapshots
 
+**Project Runtime State Root**:
+The project-local `.labline/runtime/` root for Labline-managed runtime control state, such as agents, jobs, queues, watchdog observations, pipeline state mirrors, tasks, events, leases, heartbeats, escalations, wakeups, foreground transports, and summaries. It is not a catch-all for project scaffolding, client entry files, install manifests, Git ignore rules, research artifacts, trace archives, or external bridge private state.
+_Avoid_: moving Codex/Claude project entry files into runtime, treating installation metadata as runtime control state, sweeping all generated files into one directory
+
+**Runtime Pipeline State**:
+Machine-readable workflow phase state stored under `.labline/runtime/pipelines/`. It replaces the older root-level `PIPELINE_STATE.json` convention for new projects; human-readable stage status remains in shared project surfaces such as `CLAUDE.md` Pipeline Status, trackers, or summaries.
+_Avoid_: root-level `PIPELINE_STATE.json` as a new-project protocol, hiding human stage status in machine JSON only
+
+**Runtime Status Aggregator**:
+A Labline runtime tool that reads component-owned state under `.labline/runtime/` and writes derived task and summary views such as `.labline/runtime/tasks/*.json` and `.labline/runtime/summaries/current.*`. It does not own the source state written by agents, queues, watchdogs, or pipeline controllers.
+_Avoid_: letting multiple components overwrite a shared task file, treating summaries as source of truth
+
 **Project Handoff Surface**:
-The project-owned files and snapshots that let a fresh session or role understand current work, decisions, open questions, status, and artifact pointers without relying on hidden model context. Long job records may reference or mirror this surface, but must not replace project-owned evidence.
+The project-owned files and snapshots that let a fresh session or role understand current work, decisions, open questions, status, and artifact pointers without relying on hidden model context. Runtime Task records may reference or mirror this surface, but must not replace project-owned evidence.
 _Avoid_: hidden conversation memory, duplicating full transcripts as handoff, treating chat cards as project evidence
+
+**Human-Facing Project Surface**:
+Project files intended primarily for human reading, review, teaching, or reporting. They should be concise, navigable, and stable enough for a person to inspect without learning runtime internals.
+_Avoid_: making humans read raw status JSON, burying decisions only in hidden runtime state
+
+**Human-Readable Project Structure**:
+The stable, navigable layout of human-facing and shared project files that lets a person understand a Labline project without inspecting runtime internals. Runtime consolidation must preserve this structure and may add references or summaries, but it must not relocate established human-facing artifacts into maintenance directories.
+_Avoid_: hiding plans, logs, reports, or configuration under `.labline/runtime`; optimizing machine state at the cost of human project readability
+
+**Agent-Facing Project Surface**:
+Project files intended primarily to restore or guide agent work, such as focused context, role instructions, recovery prompts, and machine-readable state summaries. They should be compact and structured for reliable loading by agents.
+_Avoid_: forcing agents to infer state from long human narratives, treating every project artifact as default context
+
+**Shared Project Surface**:
+Project files that both humans and agents are expected to read or maintain directly, especially initialization/configuration files, plans, trackers, ledgers, and concise summaries that coordinate work across sessions.
+_Avoid_: duplicating separate human and agent versions that can drift without a clear owner
+
+**Maintenance Project Surface**:
+Project-local files used by Labline tools, installers, runtimes, traces, caches, or compatibility adapters. They may be essential for operation, but they are not normal human or agent reading material unless diagnosing a problem.
+_Avoid_: treating process receipts as research artifacts, loading maintenance logs as default agent context
 
 **Project Registry**:
 A non-versioned registry in a User Workspace that records Labline project paths initialized for that user. Framework updates use it to keep registered projects in sync with the user's framework copy, and project detach removes projects from it.
@@ -197,64 +301,108 @@ A derived, remote-visible view of a live Codex Session's liveness, progress, blo
 _Avoid_: authoritative chat card, execution state stored in Feishu, using remote display success as proof of run completion
 
 **Conversation-Anchored Segmented Projection**:
-A Remote Status Projection for supervised long tasks that appears inside the initiating conversation as a small sequence of meaningful status segments. The current segment absorbs ordinary progress updates; new segments are reserved for important boundaries, input requests, and terminal results.
+A Remote Status Projection for observed Runtime Tasks that appears inside the initiating conversation as a small sequence of meaningful status segments. The current segment absorbs ordinary progress updates; new segments are reserved for important boundaries, blockers, input requests, anomalies, and terminal results.
 _Avoid_: per-job dashboard card, one-card-per-heartbeat, status feed detached from the conversation
 
-**Long Job Heartbeat**:
-A liveness update emitted by the Local Job Service while a supervised long job is still running, especially when the active agent or child process is waiting without producing user-visible output. It patches the active Conversation-Anchored Segmented Projection rather than creating a new status segment.
+**Runtime Task Heartbeat**:
+A liveness update emitted while an observed Runtime Task is still running, especially when a supervised task, active agent, or child process is waiting without producing user-visible output. It patches the active Conversation-Anchored Segmented Projection rather than creating a new status segment. "Long Job Heartbeat" is the legacy name for the supervised subset.
 _Avoid_: requiring Leader output for liveness, new card per heartbeat, treating heartbeat as evidence of task progress
 
-**Long Job Surface Pointers**:
-A short, high-signal set of project paths or artifact references shown in a long job's remote projection so the user can inspect the relevant Project Handoff Surface. These pointers identify handoff files, trackers, result directories, or logs without inlining their contents into the card.
+**Escalation-Gated Heartbeat**:
+A periodic external status probe for Runtime Tasks whose capability profile enables heartbeat. It updates runtime state without involving the Leader by default, and wakes or resumes the Leader only when the probe produces an escalation, a blocker, a due decision, a terminal result, or an explicit user status request.
+_Avoid_: scheduled Leader resume, LLM polling loop, treating every heartbeat as decision work
+
+**Project Heartbeat Protocol**:
+The framework-defined, project-executed file protocol for running Escalation-Gated Heartbeats inside a Labline project. It is independent of Feishu or any single chat transport; schedulers, bridges, shells, or future orchestrators may trigger it, but the protocol state belongs to the project runtime surface.
+_Avoid_: Feishu-owned heartbeat, chat-transport lifecycle, scheduler-specific project format
+
+**Runtime Interaction Entry**:
+A user-facing way to inspect or request changes to Project Runtime State, such as Feishu/Lark ChatOps, local Codex CLI, a shell command, a dashboard, or a future IDE panel. Interaction entries translate user intent into runtime status reads, approvals, escalations, or lease-protected control actions; they do not own workflow state.
+_Avoid_: Feishu as runtime owner, dashboard-owned tasks, treating a chat session as the project control plane
+
+**Runtime Observation Entry**:
+A read-only interaction path that lets a user follow progress from another endpoint without sending input to the active Leader session. It reads Project Runtime State, Remote Status Projection, events, summaries, and artifact pointers, but it does not create a Runtime Control Intent unless the user explicitly asks for a control action.
+_Avoid_: treating `/status` as Leader input, injecting status questions into a busy TUI, acquiring control leases for read-only progress checks
+
+**Remote Interaction Routing**:
+The classification step that decides whether a remote message is read-only observation, a BTW Side Channel question, a Normal Project Interaction, or a Runtime Control Intent. It protects active tasks from accidental interruption while still allowing ordinary project work and explicit control actions. Ambiguous remote messages default to non-mutating observation or BTW until the user explicitly confirms a project-changing action.
+_Avoid_: sending every remote message into the active Leader session, treating every question as project truth, hiding control actions inside side-channel answers
+
+**Remote Observation Subscription**:
+A bridge-owned mapping from a remote conversation to one project or task's read-only runtime projection. It is scoped by bridge profile or instance, workspace/project, conversation, and optional task id. It lets TUI-originated tasks push progress to Feishu/Lark by watching Project Runtime State and delivery state, without storing chat ownership in the project or sending input to the active Leader session.
+_Avoid_: project-owned chat IDs, TUI transcript mirroring, global project-wide broadcast, requiring Leader to send progress messages
+
+**Runtime Control Intent**:
+A structured request from an interaction entry to change runtime state or control a live session, such as approve, reject, pause heartbeat, force check, stop task, resume task, or launch workflow. It must be recorded as a runtime event and must acquire the relevant lease before mutating state or resuming a session.
+_Avoid_: free-form remote command execution, hidden direct TUI injection, unrecorded control action
+
+**Multi-Endpoint Control**:
+The rule that local CLI, Feishu/Lark, dashboard, scheduler, and future orchestrators may all observe the same project, but mutating operations converge through Runtime Control Intents and leases. Read-only status is concurrent; control is serialized by lease scope and event records.
+_Avoid_: last-writer-wins chat control, parallel Leader resumes, endpoint-specific truth
+
+**Heartbeat Monitor Worker**:
+An optional short-lived worker used by an Escalation-Gated Heartbeat to summarize logs, queue state, metrics, or job handles before a Leader decision. It may prepare evidence and a recommended next action, but it does not own the decision or replace the original Leader session.
+_Avoid_: autonomous monitor leader, hidden decision maker, replacing Leader context with a fresh worker context
+
+**Runtime Task Surface Pointers**:
+A short, high-signal set of project paths or artifact references shown in a Runtime Task's remote projection so the user can inspect the relevant Project Handoff Surface. These pointers identify handoff files, trackers, result directories, or logs without inlining their contents into the card. "Long Job Surface Pointers" is the legacy name for supervised tasks.
 _Avoid_: full logs in chat cards, long path dumps, hiding project-owned evidence behind chat-only summaries
 
-**Long Job Final Reply**:
-A new user-visible message sent in the originating conversation when a long job reaches a terminal state. It accompanies the final status-card patch so completion, failure, or stop results are visible as a fresh chat notification rather than only as an edited card.
-_Avoid_: terminal state only as card patch, silent completion, requiring users to inspect old status cards for final results
+**Runtime Task Final Reply**:
+A new user-visible message sent in the originating conversation when an observed Runtime Task reaches a terminal or attention-required state such as `blocked`, `need_decision`, or `anomaly`. It accompanies the status-card patch so completion, failure, stop results, or blockers are visible as a fresh chat notification rather than only as an edited card. "Long Job Final Reply" is the legacy name for supervised tasks.
+_Avoid_: terminal or blocked state only as card patch, silent completion, requiring users to inspect old status cards for final results
 
 **Projection Delivery State**:
-The Remote Message Archive record of whether a Remote Status Projection update, terminal card patch, or Long Job Final Reply has been delivered, is pending, or failed and needs retry. It is separate from the long job's lifecycle verdict.
-_Avoid_: marking a completed job incomplete because Feishu send failed, losing retry intent, using delivery success as proof of task completion
+The Remote Message Archive record of whether a Remote Status Projection update, terminal card patch, or Runtime Task Final Reply has been delivered, is pending, or failed and needs retry. It is keyed per remote observation subscription or projection target, and is separate from the Runtime Task lifecycle verdict.
+_Avoid_: marking a completed job incomplete because Feishu send failed, losing retry intent, using delivery success as proof of task completion, deduplicating across unrelated bridge profiles
 
-**Long Job Stop Request**:
-An explicit stop intent interpreted by the Leader for a supervised long job. `/stop` may pause the current Leader turn without directly killing background work; a user-facing request such as "stop the task" is handled by the Leader as the long job stop decision.
+**Runtime Task Stop Request**:
+An explicit stop intent interpreted by the Leader for a Runtime Task. `/stop` may pause the current Leader turn without directly killing background work; a user-facing request such as "stop the task" is handled by the Leader as the task stop decision.
 _Avoid_: direct process kill from remote projection, card-only cancellation path, bypassing the Leader for job stop decisions
 
-**Leader-Mediated Long Job Control**:
-The rule that user queries, status checks, requirement changes, continuation requests, and stop intents enter through the Leader conversation. The Leader reads long job state and decides whether to update, continue, stop, or leave background work running; long jobs do not consume user messages directly.
+**Leader-Mediated Runtime Task Control**:
+The rule that user queries, status checks, requirement changes, continuation requests, and stop intents enter through the Leader conversation or a lease-protected Runtime Control Intent. The Leader reads Runtime Task state and decides whether to update, continue, stop, or leave background work running; supervised tasks do not consume user messages directly.
 _Avoid_: background job chat endpoint, user-to-job direct routing, bypassing Leader for ordinary control flow
 
 **BTW Side Channel**:
-A read-only remote side question that can be answered while the Leader conversation or a long job continues running. It may use recent transcript, Remote Message Archive facts, and Project Handoff Surface pointers as context, but it must not modify files, advance tasks, or inject text into the Leader conversation.
+A read-only remote side question that can be answered while the Leader conversation or a Runtime Task continues running. During an active task, ordinary remote questions default to this path unless they imply a control action. It may use recent transcript, Remote Message Archive facts, and Project Handoff Surface pointers as context, but it must not modify files, advance tasks, or inject text into the Leader conversation.
 _Avoid_: side-channel task execution, hidden Leader interruption, merging BTW answers into job state as decisions
+
+**BTW Thread**:
+A short-lived, bridge-owned conversation thread for consecutive BTW Side Channel questions about the same project or active Runtime Task. It may carry recent read-only question context, task references, archive refs, and project pointers, but it is not a Runtime Task, Normal Project Interaction, Leader conversation, or control session.
+_Avoid_: task execution thread, hidden project memory, using BTW continuity to change project state
+
+**Normal Project Interaction**:
+A remote message intended to become ordinary project work or Leader conversation input, such as starting a new task, changing requirements, making a decision, or asking the Leader to perform analysis that may update project artifacts. It is not a BTW Side Channel question and must respect leases and Runtime Control Intent rules when work is already active.
+_Avoid_: treating project-changing instructions as read-only questions, bypassing control leases, implicit task creation from ambiguous chat
 
 **Remote File Broker**:
 A bridge-mediated file transfer surface that lets Feishu users request, receive, or upload files through controlled paths under the active workspace or approved roots. It does not provide direct remote filesystem editing; file modifications remain Leader-mediated project work.
 _Avoid_: Feishu file manager, remote shell filesystem access, direct chat command for arbitrary file writes
 
 **Bridge-Compatible Card Semantics**:
-The constraint that long-task status projections preserve the existing Feishu bridge card behavior, supported interactions, and fallback expectations rather than inventing a separate card surface for supervised jobs.
+The constraint that Runtime Task status projections preserve the existing Feishu bridge card behavior, supported interactions, and fallback expectations rather than inventing a separate card surface for supervised jobs.
 _Avoid_: special long-job card protocol, degraded card feature subset, divergent button semantics
 
 **Remote Projection Boundary**:
-The responsibility boundary where a Durable Task Supervisor owns long-task lifecycle state, while the Feishu bridge owns remote rendering, card patching, callbacks, and user-visible fallback behavior.
+The responsibility boundary where a Durable Task Supervisor owns Supervised Runtime Task lifecycle state, while the Feishu bridge owns remote rendering, card patching, callbacks, and user-visible fallback behavior.
 _Avoid_: supervisor calling chat APIs directly, duplicating bridge card logic inside jobs, treating card delivery as task execution
 
 **Remote Message Archive**:
-The bridge-owned archive for Feishu/Lark conversation records, remote session traces, long job identity, projection metadata, and handoff state. It may reference many project workspaces; projects remain responsible for code, experiment outputs, and durable research artifacts.
+The bridge-owned archive for Feishu/Lark conversation records, remote session traces, Runtime Task identity, projection metadata, and handoff state. It may reference many project workspaces; projects remain responsible for code, experiment outputs, and durable research artifacts.
 _Avoid_: project-local chat archive as the authority, storing job identity only inside a workspace, treating Feishu cloud history as the local archive
 
-**Project Long Job Mirror**:
-A project-local, read-only discovery surface for a supervised job whose authoritative record lives in the Remote Message Archive. It helps a local session find the remote job, handoff snapshot, and artifact pointers without creating a second writable source of lifecycle truth.
+**Project Runtime Task Mirror**:
+A project-local, read-only discovery surface for a Supervised Runtime Task whose authoritative remote projection record lives in the Remote Message Archive. It helps a local session find the task, handoff snapshot, and artifact pointers without creating a second writable source of lifecycle truth. "Project Long Job Mirror" is the legacy name.
 _Avoid_: project-owned remote job state, two-way status sync, editing mirrored job files to control the task
 
-**Single-Workspace Long Job**:
-A supervised remote job whose execution, recovery context, permissions, logs, and artifact pointers are anchored to one workspace or current working directory. Multi-workspace work is represented as orchestration across multiple jobs, not as one job with several mutable workspace roots.
+**Single-Workspace Runtime Task**:
+A Runtime Task whose execution, recovery context, permissions, logs, and artifact pointers are anchored to one workspace or current working directory. Multi-workspace work is represented as orchestration across multiple tasks, not as one task with several mutable workspace roots. "Single-Workspace Long Job" is the legacy name for supervised tasks.
 _Avoid_: cross-workspace job state, implicit cwd switching inside one job, one remote job owning multiple projects
 
-**Explicit Long Task Entry**:
-A deliberate user request to start a long-running task under a Durable Task Supervisor instead of a single chat-triggered agent turn. Ordinary status queries and casual follow-up messages are not Explicit Long Task Entries.
-_Avoid_: treating every remote message as a background job, implicit detached execution for status checks, accidental new runs from progress questions
+**Explicit Runtime Task Entry**:
+A deliberate user request, Leader dispatch, or workflow action that creates a Runtime Task. Ordinary status queries, follow-up questions, and read-only observations are not Runtime Task entries unless they explicitly start or change execution.
+_Avoid_: treating every remote message as execution, implicit detached runs for status checks, accidental new tasks from progress questions
 
 **Feishu-Controlled Session**:
 An opt-in Codex Session that is registered for Remote Session Inbox messages, Remote Action Approval, status reporting, and response forwarding through Feishu. Sessions that never opt in are invisible to Feishu control.
@@ -276,16 +424,16 @@ _Avoid_: transcript merge, hidden context merge, memory graft
 A compact, agent-readable summary for resuming or inspecting a Durable Task Supervisor job from a new local or remote session. It includes the current objective, status, decisions, open questions, next action, artifact pointers, and log paths; it does not inline the full transcript or raw logs.
 _Avoid_: full log replay, chat transcript as recovery context, attaching a new agent to a hidden live process
 
-**Long Job Handoff Sync**:
-The process of keeping a long job's handoff record aligned with relevant Project Handoff Surface entries and Remote Message Archive facts. It links or mirrors auditable facts and artifact pointers without claiming that hidden model context moved between sessions.
+**Runtime Task Handoff Sync**:
+The process of keeping a Runtime Task handoff record aligned with relevant Project Handoff Surface entries and Remote Message Archive facts. It links or mirrors auditable facts and artifact pointers without claiming that hidden model context moved between sessions. "Long Job Handoff Sync" is the legacy name for supervised tasks.
 _Avoid_: two writable handoff authorities, copying entire logs into every job record, context transfer claims
 
 **Structured Task Verdict**:
-The machine-readable status a supervised long task writes at the end of each agent turn, including whether the task is done, blocked, or ready to continue. Agent self-assessment may inform the verdict, but the Durable Task Supervisor compares it against explicit done criteria before ending the job.
-_Avoid_: accepting free-text "done" as completion, ending a long task at every milestone, relying on chat wording as lifecycle state
+The machine-readable status a Runtime Task writes at the end of each agent turn, including whether the task is done, blocked, or ready to continue. Agent self-assessment may inform the verdict, but the Durable Task Supervisor compares supervised-task verdicts against explicit done criteria before ending the job.
+_Avoid_: accepting free-text "done" as completion, ending a supervised task at every milestone, relying on chat wording as lifecycle state
 
 **Compact Continuation Context**:
-The bounded context packet supplied to each automatic continuation turn of a supervised long task. It contains the original task goal and done criteria, the latest Job Handoff Snapshot, the previous Structured Task Verdict, and selected log excerpts or artifact pointers rather than full transcripts.
+The bounded context packet supplied to each automatic continuation turn of a Supervised Runtime Task. It contains the original task goal and done criteria, the latest Job Handoff Snapshot, the previous Structured Task Verdict, and selected log excerpts or artifact pointers rather than full transcripts.
 _Avoid_: replaying complete chat history, stuffing full logs into every continuation, relying on hidden model context for progress
 
 **User Workspace**:

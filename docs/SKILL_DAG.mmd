@@ -1,7 +1,9 @@
 graph TD
     auto-paper-improvement-loop --> kill-argument
+    coder --> runtime-task-protocol
     coder --> tdd
     deployer --> monitor-experiment
+    deployer --> runtime-task-protocol
     leader --> coder
     leader --> deployer
     leader --> diagnose
@@ -9,7 +11,10 @@ graph TD
     leader --> experiment-queue
     leader --> monitor-experiment
     leader --> paper-writing
+    leader --> planner
+    leader --> reviewer
     leader --> run-experiment
+    leader --> runtime-task-protocol
     leader --> sync
     leader --> tdd
     leader --> training-check
@@ -20,6 +25,8 @@ graph TD
     paper-talk --> paper-claim-audit
     paper-talk --> paper-slides
     paper-talk --> slides-polish
+    planner --> experiment-plan
+    planner --> runtime-task-protocol
     resubmit-pipeline --> auto-paper-improvement-loop
     resubmit-pipeline --> citation-audit
     resubmit-pipeline --> kill-argument
@@ -27,10 +34,12 @@ graph TD
     resubmit-pipeline --> paper-claim-audit
     resubmit-pipeline --> paper-compile
     resubmit-pipeline --> proof-checker
+    reviewer --> runtime-task-protocol
     skill-dag-check --> write-a-skill
+    writer --> runtime-task-protocol
 
     classDef leader fill:#ff9999,stroke:#cc0000
-    class auto-paper-improvement-loop,auto-review-loop,auto-review-loop-llm,auto-review-loop-minimax,dse-loop,experiment-plan,framework-update,idea-discovery,idea-discovery-robot,init-research,kill-argument,leader,meta-optimize,paper-talk,paper-writing,patent-pipeline,rebuttal,research-pipeline,research-refine,research-refine-pipeline leader
+    class auto-paper-improvement-loop,auto-review-loop,auto-review-loop-llm,auto-review-loop-minimax,dse-loop,experiment-plan,framework-update,idea-discovery,idea-discovery-robot,init-research,kill-argument,leader,meta-optimize,paper-talk,paper-writing,patent-pipeline,planner,rebuttal,research-pipeline,research-refine leader
     classDef executor fill:#99ccff,stroke:#0066cc
     class ablation-planner,claims-drafting,coder,deployer,diagnose,embodiment-description,experiment-bridge,experiment-queue,figure-description,figure-spec,formula-derivation,grant-proposal,invention-structuring,jurisdiction-format,mermaid-diagram,monitor-experiment,overleaf-sync,paper-compile,paper-figure,paper-illustration executor
     classDef any fill:#99ff99,stroke:#009900

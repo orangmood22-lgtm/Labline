@@ -302,6 +302,36 @@ class TestWriteStatus(unittest.TestCase):
         result = watchdog.write_status(status_file, data)
         self.assertEqual(result, data)
 
+    def test_runtime_project_mirror_writes_summary_event_and_escalation_for_anomaly(self):
+        project = Path(self.tmpdir) / "project"
+        status_file = self.status_dir / "exp01.json"
+        data = {
+            "status": "DEAD",
+            "task": "exp01",
+            "type": "training",
+            "msg": "screen session gone",
+            "ts": "2026-06-30T00:00:00Z",
+        }
+
+        watchdog.write_status(status_file, data, runtime_project=project)
+
+        runtime_root = project / ".labline" / "runtime"
+        summary = json.loads((runtime_root / "watchdog" / "exp01" / "summary.json").read_text())
+        self.assertEqual(summary["task_id"], "watchdog:exp01")
+        self.assertEqual(summary["status"], "DEAD")
+        self.assertEqual(summary["watchdog"], data)
+        events = [
+            json.loads(line)
+            for line in (runtime_root / "events" / "runtime.jsonl").read_text().splitlines()
+        ]
+        self.assertEqual(events[0]["event_type"], "watchdog.anomaly")
+        self.assertEqual(events[0]["task_id"], "watchdog:exp01")
+        escalations = list((runtime_root / "escalations").glob("*.json"))
+        self.assertEqual(len(escalations), 1)
+        escalation = json.loads(escalations[0].read_text())
+        self.assertEqual(escalation["escalation_type"], "watchdog_dead")
+        self.assertFalse(escalation["resume_allowed"])
+
 
 class TestWriteSummary(unittest.TestCase):
     """Test write_summary() aggregation."""

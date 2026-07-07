@@ -17,6 +17,8 @@ project/
 ├── CLAUDE.md                              # Dashboard — Pipeline Status + project constraints
 ├── findings.md                            # Lightweight discovery log (experiments + debug)
 ├── MANIFEST.md                            # Output tracking manifest (auto-maintained)
+├── .labline/
+│   └── runtime/                           # Project runtime state: tasks, events, summaries, leases
 │
 ├── idea-stage/                            # W1: Idea Discovery outputs
 │   ├── IDEA_REPORT.md                     # Raw brainstorm output (from /idea-creator)
@@ -57,6 +59,30 @@ project/
 | `refine-logs/EXPERIMENT_TRACKER.md` | `/experiment-plan` | Execution checklist: run ID, status (TODO→DONE), one-line notes |
 | `review-stage/AUTO_REVIEW.md` | `/auto-review-loop` | Cumulative review log: scores, reviewer responses, actions taken |
 | `review-stage/REVIEW_STATE.json` | `/auto-review-loop` | Recovery state for context compaction |
+
+### Runtime State Layer
+
+`.labline/runtime/` is Labline's project-local runtime state root. It is the machine-readable layer for current execution state, separate from research artifacts such as `refine-logs/EXPERIMENT_LOG.md` or `paper/main.tex`.
+
+| Path | Purpose |
+|------|---------|
+| `.labline/runtime/tasks/*.json` | Runtime Task records and derived task views |
+| `.labline/runtime/events/runtime.jsonl` | Append-only runtime event log |
+| `.labline/runtime/summaries/current.json` | Machine-readable aggregate status |
+| `.labline/runtime/summaries/current.md` | Short human-readable aggregate status |
+| `.labline/runtime/leases/*.json` | Runtime control leases |
+| `.labline/runtime/heartbeats/*.json` | Heartbeat runner state |
+| `.labline/runtime/escalations/*.json` | Terminal, decision, anomaly, or stale escalations |
+| `.labline/runtime/agents/*.json` | Agent status snapshots |
+| `.labline/runtime/queues/*.json` | Queue state mirrors |
+| `.labline/runtime/watchdog/**/summary.json` | Watchdog summaries |
+| `.labline/runtime/pipelines/*.json` | Workflow/pipeline phase state |
+
+A Runtime Task is any executable unit of work: inline CLI work, an agent turn, or a detached job. Short and long work use the same schema; differences are expressed by the capability profile (`execution_mode`, `durability`, `observation`, `heartbeat`).
+
+Root `PIPELINE_STATE.json` is legacy migration input only. New projects should write workflow state to `.labline/runtime/pipelines/*.json` and should not create a root `PIPELINE_STATE.json`.
+
+Remote messaging state is not project runtime state. Feishu/Lark chat IDs, open IDs, tokens, message text, subscriptions, and delivery records are bridge-owned and must stay outside `.labline/runtime/`; project runtime may store only sanitized references such as `archive_ref` and `task_id`.
 
 ### New Files (this guide)
 

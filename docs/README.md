@@ -8,6 +8,7 @@
 |------|------|
 | [FRAMEWORK_STRUCTURE.md](FRAMEWORK_STRUCTURE.md) | 理解 framework / project / dev 边界 |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | 日常操作、API 配置、workflow 使用 |
+| [TOOLS_INDEX.md](TOOLS_INDEX.md) | 常用 `lane` 命令和稳定工具入口 |
 | [TRIPARTITE_ARCHITECTURE_GUIDE.md](TRIPARTITE_ARCHITECTURE_GUIDE.md) | Leader / Executor / Reviewer 三边协作 |
 | [FEISHU_INTEGRATION.md](FEISHU_INTEGRATION.md) | 飞书/Lark 远控：默认 `lark-channel-bridge`，旧版 Labline runner fallback |
 

@@ -17,6 +17,8 @@ project/
 ├── CLAUDE.md                              # 仪表盘 — Pipeline Status + 项目约束
 ├── findings.md                            # 轻量级发现日志（实验 + debug）
 ├── MANIFEST.md                            # 产出追踪清单（自动维护）
+├── .labline/
+│   └── runtime/                           # 项目运行态：tasks、events、summaries、leases
 │
 ├── idea-stage/                            # W1: Idea Discovery 产出
 │   ├── IDEA_REPORT.md                     # brainstorm 原始产出（来自 /idea-creator）
@@ -57,6 +59,30 @@ project/
 | `refine-logs/EXPERIMENT_TRACKER.md` | `/experiment-plan` | 执行清单：run ID、状态（TODO→DONE）、一句话 notes |
 | `review-stage/AUTO_REVIEW.md` | `/auto-review-loop` | 审稿循环累积日志：评分、reviewer 原始响应、采取的行动 |
 | `review-stage/REVIEW_STATE.json` | `/auto-review-loop` | 上下文压缩恢复状态 |
+
+### Runtime 状态层
+
+`.labline/runtime/` 是 Labline 项目内的运行态状态根。它保存当前执行状态的机器可读视图，和 `refine-logs/EXPERIMENT_LOG.md`、`paper/main.tex` 这类研究产物分开。
+
+| 路径 | 定位 |
+|------|------|
+| `.labline/runtime/tasks/*.json` | Runtime Task 记录和派生 task 视图 |
+| `.labline/runtime/events/runtime.jsonl` | append-only runtime 事件日志 |
+| `.labline/runtime/summaries/current.json` | 机器可读聚合状态 |
+| `.labline/runtime/summaries/current.md` | 简短人类可读聚合状态 |
+| `.labline/runtime/leases/*.json` | runtime 控制 lease |
+| `.labline/runtime/heartbeats/*.json` | heartbeat runner 状态 |
+| `.labline/runtime/escalations/*.json` | terminal、decision、anomaly、stale 等升级事件 |
+| `.labline/runtime/agents/*.json` | agent status snapshot |
+| `.labline/runtime/queues/*.json` | queue state mirror |
+| `.labline/runtime/watchdog/**/summary.json` | watchdog 摘要 |
+| `.labline/runtime/pipelines/*.json` | workflow/pipeline 阶段状态 |
+
+Runtime Task 表示任何会执行的工作单元：inline CLI work、agent turn 或 detached job。短任务和长任务使用同一个 schema；差异通过 capability profile 表达：`execution_mode`、`durability`、`observation`、`heartbeat`。
+
+根目录 `PIPELINE_STATE.json` 只作为旧项目迁移输入。新项目应把 workflow 状态写到 `.labline/runtime/pipelines/*.json`，不再创建根目录 `PIPELINE_STATE.json`。
+
+远程消息状态不属于项目 runtime。飞书/Lark chat id、open id、token、消息正文、订阅和投递记录属于 bridge-owned state，必须留在 `.labline/runtime/` 外；项目 runtime 只保存 `archive_ref`、`task_id` 等脱敏引用。
 
 ### 新增文件（本指南）
 

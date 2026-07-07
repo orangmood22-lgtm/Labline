@@ -44,12 +44,14 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from pathlib import Path
 
 DEFAULT_BASE = "/tmp/labline-watchdog"
 DEFAULT_INTERVAL = 60
 SLOW_SPEED_THRESHOLD = 1 * 1024 * 1024  # 1 MB/s
 GPU_IDLE_THRESHOLD = 5  # percent
+WATCHDOG_ANOMALY_STATUSES = {"DEAD", "STALLED", "IDLE", "ERROR"}
 
 
 def _atomic_write_text(path, content):
@@ -70,6 +72,50 @@ def _atomic_write_text(path, content):
 
 def _write_json_atomic(path, data):
     _atomic_write_text(path, json.dumps(data, indent=2))
+
+
+def mirror_runtime_status(runtime_project, status_file, data):
+    """Mirror watchdog output into project runtime without changing watchdog ownership."""
+    import labline_runtime
+
+    project = Path(runtime_project)
+    root = labline_runtime.init_runtime_root(project)
+    task_name = str(data.get("task") or Path(status_file).stem)
+    task_id = f"watchdog:{task_name}"
+    updated_at = data.get("ts") or time.strftime("%Y-%m-%dT%H:%M:%S")
+    payload = {
+        "schema_version": labline_runtime.RUNTIME_SCHEMA_VERSION,
+        "source": {"entry": "watchdog", "status_ref": str(status_file)},
+        "task_id": task_id,
+        "watchdog_task": task_name,
+        "status": data.get("status"),
+        "updated_at": updated_at,
+        "watchdog": data,
+    }
+    summary_path = root / "watchdog" / labline_runtime.safe_filename(task_name) / "summary.json"
+    labline_runtime.atomic_write_json(summary_path, payload)
+
+    status = str(data.get("status") or "")
+    if status not in WATCHDOG_ANOMALY_STATUSES:
+        return
+
+    escalation = {
+        "schema_version": labline_runtime.RUNTIME_SCHEMA_VERSION,
+        "escalation_id": "esc_" + uuid.uuid4().hex,
+        "created_at": updated_at,
+        "source": {"entry": "watchdog", "summary_ref": labline_runtime.rel_ref(project, summary_path)},
+        "task_id": task_id,
+        "status": status,
+        "escalation_type": f"watchdog_{status.lower()}",
+        "reason": data.get("msg") or f"watchdog status {status}",
+        "resume_allowed": False,
+    }
+    escalation_path = root / "escalations" / f"{labline_runtime.safe_filename(task_name)}-{escalation['escalation_id']}.json"
+    labline_runtime.atomic_write_json(escalation_path, escalation)
+    event_payload = dict(escalation)
+    event_payload["summary_ref"] = labline_runtime.rel_ref(project, summary_path)
+    event_payload["escalation_ref"] = labline_runtime.rel_ref(project, escalation_path)
+    labline_runtime.append_runtime_event(project, "watchdog.anomaly", task_id=task_id, payload=event_payload)
 
 
 def get_paths(base_dir):
@@ -189,7 +235,7 @@ def get_path_size(path):
 # ── Task checking logic ─────────────────────────────────────────
 
 
-def check_download(task, status_dir, interval):
+def check_download(task, status_dir, interval, runtime_project=None):
     name = task["name"]
     session = task["session"]
     session_type = task.get("session_type", "screen")
@@ -201,13 +247,13 @@ def check_download(task, status_dir, interval):
         return write_status(status_file, {
             "status": "DEAD", "task": name, "type": "download",
             "msg": f"{session_type} session gone", "ts": now,
-        })
+        }, runtime_project=runtime_project)
 
     if not target:
         return write_status(status_file, {
             "status": "OK", "task": name, "type": "download",
             "msg": "alive, no target_path to check size", "ts": now,
-        })
+        }, runtime_project=runtime_project)
 
     current_size = get_path_size(target)
 
@@ -224,7 +270,7 @@ def check_download(task, status_dir, interval):
         return write_status(status_file, {
             "status": "STALLED", "task": name, "type": "download",
             "size": current_size, "msg": "no size growth", "ts": now,
-        })
+        }, runtime_project=runtime_project)
 
     speed = (current_size - prev_size) / max(interval, 1)
 
@@ -233,16 +279,16 @@ def check_download(task, status_dir, interval):
             "status": "SLOW", "task": name, "type": "download",
             "size": current_size, "speed_mbps": round(speed / 1024 / 1024, 2),
             "ts": now,
-        })
+        }, runtime_project=runtime_project)
 
     return write_status(status_file, {
         "status": "OK", "task": name, "type": "download",
         "size": current_size, "speed_mbps": round(speed / 1024 / 1024, 2),
         "ts": now,
-    })
+    }, runtime_project=runtime_project)
 
 
-def check_training(task, status_dir):
+def check_training(task, status_dir, runtime_project=None):
     name = task["name"]
     session = task["session"]
     session_type = task.get("session_type", "screen")
@@ -253,7 +299,7 @@ def check_training(task, status_dir):
         return write_status(status_file, {
             "status": "DEAD", "task": name, "type": "training",
             "msg": f"{session_type} session gone", "ts": now,
-        })
+        }, runtime_project=runtime_project)
 
     gpu_utils = get_gpu_util()
 
@@ -266,18 +312,18 @@ def check_training(task, status_dir):
                 "status": "IDLE", "task": name, "type": "training",
                 "gpu_util": {str(i): gpu_utils[i] for i in gpus if i < len(gpu_utils)},
                 "msg": f"GPUs idle (<{GPU_IDLE_THRESHOLD}%)", "ts": now,
-            })
+            }, runtime_project=runtime_project)
 
     return write_status(status_file, {
         "status": "OK", "task": name, "type": "training",
         "gpu_util": gpu_utils, "ts": now,
-    })
+    }, runtime_project=runtime_project)
 
 
 # ── Status output ────────────────────────────────────────────────
 
 
-def write_status(path, data):
+def write_status(path, data, runtime_project=None):
     """Write per-task status and append to alerts.log on anomalies."""
     _write_json_atomic(path, data)
 
@@ -290,6 +336,9 @@ def write_status(path, data):
         alert_line = f"[{ts}] {task}: {status} — {msg}\n"
         with open(alert_file, "a") as f:
             f.write(alert_line)
+
+    if runtime_project:
+        mirror_runtime_status(runtime_project, path, data)
 
     return data
 
@@ -322,7 +371,7 @@ def write_summary(status_dir):
 # ── Main loop ────────────────────────────────────────────────────
 
 
-def run_watchdog(base_dir, interval):
+def run_watchdog(base_dir, interval, runtime_project=None):
     paths = get_paths(base_dir)
     paths["base"].mkdir(parents=True, exist_ok=True)
     paths["status"].mkdir(parents=True, exist_ok=True)
@@ -353,14 +402,15 @@ def run_watchdog(base_dir, interval):
         for task in tasks:
             try:
                 if task["type"] == "download":
-                    check_download(task, paths["status"], interval)
+                    check_download(task, paths["status"], interval, runtime_project=runtime_project)
                 elif task["type"] == "training":
-                    check_training(task, paths["status"])
+                    check_training(task, paths["status"], runtime_project=runtime_project)
             except Exception as e:
                 write_status(
                     paths["status"] / f"{task['name']}.json",
                     {"status": "ERROR", "task": task["name"], "msg": str(e),
                      "ts": time.strftime("%Y-%m-%dT%H:%M:%S")},
+                    runtime_project=runtime_project,
                 )
 
         write_summary(paths["status"])
@@ -399,6 +449,8 @@ Examples:
                         help="Unregister a task by name")
     parser.add_argument("--status", action="store_true",
                         help="Print current summary and exit")
+    parser.add_argument("--runtime-project",
+                        help="Mirror status into <project>/.labline/runtime/watchdog")
     args = parser.parse_args()
 
     if args.register:
@@ -410,7 +462,7 @@ Examples:
         summary = paths["status"] / "summary.txt"
         print(summary.read_text() if summary.exists() else "no status")
     else:
-        run_watchdog(args.base_dir, args.interval)
+        run_watchdog(args.base_dir, args.interval, runtime_project=args.runtime_project)
 
 
 if __name__ == "__main__":

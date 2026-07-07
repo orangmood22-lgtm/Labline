@@ -79,12 +79,12 @@ body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; backgrou
 <div id="nav">
   <h1>Labline <span>Skill DAG</span></h1>
   <div id="stats">
-    <span><b>95</b> skills</span>
-    <span><b>29</b> edges</span>
-    <span><b>22</b> leader</span>
-    <span><b>11</b> reviewer</span>
+    <span><b>98</b> skills</span>
+    <span><b>38</b> edges</span>
+    <span><b>23</b> leader</span>
+    <span><b>12</b> reviewer</span>
     <span><b>37</b> executor</span>
-    <span><b>25</b> any</span>
+    <span><b>26</b> any</span>
   </div>
 </div>
 <div id="toolbar">
@@ -284,6 +284,7 @@ const DAG_NODES = [
     "caller": "executor",
     "description": "代码实现角色 - 只写代码、测试、重构，不做部署、SSH、论文写作",
     "invokes": [
+      "runtime-task-protocol",
       "tdd"
     ],
     "platform": "both",
@@ -327,7 +328,8 @@ const DAG_NODES = [
     "caller": "executor",
     "description": "部署角色 - 只做 SSH 同步、启动训练、监控实验、收集结果，不写代码",
     "invokes": [
-      "monitor-experiment"
+      "monitor-experiment",
+      "runtime-task-protocol"
     ],
     "platform": "both",
     "status": "active",
@@ -449,7 +451,8 @@ const DAG_NODES = [
       "plan ablation studies"
     ],
     "invoked_by": [
-      "leader"
+      "leader",
+      "planner"
     ],
     "layer": "orchestration"
   },
@@ -790,7 +793,10 @@ const DAG_NODES = [
       "experiment-queue",
       "monitor-experiment",
       "paper-writing",
+      "planner",
+      "reviewer",
       "run-experiment",
+      "runtime-task-protocol",
       "sync",
       "tdd",
       "training-check",
@@ -1145,6 +1151,26 @@ const DAG_NODES = [
     "layer": "tools"
   },
   {
+    "name": "planner",
+    "caller": "leader",
+    "description": "计划角色 - 产出计划草案、依赖拆解、风险图和 checkpoint，不执行计划、不越过 Leader。",
+    "invokes": [
+      "experiment-plan",
+      "runtime-task-protocol"
+    ],
+    "platform": "both",
+    "status": "active",
+    "examples": [
+      "/planner split this research idea into phases",
+      "规划 R001-R003 experiment blocks",
+      "draft task dependencies and checkpoints"
+    ],
+    "invoked_by": [
+      "leader"
+    ],
+    "layer": "orchestration"
+  },
+  {
     "name": "prior-art-search",
     "caller": "reviewer",
     "description": "Search patent databases and academic literature for prior art relevant to an invention. Use when user says \"现有技术检索\", \"prior art search\", \"专利检索\", \"check patents\", or wants to find relevant prior art.",
@@ -1361,6 +1387,25 @@ const DAG_NODES = [
     "layer": "reviewer"
   },
   {
+    "name": "reviewer",
+    "caller": "reviewer",
+    "description": "独立 Reviewer 角色 - 从原始输入审查计划、代码、实验、claim 或论文；只产出 verdict 和 findings，不替 executor 修复。",
+    "invokes": [
+      "runtime-task-protocol"
+    ],
+    "platform": "both",
+    "status": "active",
+    "examples": [
+      "/reviewer audit R003 config from source files",
+      "independently review this experiment result",
+      "check paper claims against raw results"
+    ],
+    "invoked_by": [
+      "leader"
+    ],
+    "layer": "reviewer"
+  },
+  {
     "name": "run-experiment",
     "caller": "executor",
     "description": "Deploy and run ML experiments on local, remote, Vast.ai, or Modal serverless GPU. Use when user says \"run experiment\", \"deploy to server\", \"跑实验\", or needs to launch training jobs.",
@@ -1373,6 +1418,27 @@ const DAG_NODES = [
       "leader"
     ],
     "layer": "executor-deployer"
+  },
+  {
+    "name": "runtime-task-protocol",
+    "caller": "any",
+    "description": "Runtime Task protocol contract for dispatched Labline roles. Use when acting as or dispatching Leader, Planner, Coder, Deployer, Writer, or Reviewer so status snapshots, terminal decisions, and superseded/resolved task events are written consistently.",
+    "platform": "both",
+    "status": "active",
+    "examples": [
+      "/runtime-task-protocol coder-r003",
+      "apply runtime protocol to this delegated task",
+      "how should I mark this old task superseded"
+    ],
+    "invoked_by": [
+      "coder",
+      "deployer",
+      "leader",
+      "planner",
+      "reviewer",
+      "writer"
+    ],
+    "layer": "tools"
   },
   {
     "name": "semantic-scholar",
@@ -1581,6 +1647,11 @@ const DAG_NODES = [
     "name": "writer",
     "caller": "executor",
     "description": "论文写作角色 - 只写论文、文档、Rebuttal，不写代码、不做部署",
+    "invokes": [
+      "runtime-task-protocol"
+    ],
+    "platform": "both",
+    "status": "active",
     "examples": [
       "/writer draft the method section",
       "写论文 introduction",
@@ -1626,11 +1697,19 @@ const DAG_EDGES = [
   },
   {
     "source": "coder",
+    "target": "runtime-task-protocol"
+  },
+  {
+    "source": "coder",
     "target": "tdd"
   },
   {
     "source": "deployer",
     "target": "monitor-experiment"
+  },
+  {
+    "source": "deployer",
+    "target": "runtime-task-protocol"
   },
   {
     "source": "leader",
@@ -1662,7 +1741,19 @@ const DAG_EDGES = [
   },
   {
     "source": "leader",
+    "target": "planner"
+  },
+  {
+    "source": "leader",
+    "target": "reviewer"
+  },
+  {
+    "source": "leader",
     "target": "run-experiment"
+  },
+  {
+    "source": "leader",
+    "target": "runtime-task-protocol"
   },
   {
     "source": "leader",
@@ -1705,6 +1796,14 @@ const DAG_EDGES = [
     "target": "slides-polish"
   },
   {
+    "source": "planner",
+    "target": "experiment-plan"
+  },
+  {
+    "source": "planner",
+    "target": "runtime-task-protocol"
+  },
+  {
     "source": "resubmit-pipeline",
     "target": "auto-paper-improvement-loop"
   },
@@ -1733,8 +1832,16 @@ const DAG_EDGES = [
     "target": "proof-checker"
   },
   {
+    "source": "reviewer",
+    "target": "runtime-task-protocol"
+  },
+  {
     "source": "skill-dag-check",
     "target": "write-a-skill"
+  },
+  {
+    "source": "writer",
+    "target": "runtime-task-protocol"
   }
 ];
 

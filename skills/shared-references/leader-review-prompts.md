@@ -13,6 +13,13 @@ mcp__codex__codex:
   prompt: |
     EXPERIMENT PLAN REVIEW
 
+    Reviewer runtime protocol:
+    - agent_id: reviewer-${pipeline_id}-phase1-plan-review
+    - Read .claude/skills/shared-references/runtime-task-protocol.md before reviewing.
+    - Use .labline/tools/agent_status.py at start, update, and finish if this review runs as an agent with filesystem access.
+    - Write or return a verdict artifact path for the final review result.
+    - Finish with terminal status completed | failed | blocked and include the verdict artifact path.
+
     审核以下实验计划的科学严谨性：
 
     1. claims 是否清晰可测？
@@ -42,6 +49,13 @@ mcp__codex__codex:
     CODE REVIEW FOR EXPERIMENT IMPLEMENTATION
 
     You are a senior code reviewer. Review the following for correctness.
+
+    Reviewer runtime protocol:
+    - agent_id: reviewer-${pipeline_id}-phase2-code-review
+    - Read .claude/skills/shared-references/runtime-task-protocol.md before reviewing.
+    - Use .labline/tools/agent_status.py at start, update, and finish if this review runs as an agent with filesystem access.
+    - Write or return a verdict artifact path for the final review result.
+    - Finish with terminal status completed | failed | blocked and include the verdict artifact path.
 
     Experiment Plan:
     [paste key sections from EXPERIMENT_PLAN.md: Expectation Declaration, Execution Spec, Data Flow, Delta Assertion, Evidence Mapping]
@@ -73,6 +87,13 @@ mcp__codex__codex:
     EXPERIMENT AUDIT
 
     You are an independent experiment auditor. You must read ALL files directly — do NOT trust any Executor summary.
+
+    Reviewer runtime protocol:
+    - agent_id: reviewer-${pipeline_id}-phase4-experiment-audit
+    - Read .claude/skills/shared-references/runtime-task-protocol.md before reviewing.
+    - Use .labline/tools/agent_status.py at start, update, and finish if this review runs as an agent with filesystem access.
+    - Write or return a verdict artifact path for the final review result.
+    - Finish with terminal status completed | failed | blocked and include the verdict artifact path.
 
     Files to read:
     - refine-logs/EXPERIMENT_PLAN.md (the plan)
@@ -107,6 +128,13 @@ mcp__codex__codex:
     RESULT-TO-CLAIM EVALUATION
 
     Judge whether experimental results support the intended claims.
+
+    Reviewer runtime protocol:
+    - agent_id: reviewer-${pipeline_id}-phase5-claim-evaluation
+    - Read .claude/skills/shared-references/runtime-task-protocol.md before reviewing.
+    - Use .labline/tools/agent_status.py at start, update, and finish if this review runs as an agent with filesystem access.
+    - Write or return a verdict artifact path for the final review result.
+    - Finish with terminal status completed | failed | blocked and include the verdict artifact path.
 
     Planning contract:
     - Claim map: [from EXPERIMENT_PLAN.md]
@@ -143,6 +171,13 @@ mcp__codex__codex:
     DIRECTION REVIEW (STOP-LOSS)
 
     The research pipeline has failed [N] consecutive times.
+
+    Reviewer runtime protocol:
+    - agent_id: reviewer-${pipeline_id}-phase-x-stoploss
+    - Read .claude/skills/shared-references/runtime-task-protocol.md before reviewing.
+    - Use .labline/tools/agent_status.py at start, update, and finish if this review runs as an agent with filesystem access.
+    - Write or return a verdict artifact path for the final review result.
+    - Finish with terminal status completed | failed | blocked and include the verdict artifact path.
 
     Failure history:
     [list each failure with stage, error, attempted fixes]

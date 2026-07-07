@@ -7,12 +7,14 @@ Project-local status snapshots let Leader observe delegated agents without readi
 Runtime status belongs to the research project, not the Labline framework repo:
 
 ```text
-.labline/status/
+.labline/runtime/
   agents/<agent_id>.json
   events.jsonl          # optional diagnostics only
 ```
 
-Do not commit `.labline/status/`. Framework tests must use `--status-root` with a tmp dir.
+`.labline/status/agents/` is a legacy compatibility path. New agent snapshots must be written under `.labline/runtime/agents/`; readers may still ingest the legacy path during migration.
+
+Do not commit `.labline/runtime/` or `.labline/status/`. Framework tests must use `--status-root` with a tmp dir or a temporary project root.
 
 ## Tool
 
@@ -94,6 +96,16 @@ Expected update pacing:
 | Download | `+15m` to `+30m` |
 | Paper / writing agent | `+10m` to `+20m` |
 | Failure retry or uncertain state | `+5m` to `+10m` |
+
+## Remote Bridge And Push Discipline
+
+When a Labline run is controlled through Feishu/Lark, the chat card is only a Remote Status Projection. It is not the runtime owner and must not be kept busy for long work.
+
+- Treat any expected runtime over 3 minutes as a supervised long task: environment install, compile, download, training, deploy, batch evaluation, or long `wait_agent`.
+- Before long work starts, write an Agent Status Snapshot or Runtime Task with `current_action`, durable `job_handles`, log/result paths, `next_expected_update`, and `next_check_reason`.
+- After dispatch, the Leader may wait once for immediate failure, up to 120 seconds. If the task is still running, the Leader must end the current turn with the task id/status path/log path and let `/status`, `/follow`, heartbeat, or monitor surface later updates.
+- Normal progress must be throttled or patched in place. Send a fresh visible reply only for `completed`, `failed`, `cancelled`, `blocked`, `need_decision`, `anomaly`, or heartbeat escalation.
+- Healthy heartbeat checks write local runtime state only; they must not spam Feishu messages during a stable plateau.
 
 ## Read-Only Checks
 
