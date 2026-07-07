@@ -109,7 +109,7 @@ python .labline/tools/lane workflow tmux-job task-deployer-r003-retry2 \
   --required-artifact outputs/r003/epoch_2.pth
 ```
 
-This command writes a `tmux` job handle, `.labline/runtime/jobs/<job_id>.json`, `.labline/runtime/agents/<agent_id>.json`, and a `job.started` event. The launcher only needs to persist the durable handle; it may exit after that. It does not mark the task completed. Runtime wakeup checks the detached tmux session later: an inactive session with all required artifacts becomes `detached_job_completed`; an inactive session with missing required artifacts becomes `detached_job_exited`. Leader must inspect the session/log/result artifact and then record completed/failed/continue-waiting.
+This command writes a `tmux` job handle, `.labline/runtime/jobs/<job_id>.json`, `.labline/runtime/jobs/<job_id>.exitcode`, `.labline/runtime/agents/<agent_id>.json`, and a `job.started` event. The launcher only needs to persist the durable handle; it may exit after that. It does not mark the task completed. Runtime wakeup checks the detached tmux session later: an inactive session with exit code 0 or no exit-code sentinel yet and all required artifacts becomes `detached_job_completed`; an inactive session with a non-zero exit code or missing required artifacts becomes `detached_job_exited`. Leader must inspect the session/log/result artifact and then record completed/failed/continue-waiting.
 
 The agent must set `status=waiting_on_job`, `next_expected_update`, and `next_check_reason`. The chat card is only a projection; it is not the task owner.
 
@@ -206,8 +206,8 @@ Runtime readers intentionally treat missing protocol signals as risk:
 - retry task with the same id as `--retry-of` -> rejected
 - old escalation with no resolution event -> wakeup candidate
 - unresolved `failed` / `cancelled` terminal Runtime Task -> `terminal_result` wakeup candidate
-- detached `tmux` job session inactive and required artifacts present -> `detached_job_completed` wakeup candidate
-- detached `tmux` job session inactive and required artifacts missing -> `detached_job_exited` wakeup candidate
+- detached `tmux` job session inactive, exit code 0 or unknown, and required artifacts present -> `detached_job_completed` wakeup candidate
+- detached `tmux` job session inactive and non-zero exit code or required artifacts missing -> `detached_job_exited` wakeup candidate
 - task id referenced by another Runtime Task's `retry_of` -> not resumed by wakeup
 - completed/resolved/superseded task id, or any task id with terminal `leader.decision` -> not resumed by wakeup
 

@@ -1376,6 +1376,24 @@ def missing_required_artifact_refs(project: Path, task: dict[str, Any]) -> list[
     return missing
 
 
+def read_exit_code_ref(project: Path, ref: str) -> int | None:
+    if not ref:
+        return None
+    path = Path(ref)
+    if not path.is_absolute():
+        path = project / path
+    if not path.exists():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    try:
+        return int(text.split()[0])
+    except (IndexError, ValueError):
+        return None
+
+
 def detached_job_candidate_from_task(project: Path, task: dict[str, Any]) -> dict[str, Any] | None:
     if task.get("execution_mode") != "detached_job":
         return None
@@ -1408,7 +1426,26 @@ def detached_job_candidate_from_task(project: Path, task: dict[str, Any]) -> dic
 
     required_artifacts = string_list(task.get("required_artifacts"))
     missing_artifacts = missing_required_artifact_refs(project, task)
-    if required_artifacts and not missing_artifacts:
+    exit_codes: list[dict[str, Any]] = []
+    nonzero_exit_codes: list[dict[str, Any]] = []
+    for handle in inactive_handles:
+        exit_code_ref = str(handle.get("exit_code_ref") or "")
+        exit_code = read_exit_code_ref(project, exit_code_ref)
+        if exit_code is None:
+            continue
+        exit_record = {
+            "session": str(handle.get("session") or ""),
+            "exit_code": exit_code,
+            "exit_code_ref": exit_code_ref,
+        }
+        exit_codes.append(exit_record)
+        if exit_code != 0:
+            nonzero_exit_codes.append(exit_record)
+
+    if nonzero_exit_codes:
+        escalation_type = "detached_job_exited"
+        reason = "detached tmux job session is no longer active; exit code is non-zero"
+    elif required_artifacts and not missing_artifacts:
         escalation_type = "detached_job_completed"
         reason = "detached tmux job session is no longer active and required artifacts exist"
     else:
@@ -1432,6 +1469,10 @@ def detached_job_candidate_from_task(project: Path, task: dict[str, Any]) -> dic
         candidate["required_artifacts"] = required_artifacts
     if missing_artifacts:
         candidate["missing_artifacts"] = missing_artifacts
+    if exit_codes:
+        candidate["exit_codes"] = exit_codes
+    if nonzero_exit_codes:
+        candidate["nonzero_exit_codes"] = nonzero_exit_codes
     copy_phase_boundary_context(task, candidate)
     return candidate
 
@@ -2363,6 +2404,7 @@ def start_tmux_job(args: argparse.Namespace) -> dict[str, Any]:
 
     job_id = "job_" + uuid.uuid4().hex
     job_path = runtime_job_record_path(project, job_id)
+    exit_code_path = job_path.with_suffix(".exitcode")
     job_handle = {
         "type": "tmux",
         "backend": "tmux",
@@ -2372,13 +2414,16 @@ def start_tmux_job(args: argparse.Namespace) -> dict[str, Any]:
         "session": session,
         "log_ref": rel_ref(project, log_path),
         "job_ref": rel_ref(project, job_path),
+        "exit_code_ref": rel_ref(project, exit_code_path),
         "started_at": now_stamp,
     }
     wrapped_command = (
         "set -o pipefail; "
-        f"mkdir -p {shlex.quote(str(log_path.parent))}; "
-        f"{command} 2>&1 | tee -a {shlex.quote(str(log_path))}; "
-        "exit ${PIPESTATUS[0]}"
+        f"mkdir -p {shlex.quote(str(log_path.parent))} {shlex.quote(str(exit_code_path.parent))}; "
+        f"{{ {command}; }} 2>&1 | tee -a {shlex.quote(str(log_path))}; "
+        "rc=${PIPESTATUS[0]}; "
+        f"printf '%s\\n' \"$rc\" > {shlex.quote(str(exit_code_path))}; "
+        'exit "$rc"'
     )
     tmux_command = f"bash -lc {shlex.quote(wrapped_command)}"
     launched = subprocess.run(
@@ -2401,6 +2446,7 @@ def start_tmux_job(args: argparse.Namespace) -> dict[str, Any]:
             "command": command,
             "wrapped_command": wrapped_command,
             "log_ref": rel_ref(project, log_path),
+            "exit_code_ref": rel_ref(project, exit_code_path),
             "started_at": now_stamp,
             "failed_at": format_utc(parse_utc(getattr(args, "now", None))),
             "blocker": blocker,
@@ -2464,6 +2510,7 @@ def start_tmux_job(args: argparse.Namespace) -> dict[str, Any]:
         "command": command,
         "wrapped_command": wrapped_command,
         "log_ref": rel_ref(project, log_path),
+        "exit_code_ref": rel_ref(project, exit_code_path),
         "started_at": now_stamp,
         "required_artifacts": required_artifacts,
     }
