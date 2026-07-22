@@ -142,6 +142,10 @@ function lablineAutoWakeupNoticeThrottleMs() {
   const parsed = Number.parseInt(process.env.LABLINE_AUTO_WAKEUP_NOTICE_THROTTLE_MS || "300000", 10);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 300000;
 }
+function lablineAutoWakeupNotifyAlreadyStarted() {
+  const raw = process.env.LABLINE_AUTO_WAKEUP_NOTIFY_ALREADY_STARTED || "";
+  return /^(1|true|yes)$/i.test(raw);
+}
 var lablineAutoWakeupNoticeLastSent = /* @__PURE__ */ new Map();
 function lablineCaptureText(current, chunk) {
   const max = 4 * 1024 * 1024;
@@ -366,6 +370,10 @@ function lablineAutoWakeupNoticeKey(project, result) {
 }
 async function lablineMaybeDeliverAutoWakeupNotice(channel, project, controls, result, code, signal, stderrText) {
   if (!result || (result.action === "skip" && result.reason === "healthy_or_no_escalation")) return;
+  if (result.action === "skip" && result.reason === "wakeup_already_started" && !lablineAutoWakeupNotifyAlreadyStarted()) {
+    log.info("labline-wakeup", "already-started-notice-suppressed", { project, wakeupKey: result.wakeup_key });
+    return;
+  }
   const key = lablineAutoWakeupNoticeKey(project, result);
   const throttleMs = lablineAutoWakeupNoticeThrottleMs();
   const now = Date.now();

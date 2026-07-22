@@ -928,6 +928,8 @@ lane feishu run --profile lane-claude --agent claude
 
 需要自动唤醒 Leader 时，按 profile 显式设置 `LABLINE_AUTO_WAKEUP_ENABLED=1` 并重启 bridge。启用后 bridge 只做轻量触发：定时运行 `lane workflow wakeup-plan`，当 runtime escalation、未处理的 `failed` / `cancelled` terminal Runtime Task、detached tmux job 已退出且需要 Leader 检查 artifact/log，或 `phase_boundary_ready` candidate 可接手且 `leader_session` lease 可用时，启动 `lane workflow wakeup --backend native-codex`。去重、lease、prompt、完成/失败记录都写在 `.labline/runtime/`；高风险 control intent 仍需要人工确认，不会被自动执行。若确认同一 `wakeup_key` 的上一次唤醒没有真正接手，可以先用 `lane workflow wakeup-plan --force` 预览，再用 `lane workflow wakeup --force --backend native-codex` 重试；`--force` 只绕过去重，不绕过高风险确认和 `leader_session` lease。`native-codex` wakeup 默认用 `codex exec -s danger-full-access`，不依赖 `bwrap` sandbox；如需收紧可设置 `LABLINE_AUTO_WAKEUP_CODEX_SANDBOX=workspace-write|read-only` 或传 `--codex-sandbox`。bridge 会把 started、completed、failed、非健康 skip 和 `needs_confirmation` 发到当前 profile/project 的 active `/follow` chat；也可用 `LABLINE_AUTO_WAKEUP_CHAT_ID` 指定固定投递 chat。跨 profile 通知默认关闭，只有确认同一个 bot 可以投递目标 chat 时才开启 `LABLINE_AUTO_WAKEUP_INCLUDE_CROSS_PROFILE=1`。同一检查结果按 `LABLINE_AUTO_WAKEUP_NOTICE_THROTTLE_MS` 限流。用户可见的自动唤醒结论默认使用中文解释，英文只保留在必要的标识符、路径、状态值中。
 
+`waiting_on_job`、`handoff_verifying` 和 `recovering` 任务如果同时声明了 `next_expected_update` 和 `next_check_reason`，到点后会产生包含时间戳的 `expected_update_due` 自动唤醒候选；普通 `running` monitor 不会仅因时间到期而唤醒 Leader。同一候选已有 `wakeup.started` 时，`wakeup_already_started` 默认只写 bridge 日志；仅排障时设置 `LABLINE_AUTO_WAKEUP_NOTIFY_ALREADY_STARTED=1` 才恢复可见通知。
+
 多人共用同一台服务器、同一 Linux 账户时，至少用不同 `--home`、`--profile` 和 `--workspace` 隔离：
 
 ```bash

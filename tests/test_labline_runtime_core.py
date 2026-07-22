@@ -3926,3 +3926,164 @@ def test_heartbeat_dry_run_reports_explicit_task_without_runtime_writes():
         assert not (runtime_root(project) / "heartbeats" / "local-heartbeat.json").exists()
         assert not list((runtime_root(project) / "escalations").glob("*.json"))
         assert (runtime_root(project) / "events" / "runtime.jsonl").read_text(encoding="utf-8") == before_events
+
+
+def test_workflow_wakeup_plan_reports_expected_update_due_passive_waiting_task():
+    with tempfile.TemporaryDirectory() as tmp:
+        project = Path(tmp) / "project"
+        project.mkdir()
+        run_lane(
+            [
+                "runtime",
+                "task",
+                "create",
+                "task_wait_r006",
+                "--kind",
+                "agent",
+                "--title",
+                "wait for R006 checkpoint",
+                "--owner",
+                "Leader",
+                "--parent-task-id",
+                "task_train_r006",
+                "--execution-mode",
+                "agent_turn",
+                "--durability",
+                "supervised",
+                "--heartbeat",
+                "passive",
+                "--status",
+                "waiting_on_job",
+                "--current-action",
+                "waiting for upstream R006 checkpoint",
+                "--next-expected-update",
+                "2026-06-30T00:00:00Z",
+                "--next-check-reason",
+                "verify R006 epoch_300.pth before dispatching R007",
+                "--required-artifact",
+                "outputs/r007/epoch_300.pth",
+            ],
+            cwd=project,
+        )
+
+        plan = json.loads(run_lane(["workflow", "wakeup-plan", "--json", "--now", "2026-06-30T00:05:00Z"], cwd=project).stdout)
+
+        assert plan["action"] == "acquire_lease"
+        assert plan["reason"] == "expected_update_due"
+        assert plan["candidate"]["task_id"] == "task_wait_r006"
+        assert plan["candidate"]["category"] == "expected_update_due"
+        assert plan["candidate"]["next_check_reason"] == "verify R006 epoch_300.pth before dispatching R007"
+        assert plan["wakeup_key"] == "task:task_wait_r006:expected_update_due:waiting_on_job:2026-06-30T00:00:00Z"
+
+        wakeup = json.loads(run_lane(["workflow", "wakeup", "--json", "--now", "2026-06-30T00:05:10Z"], cwd=project).stdout)
+        prompt = (project / wakeup["leader_prompt_ref"]).read_text(encoding="utf-8")
+        assert "Expected Update Due Context" in prompt
+        assert "read-only Leader status check" in prompt
+        assert "Do not restart jobs" in prompt
+
+
+def test_workflow_wakeup_plan_limits_expected_update_due_to_waiting_or_recovery_tasks():
+    with tempfile.TemporaryDirectory() as tmp:
+        project = Path(tmp) / "project"
+        project.mkdir()
+        for task_id, status, due_at in (
+            ("future_wait", "waiting_on_job", "2026-06-30T00:30:00Z"),
+            ("running_monitor", "running", "2026-06-30T00:00:00Z"),
+        ):
+            run_lane(
+                [
+                    "runtime",
+                    "task",
+                    "create",
+                    task_id,
+                    "--kind",
+                    "agent",
+                    "--title",
+                    task_id,
+                    "--execution-mode",
+                    "agent_turn",
+                    "--durability",
+                    "supervised",
+                    "--heartbeat",
+                    "passive",
+                    "--status",
+                    status,
+                    "--next-expected-update",
+                    due_at,
+                    "--next-check-reason",
+                    "read-only status check",
+                ],
+                cwd=project,
+            )
+
+        plan = json.loads(run_lane(["workflow", "wakeup-plan", "--json", "--now", "2026-06-30T00:05:00Z"], cwd=project).stdout)
+
+        assert plan["action"] == "skip"
+        assert plan["reason"] == "healthy_or_no_escalation"
+        assert plan["candidates"] == []
+
+
+def test_workflow_wakeup_plan_uses_new_expected_update_for_repeat_due_check():
+    with tempfile.TemporaryDirectory() as tmp:
+        project = Path(tmp) / "project"
+        project.mkdir()
+        run_lane(
+            [
+                "runtime",
+                "task",
+                "create",
+                "task_wait_r006",
+                "--kind",
+                "agent",
+                "--title",
+                "wait for R006 checkpoint",
+                "--execution-mode",
+                "agent_turn",
+                "--durability",
+                "supervised",
+                "--heartbeat",
+                "passive",
+                "--status",
+                "waiting_on_job",
+                "--next-expected-update",
+                "2026-06-30T00:00:00Z",
+                "--next-check-reason",
+                "first checkpoint check",
+            ],
+            cwd=project,
+        )
+        run_lane(
+            [
+                "runtime",
+                "event",
+                "append",
+                "--type",
+                "wakeup.started",
+                "--task-id",
+                "task_wait_r006",
+                "--json",
+                '{"wakeup_key":"task:task_wait_r006:expected_update_due:waiting_on_job:2026-06-30T00:00:00Z"}',
+            ],
+            cwd=project,
+        )
+        run_lane(
+            [
+                "runtime",
+                "task",
+                "update",
+                "task_wait_r006",
+                "--next-expected-update",
+                "2026-06-30T01:00:00Z",
+                "--next-check-reason",
+                "second checkpoint check",
+            ],
+            cwd=project,
+        )
+
+        plan = json.loads(run_lane(["workflow", "wakeup-plan", "--json", "--now", "2026-06-30T01:05:00Z"], cwd=project).stdout)
+
+        assert plan["action"] == "acquire_lease"
+        assert plan["reason"] == "expected_update_due"
+        assert plan["candidate"]["next_check_reason"] == "second checkpoint check"
+        assert plan["wakeup_key"] == "task:task_wait_r006:expected_update_due:waiting_on_job:2026-06-30T01:00:00Z"
+        assert plan["skipped_started_candidates"] == []

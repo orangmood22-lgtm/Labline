@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 - `lane project migrate-aris` can dry-run and apply migration of legacy ARIS project state, old framework symlinks, and `project.yaml` framework metadata.
+- Auto-wakeup now creates `expected_update_due` candidates for waiting or recovery tasks when their declared check time arrives.
 
 ### Changed
 - Feishu/Lark integration docs now explain `--home`, `--profile`, `--workspace`, tmux operation, and multi-user/multi-project usage.
@@ -15,6 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - `lane feishu` now reports a clear install hint when `lark-channel-bridge` is missing, and status-style bridge commands no longer pass workspace-only arguments.
+- Repeated `wakeup_already_started` checks are log-only by default instead of sending a visible Feishu message every poll cycle.
 
 ---
 

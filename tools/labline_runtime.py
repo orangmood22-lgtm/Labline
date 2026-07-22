@@ -102,6 +102,8 @@ PHASE_BOUNDARY_CONTEXT_KEYS = [
     "next_leader_prompt",
 ]
 PHASE_BOUNDARY_SUCCESS_STATUSES = {"completed", "resolved"}
+EXPECTED_UPDATE_DUE_STATUSES = {"waiting_on_job", "handoff_verifying", "recovering"}
+EXPECTED_UPDATE_DUE_CATEGORY = "expected_update_due"
 
 
 def utc_stamp() -> str:
@@ -1572,10 +1574,51 @@ def escalation_candidate_from_file(project: Path, path: Path, escalation: dict[s
     return candidate
 
 
+def expected_update_due_candidate_from_task(task: dict[str, Any], now: datetime | None) -> dict[str, Any] | None:
+    if task.get("derived") is True and task.get("kind") == "agent_status":
+        return None
+    status = str(task.get("status") or "")
+    if status not in EXPECTED_UPDATE_DUE_STATUSES:
+        return None
+    if task.get("heartbeat") not in HEARTBEAT_ENABLED_VALUES:
+        return None
+    next_check_reason = str(task.get("next_check_reason") or "").strip()
+    if not next_check_reason:
+        return None
+    if not due_at_passed(task.get("next_expected_update"), now):
+        return None
+    if task.get("execution_mode") == "detached_job" and task.get("job_handles"):
+        return None
+    task_id = str(task.get("task_id") or "")
+    if not task_id:
+        return None
+    candidate = {
+        "source": "runtime_task",
+        "task_id": task_id,
+        "status": status,
+        "title": task.get("title"),
+        "category": EXPECTED_UPDATE_DUE_CATEGORY,
+        "reason": "next_expected_update is due and the Runtime Task is still active",
+        "lease_scope": f"task:{task_id}",
+        "source_refs": task.get("source_refs") if isinstance(task.get("source_refs"), list) else [],
+        "heartbeat": task.get("heartbeat"),
+        "suggested_role": task.get("owner") or task.get("role"),
+        "current_action": task.get("current_action"),
+        "blocker": task.get("blocker"),
+        "next_expected_update": task.get("next_expected_update"),
+        "next_check_reason": next_check_reason,
+        "parent_task_id": task.get("parent_task_id"),
+        "required_artifacts": string_list(task.get("required_artifacts")),
+    }
+    copy_phase_boundary_context(task, candidate)
+    return {key: value for key, value in candidate.items() if value not in (None, "", [])}
+
+
 def collect_wakeup_candidates(
     project: Path,
     root: Path,
     tasks: list[dict[str, Any]],
+    now: datetime | None,
     task_id: str | None = None,
     resolved_task_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
@@ -1607,6 +1650,7 @@ def collect_wakeup_candidates(
         candidate = (
             phase_boundary_ready_candidate_from_task(project, task, tasks_by_id)
             or detached_job_candidate_from_task(project, task)
+            or expected_update_due_candidate_from_task(task, now)
             or terminal_result_candidate_from_task(task)
             or escalation_candidate_from_task(task)
         )
@@ -1637,6 +1681,7 @@ def build_wakeup_plan(args: argparse.Namespace) -> dict[str, Any]:
         project,
         root,
         summary.get("tasks") or [],
+        now,
         task_id=task_id,
         resolved_task_ids=set(resolutions),
     )
@@ -1733,6 +1778,8 @@ def wakeup_candidate_category(candidate: dict[str, Any]) -> str:
 def wakeup_plan_reason(candidate: dict[str, Any]) -> str:
     if wakeup_candidate_category(candidate) == PHASE_BOUNDARY_READY_ESCALATION:
         return PHASE_BOUNDARY_READY_ESCALATION
+    if wakeup_candidate_category(candidate) == EXPECTED_UPDATE_DUE_CATEGORY:
+        return EXPECTED_UPDATE_DUE_CATEGORY
     return "escalation_candidate"
 
 
@@ -1743,6 +1790,8 @@ def candidate_wakeup_key(candidate: dict[str, Any]) -> str:
     task_id = candidate.get("task_id") or "task"
     category = wakeup_candidate_category(candidate)
     status = candidate.get("status") or "unknown"
+    if category == EXPECTED_UPDATE_DUE_CATEGORY and candidate.get("next_expected_update"):
+        return f"task:{task_id}:{category}:{status}:{candidate.get('next_expected_update')}"
     return f"task:{task_id}:{category}:{status}"
 
 
@@ -1756,6 +1805,8 @@ def started_wakeup_candidate_marker(candidate: dict[str, Any], wakeup_key: str) 
         marker["escalation_type"] = candidate.get("escalation_type")
     elif candidate.get("category"):
         marker["category"] = candidate.get("category")
+    if candidate.get("category") == EXPECTED_UPDATE_DUE_CATEGORY and candidate.get("next_expected_update"):
+        marker["next_expected_update"] = candidate.get("next_expected_update")
     return marker
 
 
@@ -1777,6 +1828,7 @@ def build_leader_prompt(project: Path, plan: dict[str, Any], wakeup_key: str) ->
     metrics = json.dumps(plan.get("summary_metrics") or {}, ensure_ascii=False, sort_keys=True)
     category = wakeup_candidate_category(candidate)
     phase_boundary_context = ""
+    expected_update_due_context = ""
     if category == PHASE_BOUNDARY_READY_ESCALATION:
         evidence = {
             key: candidate[key]
@@ -1802,6 +1854,45 @@ def build_leader_prompt(project: Path, plan: dict[str, Any], wakeup_key: str) ->
             "- Do not auto-launch high-cost, remote, deployment, SSH, or training work from readiness alone.\n"
             "- After recording the next orchestration outcome, consume this phase-boundary task by making it terminal, and represent any follow-up work as a new Runtime Task.\n"
             "- Record any project-state change through Labline runtime events or task updates.\n"
+            "- Write the user-facing final answer in Chinese. Keep code identifiers, paths, task ids, and literal status values unchanged, but explain every decision and required action in Chinese.\n"
+            "- Do not emit an English-only final decision such as `Decision` / `Required action`; use concise Chinese headings instead.\n"
+            "- 面向飞书用户的最终回复必须使用中文；不要只输出英文监控结论。可以保留英文状态值、路径和任务 id，但需要用中文解释含义和下一步。\n"
+        )
+    elif category == EXPECTED_UPDATE_DUE_CATEGORY:
+        expected_update_due_text = json.dumps(
+            {
+                "task_id": candidate.get("task_id"),
+                "status": candidate.get("status"),
+                "suggested_role": candidate.get("suggested_role"),
+                "heartbeat": candidate.get("heartbeat"),
+                "current_action": candidate.get("current_action"),
+                "blocker": candidate.get("blocker"),
+                "parent_task_id": candidate.get("parent_task_id"),
+                "next_expected_update": candidate.get("next_expected_update"),
+                "next_check_reason": candidate.get("next_check_reason"),
+                "required_artifacts": candidate.get("required_artifacts") or [],
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        expected_update_due_context = (
+            "## Expected Update Due Context\n"
+            "A Runtime Task reached its `next_expected_update` while still active. Treat this as a read-only Leader status check, not as proof of failure and not as permission to restart or relaunch work.\n\n"
+            "Machine-readable due task:\n"
+            "```json\n"
+            f"{expected_update_due_text}\n"
+            "```\n\n"
+        )
+        instructions = (
+            "## Instructions\n"
+            "- Read the project runtime state under `.labline/runtime/` before acting.\n"
+            "- Perform a read-only status check first: inspect referenced Runtime Tasks, job handles, logs, status files, and required artifacts relevant to this due check.\n"
+            "- Do not restart jobs, change configuration, launch training, or mutate experiment artifacts merely because `next_expected_update` is due.\n"
+            "- If the task is still legitimately waiting, update the same Runtime Task with a future `next_expected_update`, concrete `current_action`, and `next_check_reason`.\n"
+            "- If the prerequisite is now satisfied, record or dispatch the next valid Runtime Task under the existing task contract.\n"
+            "- If the task is blocked, stale, failed, or needs human input, record that as runtime state (`blocked`, `stale`, `need_decision`, or a machine-readable `leader.decision`) before ending the turn.\n"
+            "- Do not create repeated wakeups for the same due time; if continued waiting is valid, move the expected update time forward.\n"
             "- Write the user-facing final answer in Chinese. Keep code identifiers, paths, task ids, and literal status values unchanged, but explain every decision and required action in Chinese.\n"
             "- Do not emit an English-only final decision such as `Decision` / `Required action`; use concise Chinese headings instead.\n"
             "- 面向飞书用户的最终回复必须使用中文；不要只输出英文监控结论。可以保留英文状态值、路径和任务 id，但需要用中文解释含义和下一步。\n"
@@ -1832,6 +1923,7 @@ def build_leader_prompt(project: Path, plan: dict[str, Any], wakeup_key: str) ->
         "## Relevant Runtime References\n"
         f"{ref_lines}\n\n"
         f"{phase_boundary_context}"
+        f"{expected_update_due_context}"
         f"{instructions}"
     )
 

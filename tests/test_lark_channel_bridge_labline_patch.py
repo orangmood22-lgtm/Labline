@@ -519,11 +519,14 @@ def test_auto_wakeup_delivery_uses_card_with_markdown_fallback() -> None:
 
     assert "function lablineWakeupResultCard(" in patched
     assert "function lablineMaybeDeliverAutoWakeupNotice(" in patched
+    assert "function lablineAutoWakeupNotifyAlreadyStarted(" in patched
     assert "return renderCard(state)" in patched
     assert "{ card: lablineWakeupResultCard(message, result) }" in patched
     assert "{ markdown: message }" in patched
     assert "delivery-fallback-sent" in patched
     assert "wakeup_already_started" in patched
+    assert "already-started-notice-suppressed" in patched
+    assert "LABLINE_AUTO_WAKEUP_NOTIFY_ALREADY_STARTED" in patched
     assert "Leader 自动唤醒检查" in patched
     assert "notice-throttled" in patched
     assert "await lablineMaybeDeliverAutoWakeupNotice(channel, project, controls, value, 0, null, \"\");" in patched
